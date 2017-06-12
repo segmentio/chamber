@@ -203,20 +203,28 @@ func (s *SSMStore) List(service string, includeValues bool) ([]Secret, error) {
 
 	if includeValues {
 		secretKeys := keys(secrets)
-		getParametersInput := &ssm.GetParametersInput{
-			Names:          stringsToAWSStrings(secretKeys),
-			WithDecryption: aws.Bool(true),
-		}
+		for i := 0; i < len(secretKeys); i += 10 {
+			batchEnd := i + 10
+			if i+10 > len(secretKeys) {
+				batchEnd = len(secretKeys)
+			}
+			batch := secretKeys[i:batchEnd]
 
-		resp, err := s.svc.GetParameters(getParametersInput)
-		if err != nil {
-			return nil, err
-		}
+			getParametersInput := &ssm.GetParametersInput{
+				Names:          stringsToAWSStrings(batch),
+				WithDecryption: aws.Bool(true),
+			}
 
-		for _, param := range resp.Parameters {
-			secret := secrets[*param.Name]
-			secret.Value = param.Value
-			secrets[*param.Name] = secret
+			resp, err := s.svc.GetParameters(getParametersInput)
+			if err != nil {
+				return nil, err
+			}
+
+			for _, param := range resp.Parameters {
+				secret := secrets[*param.Name]
+				secret.Value = param.Value
+				secrets[*param.Name] = secret
+			}
 		}
 	}
 	return values(secrets), nil

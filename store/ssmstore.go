@@ -2,10 +2,12 @@ package store
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"strconv"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
@@ -27,8 +29,18 @@ type SSMStore struct {
 
 // NewSSMStore creates a new SSMStore
 func NewSSMStore() *SSMStore {
-	session := session.New()
-	svc := ssm.New(session)
+	region, ok := os.LookupEnv("AWS_REGION")
+	if !ok {
+		// If region is not set, attempt to determine it via ec2 metadata API
+		session := session.New()
+		ec2metadataSvc := ec2metadata.New(session)
+		region, _ = ec2metadataSvc.Region()
+	}
+
+	ssmSession := session.Must(session.NewSession(&aws.Config{
+		Region: aws.String(region),
+	}))
+	svc := ssm.New(ssmSession)
 	return &SSMStore{
 		svc: svc,
 	}

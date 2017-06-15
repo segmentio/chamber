@@ -292,6 +292,16 @@ func TestList(t *testing.T) {
 			assert.Equal(t, "value", *secret.Value)
 		}
 	})
+
+	t.Run("List should only return exact matches on service name", func(t *testing.T) {
+		store.Write(SecretId{Service: "match", Key: "a"}, "val")
+		store.Write(SecretId{Service: "matchlonger", Key: "a"}, "val")
+
+		s, err := store.List("match", false)
+		assert.Nil(t, err)
+		assert.Equal(t, 1, len(s))
+		assert.Equal(t, "match.a", s[0].Meta.Key)
+	})
 }
 
 func TestHistory(t *testing.T) {

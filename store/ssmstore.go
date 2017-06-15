@@ -172,7 +172,7 @@ func (s *SSMStore) List(service string, includeValues bool) ([]Secret, error) {
 			Filters: []*ssm.ParametersFilter{
 				{
 					Key:    aws.String("Name"),
-					Values: []*string{aws.String(service)},
+					Values: []*string{aws.String(service + ".")},
 				},
 			},
 			NextToken: nextToken,

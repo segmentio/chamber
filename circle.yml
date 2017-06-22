@@ -30,4 +30,17 @@ deployment:
   release:
     tag: /v[0-9]+(\.[0-9]+)*/
     commands:
-      - make release
+      - >
+        docker run
+        $(env | grep -E '^CIRCLE_|^DOCKER_|^AWS_|^GH_|^NPM_|^PRODUCTION_|^STAGE_|^CIRCLECI=|^CI=' | sed 's/^/--env /g' | tr "\\n" " ")
+        --rm
+        --tty
+        --interactive
+        --name release
+        --net host
+        --volume /var/run/docker.sock:/run/docker.sock
+        --volume ${GOPATH%%:*}/src:/go/src
+        --volume ${PWD}:/go/src/github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}
+        --workdir /go/src/github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}
+        --entrypoint make
+        segment/golang-private:latest release

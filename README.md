@@ -55,3 +55,7 @@ $ chamber exec <service> -- <your executable>
 ```
 
 The purpose of this command is to be used inside your service's docker container. Exec sets up environment variables populated with all the latest versions of secrets for the given service and environment.
+
+## Releasing
+
+To cut a new release, just push a tag named `v<semver>` where `<semver>` is a valid semver version.  This tag will be used by Circle to automatically publish a github release.

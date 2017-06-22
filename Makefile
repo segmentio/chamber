@@ -1,14 +1,16 @@
 version := $$CIRCLE_TAG
-GITHUB_TOKEN := $$GH_LOGIN
 
 release: gh-release clean dist
+	govendor sync
 	github-release release \
+	--security-token $$GH_LOGIN \
 	--user segmentio \
 	--repo chamber \
 	--tag $(version) \
 	--name $(version)
 
 	github-release upload \
+	--security-token $$GH_LOGIN \
 	--user segmentio \
 	--repo chamber \
 	--tag $(version) \
@@ -16,6 +18,7 @@ release: gh-release clean dist
 	--file dist/chamber-$(version)-darwin-amd64
 
 	github-release upload \
+	--security-token $$GH_LOGIN \
 	--user segmentio \
 	--repo chamber \
 	--tag $(version) \
@@ -32,3 +35,6 @@ dist:
 
 gh-release:
 	go get -u github.com/aktau/github-release
+
+govendor:
+	go get -u github.com/kardianos/govendor

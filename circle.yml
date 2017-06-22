@@ -1,14 +1,10 @@
 machine:
-  pre:
-    - curl -sSL https://s3.amazonaws.com/circle-downloads/install-circleci-docker.sh | bash -s -- 1.10.0
   services:
     - docker
 
 dependencies:
-  pre:
-    - docker login -e ${DOCKER_EMAIL} -u ${DOCKER_USER} -p ${DOCKER_PASS}
   override:
-    - docker pull segment/golang-private:latest
+    - docker pull segment/golang:latest
 
 test:
   override:
@@ -24,7 +20,7 @@ test:
       --volume ${GOPATH%%:*}/src:/go/src
       --volume ${PWD}:/go/src/github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}
       --workdir /go/src/github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}
-      segment/golang-private:latest
+      segment/golang:latest
 
 deployment:
   release:
@@ -43,4 +39,4 @@ deployment:
         --volume ${PWD}:/go/src/github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}
         --workdir /go/src/github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}
         --entrypoint make
-        segment/golang-private:latest release
+        segment/golang:latest release

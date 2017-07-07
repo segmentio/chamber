@@ -42,11 +42,6 @@ func execRun(cmd *cobra.Command, args []string) error {
 		return errors.New("must specify command to run")
 	}
 
-	service := strings.ToLower(args[0])
-	if err := validateService(service); err != nil {
-		return err
-	}
-
 	command := commandPart[0]
 
 	var commandArgs []string
@@ -54,15 +49,19 @@ func execRun(cmd *cobra.Command, args []string) error {
 		commandArgs = commandPart[1:]
 	}
 
-	secretStore := store.NewSSMStore()
-	secrets, err := secretStore.List(service, true)
-	if err != nil {
-		return err
-	}
-
 	env := environ(os.Environ())
-	for _, secret := range secrets {
-		env.Set(strings.ToUpper(key(secret.Meta.Key)), *secret.Value)
+	secretStore := store.NewSSMStore()
+	for _, service := range args {
+		if err := validateService(service); err != nil {
+			return err
+		}
+		secrets, err := secretStore.List(service, true)
+		if err != nil {
+			return err
+		}
+		for _, secret := range secrets {
+			env.Set(strings.ToUpper(key(secret.Meta.Key)), *secret.Value)
+		}
 	}
 
 	ecmd := exec.Command(command, commandArgs...)

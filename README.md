@@ -51,7 +51,7 @@ The history command gives a historical view of a given secret. This view is usef
 
 ### Exec
 ```bash
-$ chamber exec <service> -- <your executable>
+$ chamber exec <service...> -- <your executable>
 ```
 
 The purpose of this command is to be used inside your service's docker container. Exec sets up environment variables populated with all the latest versions of secrets for the given service and environment.

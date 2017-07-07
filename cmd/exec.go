@@ -18,7 +18,7 @@ var (
 
 // execCmd represents the exec command
 var execCmd = &cobra.Command{
-	Use:   "exec <service> -- <command>",
+	Use:   "exec <service...> -- <command>",
 	Short: "Executes a command with secrets loaded into the environment",
 	RunE:  execRun,
 }

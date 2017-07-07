@@ -55,7 +55,8 @@ func execRun(cmd *cobra.Command, args []string) error {
 		if err := validateService(service); err != nil {
 			return err
 		}
-		secrets, err := secretStore.List(service, true)
+
+		secrets, err := secretStore.List(strings.ToLower(service), true)
 		if err != nil {
 			return err
 		}

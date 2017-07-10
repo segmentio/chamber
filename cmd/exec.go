@@ -12,6 +12,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	NoopEnv = "CHAMBER_NOOP"
+)
+
 var (
 	ErrCommandMissing = errors.New("must specify command to run")
 )
@@ -25,8 +29,8 @@ var execCmd = &cobra.Command{
 
 func init() {
 	RootCmd.AddCommand(execCmd)
-
 }
+
 func execRun(cmd *cobra.Command, args []string) error {
 	dashIx := cmd.ArgsLenAtDash()
 	if dashIx == -1 {
@@ -54,10 +58,17 @@ func execRun(cmd *cobra.Command, args []string) error {
 		commandArgs = commandPart[1:]
 	}
 
-	secretStore := store.NewSSMStore()
-	secrets, err := secretStore.List(service, true)
-	if err != nil {
-		return err
+	// If NoopEnv is set then we do not want to actually fetch and list our
+	// secrets from AWS. This is so development services have an easy escape
+	// hatch to turn off chamber from fetching secrets.
+	var secrets []store.Secret
+	if _, ok := os.LookupEnv(NoopEnv); !ok {
+		secretStore := store.NewSSMStore()
+		secretList, err := secretStore.List(service, true)
+		if err != nil {
+			return err
+		}
+		secrets = secretList
 	}
 
 	env := environ(os.Environ())

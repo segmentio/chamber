@@ -27,11 +27,15 @@ release: gh-release clean dist
 
 clean:
 	rm -rf ./dist
+	rm -f chamber_*.deb
 
 dist:
 	mkdir dist
 	GOOS=darwin GOARCH=amd64 go build -o dist/chamber-$(version)-darwin-amd64
 	GOOS=linux GOARCH=amd64 go build -o dist/chamber-$(version)-linux-amd64
+
+deb: dist
+	fpm -s dir -t deb -n chamber -v $(version) ./dist/chamber--linux-amd64=/usr/bin/chamber
 
 gh-release:
 	go get -u github.com/aktau/github-release

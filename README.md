@@ -54,7 +54,9 @@ The history command gives a historical view of a given secret. This view is usef
 $ chamber exec <service...> -- <your executable>
 ```
 
-The purpose of this command is to be used inside your service's docker container. Exec sets up environment variables populated with all the latest versions of secrets for the given service and environment.
+`exec` populates the environment with the secrets from the specified services and executes the given command.  Secret keys are converted to upper case (for example a secret with key `secret_key` will become `SECRET_KEY`).
+
+Secrets from services are loaded in the order specified in the command.  For example, if you do `chamber exec app apptwo -- ...` and both apps have a secret named `api_key`, the `api_key` from `apptwo` will be the one set in your environment.
 
 ## Releasing
 

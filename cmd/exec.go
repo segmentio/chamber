@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -61,7 +62,12 @@ func execRun(cmd *cobra.Command, args []string) error {
 			return err
 		}
 		for _, secret := range secrets {
-			env.Set(strings.ToUpper(key(secret.Meta.Key)), *secret.Value)
+			envVarKey := strings.ToUpper(key(secret.Meta.Key))
+
+			if env.IsSet(envVarKey) {
+				fmt.Fprintf(os.Stderr, "warning: overwriting environment variable %s\n", envVarKey)
+			}
+			env.Set(envVarKey, *secret.Value)
 		}
 	}
 
@@ -107,6 +113,16 @@ func (e *environ) Unset(key string) {
 			break
 		}
 	}
+}
+
+// IsSet returns whether or not a key is currently set in the environ
+func (e *environ) IsSet(key string) bool {
+	for i := range *e {
+		if strings.HasPrefix((*e)[i], key+"=") {
+			return true
+		}
+	}
+	return false
 }
 
 // Set adds an environment variable, replacing any existing ones of the same key

@@ -1,8 +1,14 @@
 machine:
   services:
     - docker
+  environment:
+    ECR_ENABLED: True
 
 dependencies:
+  pre:
+    # get ECR credentials
+    - pip install awscli==1.11.76
+    - $(aws ecr get-login --region $AWS_REGION)
   override:
     - docker pull segment/golang:latest
 

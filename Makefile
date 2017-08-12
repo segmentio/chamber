@@ -30,8 +30,8 @@ clean:
 
 dist:
 	mkdir dist
-	GOOS=darwin GOARCH=amd64 go build -o dist/chamber-$(version)-darwin-amd64
-	GOOS=linux GOARCH=amd64 go build -o dist/chamber-$(version)-linux-amd64
+	GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -o dist/chamber-$(version)-darwin-amd64
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o dist/chamber-$(version)-linux-amd64
 
 gh-release:
 	go get -u github.com/aktau/github-release

@@ -26,8 +26,8 @@ var execCmd = &cobra.Command{
 
 func init() {
 	RootCmd.AddCommand(execCmd)
-
 }
+
 func execRun(cmd *cobra.Command, args []string) error {
 	dashIx := cmd.ArgsLenAtDash()
 	if dashIx == -1 {

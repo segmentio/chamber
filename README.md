@@ -58,6 +58,15 @@ $ chamber exec <service...> -- <your executable>
 
 Secrets from services are loaded in the order specified in the command.  For example, if you do `chamber exec app apptwo -- ...` and both apps have a secret named `api_key`, the `api_key` from `apptwo` will be the one set in your environment.
 
+### Reading
+```bash
+$ chamber read service key
+Key             Value                           Version         LastModified    User
+key             secret                          1               06-09 17:30:56  daniel-fuentes
+```
+
+`read` provides the ability to print out the value of a single secret, as well as the secret's additional metadata. It does not provide the ability to print out multiple secrets in order to discourage accessing extra secret material that is unneeded. Parameter store automatically versions secrets and passing the `--version/-v` flag to read can print older versions of the secret. Default version (-1) is the latest secret.
+
 ## Releasing
 
 To cut a new release, just push a tag named `v<semver>` where `<semver>` is a valid semver version.  This tag will be used by Circle to automatically publish a github release.

@@ -13,14 +13,14 @@ import (
 var (
 	version int
 	quiet   bool
-)
 
-// readCmd represents the read command
-var readCmd = &cobra.Command{
-	Use:   "read <service> <key>",
-	Short: "Read a specific secret from the parameter store",
-	RunE:  read,
-}
+	// readCmd represents the read command
+	readCmd = &cobra.Command{
+		Use:   "read <service> <key>",
+		Short: "Read a specific secret from the parameter store",
+		RunE:  read,
+	}
+)
 
 func init() {
 	readCmd.Flags().IntVarP(&version, "version", "v", -1, "The version number of the secret. Defaults to latest.")

@@ -23,7 +23,7 @@ var readCmd = &cobra.Command{
 }
 
 func init() {
-	readCmd.Flags().IntVarP(&version, "version", "v", -1, "The version number of the secret")
+	readCmd.Flags().IntVarP(&version, "version", "v", -1, "The version number of the secret. Defaults to latest.")
 	readCmd.Flags().BoolVarP(&quiet, "quiet", "q", false, "Only print the secret")
 	RootCmd.AddCommand(readCmd)
 }
@@ -58,7 +58,7 @@ func read(cmd *cobra.Command, args []string) error {
 	}
 
 	if quiet {
-		fmt.Fprintf(os.Stdout, "%s", *secret.Value)
+		fmt.Fprintf(os.Stdout, "%s\n", *secret.Value)
 		return nil
 	}
 

@@ -65,7 +65,7 @@ Key             Value                           Version         LastModified    
 key             secret                          1               06-09 17:30:56  daniel-fuentes
 ```
 
-`read` provides the ability to print out the value of a single secret, as well as the secret's additional metadata. It does not provide the ability to print out multiple secrets in order to discourage accessing extra secret material that is unneeded.
+`read` provides the ability to print out the value of a single secret, as well as the secret's additional metadata. It does not provide the ability to print out multiple secrets in order to discourage accessing extra secret material that is unneeded. Parameter store automatically versions secrets and passing the `--version/-v` flag to read can print older versions of the secret. Default version (-1) is the latest secret.
 
 ## Releasing
 

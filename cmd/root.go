@@ -40,9 +40,6 @@ func Execute() {
 	}
 }
 
-func init() {
-}
-
 func validateService(service string) error {
 	if !validServiceFormat.MatchString(service) {
 		return fmt.Errorf("Failed to validate service name '%s'.  Only alphanumeric, dashes, and underscores are allowed for service names", service)

@@ -10,6 +10,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	version int
+	quiet   bool
+)
+
 // readCmd represents the read command
 var readCmd = &cobra.Command{
 	Use:   "read <service> <key>",
@@ -18,6 +23,8 @@ var readCmd = &cobra.Command{
 }
 
 func init() {
+	readCmd.Flags().IntVarP(&version, "version", "v", -1, "The version number of the secret")
+	readCmd.Flags().BoolVarP(&quiet, "quiet", "q", false, "Only print the secret")
 	RootCmd.AddCommand(readCmd)
 }
 
@@ -45,9 +52,14 @@ func read(cmd *cobra.Command, args []string) error {
 		Key:     key,
 	}
 
-	secret, err := secretStore.Read(secretId, -1)
+	secret, err := secretStore.Read(secretId, version)
 	if err != nil {
 		return err
+	}
+
+	if quiet {
+		fmt.Fprintf(os.Stdout, "%s", *secret.Value)
+		return nil
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 8, 2, '\t', 0)

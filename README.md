@@ -16,6 +16,27 @@ For this reason, it is recommended that you create an alias in your shell of cho
 alias chamberprod='aws-vault exec production -- chamber'
 ```
 
+## Setting up KMS
+
+Chamber expects to find a KMS key with alias `parameter_store_key` in the account that you are writing/reading secrets.  You can follow the [AWS KMS documentation](http://docs.aws.amazon.com/kms/latest/developerguide/create-keys.html) to create your key, and [follow this guide to set up your alias](http://docs.aws.amazon.com/kms/latest/developerguide/programming-aliases.html).
+
+If you are a [Terraform](https://www.terraform.io/) user, you can create your key with the following:
+
+```HCL
+resource "aws_kms_key" "parameter_store" {
+  description             = "Parameter store kms master key"
+  deletion_window_in_days = 10
+  enable_key_rotation     = true
+}
+
+resource "aws_kms_alias" "parameter_store_alias" {
+  name          = "alias/parameter_store_key"
+  target_key_id = "${aws_kms_key.parameter_store.id}"
+}
+```
+
+If you'd like to use an alternate KMS key to encrypt your secrets, you can set the environment variable `CHAMBER_KMS_KEY_ALIAS`.
+
 ## Usage
 
 ### Writing Secrets

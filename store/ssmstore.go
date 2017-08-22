@@ -5,6 +5,7 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
@@ -13,9 +14,9 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
 )
 
-var (
-	// KeyID is the alias for the KMS key used to encrypt/decrypt secrets
-	KeyID = "alias/parameter_store_key"
+const (
+	// DefaultKeyID is the default alias for the KMS key used to encrypt/decrypt secrets
+	DefaultKeyID = "alias/parameter_store_key"
 )
 
 // validKeyFormat is the format that is expected for key names inside parameter store
@@ -46,6 +47,18 @@ func NewSSMStore() *SSMStore {
 	}
 }
 
+func (s *SSMStore) KMSKey() string {
+	fromEnv, ok := os.LookupEnv("CHAMBER_KMS_KEY_ALIAS")
+	if !ok {
+		return DefaultKeyID
+	}
+	if !strings.HasPrefix(fromEnv, "alias/") {
+		return fmt.Sprintf("alias/%s", fromEnv)
+	}
+
+	return fromEnv
+}
+
 // Write writes a given value to a secret identified by id.  If the secret
 // already exists, then write a new version.
 func (s *SSMStore) Write(id SecretId, value string) error {
@@ -60,7 +73,7 @@ func (s *SSMStore) Write(id SecretId, value string) error {
 	}
 
 	putParameterInput := &ssm.PutParameterInput{
-		KeyId:       aws.String(KeyID),
+		KeyId:       aws.String(s.KMSKey()),
 		Name:        aws.String(idToName(id)),
 		Type:        aws.String("SecureString"),
 		Value:       aws.String(value),

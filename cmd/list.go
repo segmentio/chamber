@@ -54,7 +54,7 @@ func list(cmd *cobra.Command, args []string) error {
 }
 
 func key(s string) string {
-	tokens := strings.Split(s, ".")
-	secretKey := tokens[1]
+	tokens := strings.Split(s, "/")
+	secretKey := tokens[2]
 	return secretKey
 }

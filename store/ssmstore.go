@@ -20,7 +20,7 @@ const (
 )
 
 // validKeyFormat is the format that is expected for key names inside parameter store
-var validKeyFormat = regexp.MustCompile(`^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$`)
+var validKeyFormat = regexp.MustCompile(`^\/[A-Za-z0-9-_]+\/[A-Za-z0-9-_]+$`)
 
 // SSMStore implements the Store interface for storing secrets in SSM Parameter
 // Store
@@ -197,7 +197,7 @@ func (s *SSMStore) List(service string, includeValues bool) ([]Secret, error) {
 			Filters: []*ssm.ParametersFilter{
 				{
 					Key:    aws.String("Name"),
-					Values: []*string{aws.String(service + ".")},
+					Values: []*string{aws.String("/" + service + "/")},
 				},
 			},
 			NextToken: nextToken,
@@ -298,7 +298,7 @@ func (s *SSMStore) History(id SecretId) ([]ChangeEvent, error) {
 }
 
 func idToName(id SecretId) string {
-	return fmt.Sprintf("%s.%s", id.Service, id.Key)
+	return fmt.Sprintf("/%s/%s", id.Service, id.Key)
 }
 
 func parameterMetaToSecretMeta(p *ssm.ParameterMetadata) SecretMetadata {

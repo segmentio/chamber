@@ -19,13 +19,20 @@ const (
 	DefaultKeyID = "alias/parameter_store_key"
 )
 
-// validKeyFormat is the format that is expected for key names inside parameter store
+// validPathKeyFormat is the format that is expected for key names inside parameter store
+// when using paths
+var validPathKeyFormat = regexp.MustCompile(`^\/[A-Za-z0-9-_]+\/[A-Za-z0-9-_]+$`)
+
+
+// validKeyFormat is the format that is expected for key names inside parameter store when
+// not using paths
 var validKeyFormat = regexp.MustCompile(`^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$`)
 
 // SSMStore implements the Store interface for storing secrets in SSM Parameter
 // Store
 type SSMStore struct {
 	svc ssmiface.SSMAPI
+	usePaths bool
 }
 
 // NewSSMStore creates a new SSMStore
@@ -42,8 +49,16 @@ func NewSSMStore(numRetries int) *SSMStore {
 		Region: aws.String(region),
 	}))
 	svc := ssm.New(ssmSession, &aws.Config{MaxRetries: aws.Int(numRetries)})
+
+	usePaths := false
+	_, ok = os.LookupEnv("CHAMBER_USE_PATHS")
+	if ok {
+		usePaths = true
+	}
+
 	return &SSMStore{
 		svc: svc,
+		usePaths: usePaths,
 	}
 }
 
@@ -74,7 +89,7 @@ func (s *SSMStore) Write(id SecretId, value string) error {
 
 	putParameterInput := &ssm.PutParameterInput{
 		KeyId:       aws.String(s.KMSKey()),
-		Name:        aws.String(idToName(id)),
+		Name:        aws.String(s.idToName(id)),
 		Type:        aws.String("SecureString"),
 		Value:       aws.String(value),
 		Overwrite:   aws.Bool(true),
@@ -101,8 +116,9 @@ func (s *SSMStore) Read(id SecretId, version int) (Secret, error) {
 }
 
 func (s *SSMStore) readVersion(id SecretId, version int) (Secret, error) {
+
 	getParameterHistoryInput := &ssm.GetParameterHistoryInput{
-		Name:           aws.String(idToName(id)),
+		Name:           aws.String(s.idToName(id)),
 		WithDecryption: aws.Bool(true),
 	}
 
@@ -141,7 +157,7 @@ func (s *SSMStore) readVersion(id SecretId, version int) (Secret, error) {
 
 func (s *SSMStore) readLatest(id SecretId) (Secret, error) {
 	getParametersInput := &ssm.GetParametersInput{
-		Names:          []*string{aws.String(idToName(id))},
+		Names:          []*string{aws.String(s.idToName(id))},
 		WithDecryption: aws.Bool(true),
 	}
 
@@ -153,23 +169,39 @@ func (s *SSMStore) readLatest(id SecretId) (Secret, error) {
 	if len(resp.Parameters) == 0 {
 		return Secret{}, ErrSecretNotFound
 	}
-
 	param := resp.Parameters[0]
-	// To get metadata, we need to use describe parameters
-	describeParametersInput := &ssm.DescribeParametersInput{
-		Filters: []*ssm.ParametersFilter{
-			{
-				Key:    aws.String("Name"),
-				Values: []*string{aws.String(idToName(id))},
-			},
-		},
-		MaxResults: aws.Int64(1),
-	}
-
 	var parameter *ssm.ParameterMetadata
+	var describeParametersInput *ssm.DescribeParametersInput
+
+	// To get metadata, we need to use describe parameters
+
+	if s.usePaths {
+		// There is no way to use describe parameters to get a single key
+		// if that key uses paths, so instead get all the keys for a path,
+		// then find the one you are looking for :(
+		describeParametersInput = &ssm.DescribeParametersInput{
+			ParameterFilters: []*ssm.ParameterStringFilter{
+				{
+					Key:    aws.String("Path"),
+					Option: aws.String("OneLevel"),
+					Values: []*string{aws.String(basePath(s.idToName(id)))},
+				},
+			},
+		}
+	} else {
+		describeParametersInput = &ssm.DescribeParametersInput{
+			Filters: []*ssm.ParametersFilter{
+				{
+					Key:    aws.String("Name"),
+					Values: []*string{aws.String(s.idToName(id))},
+				},
+			},
+			MaxResults: aws.Int64(1),
+		}
+	}
 	if err := s.svc.DescribeParametersPages(describeParametersInput, func(o *ssm.DescribeParametersOutput, lastPage bool) bool {
 		for _, param := range o.Parameters {
-			if *param.Name == idToName(id) {
+			if *param.Name == s.idToName(id) {
 				parameter = param
 			}
 		}
@@ -198,14 +230,29 @@ func (s *SSMStore) List(service string, includeValues bool) ([]Secret, error) {
 
 	var nextToken *string
 	for {
-		describeParametersInput := &ssm.DescribeParametersInput{
-			Filters: []*ssm.ParametersFilter{
-				{
-					Key:    aws.String("Name"),
-					Values: []*string{aws.String(service + ".")},
+		var describeParametersInput *ssm.DescribeParametersInput
+
+		if s.usePaths {
+			describeParametersInput = &ssm.DescribeParametersInput{
+				ParameterFilters: []*ssm.ParameterStringFilter{
+					{
+						Key:    aws.String("Path"),
+						Option: aws.String("OneLevel"),
+						Values: []*string{aws.String("/" + service)},
+					},
 				},
-			},
-			NextToken: nextToken,
+				NextToken: nextToken,
+			}
+		} else {
+			describeParametersInput = &ssm.DescribeParametersInput{
+				Filters: []*ssm.ParametersFilter{
+					{
+						Key:    aws.String("Name"),
+						Values: []*string{aws.String(service + ".")},
+					},
+				},
+				NextToken: nextToken,
+			}
 		}
 
 		resp, err := s.svc.DescribeParameters(describeParametersInput)
@@ -214,7 +261,7 @@ func (s *SSMStore) List(service string, includeValues bool) ([]Secret, error) {
 		}
 
 		for _, meta := range resp.Parameters {
-			if !validKeyFormat.MatchString(*meta.Name) {
+			if !s.validateName(*meta.Name) {
 				continue
 			}
 			secretMeta := parameterMetaToSecretMeta(meta)
@@ -266,7 +313,7 @@ func (s *SSMStore) History(id SecretId) ([]ChangeEvent, error) {
 	events := []ChangeEvent{}
 
 	getParameterHistoryInput := &ssm.GetParameterHistoryInput{
-		Name:           aws.String(idToName(id)),
+		Name:           aws.String(s.idToName(id)),
 		WithDecryption: aws.Bool(false),
 	}
 
@@ -302,8 +349,27 @@ func (s *SSMStore) History(id SecretId) ([]ChangeEvent, error) {
 	return events, nil
 }
 
-func idToName(id SecretId) string {
+func (s *SSMStore) idToName(id SecretId) string {
+	if s.usePaths {
+		return fmt.Sprintf("/%s/%s", id.Service, id.Key)
+	}
+
 	return fmt.Sprintf("%s.%s", id.Service, id.Key)
+}
+
+func (s *SSMStore) validateName(name string) bool {
+	if s.usePaths {
+		return validPathKeyFormat.MatchString(name)
+	}
+	return validKeyFormat.MatchString(name)
+}
+
+func basePath(key string) string {
+	pathParts := strings.Split(key, "/")
+	if len(pathParts) == 1 {
+		return pathParts[0]
+	}
+	return "/" + pathParts[1]
 }
 
 func parameterMetaToSecretMeta(p *ssm.ParameterMetadata) SecretMetadata {

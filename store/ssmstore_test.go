@@ -281,9 +281,9 @@ func TestList(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, 3, len(s))
 		sort.Sort(ByKey(s))
-		assert.Equal(t, "test.a", s[0].Meta.Key)
-		assert.Equal(t, "test.b", s[1].Meta.Key)
-		assert.Equal(t, "test.c", s[2].Meta.Key)
+		assert.Equal(t, "/test/a", s[0].Meta.Key)
+		assert.Equal(t, "/test/b", s[1].Meta.Key)
+		assert.Equal(t, "/test/c", s[2].Meta.Key)
 	})
 
 	t.Run("List should not return values if includeValues is false", func(t *testing.T) {
@@ -309,7 +309,7 @@ func TestList(t *testing.T) {
 		s, err := store.List("match", false)
 		assert.Nil(t, err)
 		assert.Equal(t, 1, len(s))
-		assert.Equal(t, "match.a", s[0].Meta.Key)
+		assert.Equal(t, "/match/a", s[0].Meta.Key)
 	})
 }
 

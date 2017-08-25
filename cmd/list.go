@@ -55,7 +55,14 @@ func list(cmd *cobra.Command, args []string) error {
 }
 
 func key(s string) string {
+	_, usePaths := os.LookupEnv("CHAMBER_USE_PATHS")
+	if usePaths {
+		tokens := strings.Split(s, "/")
+		secretKey := tokens[2]
+		return secretKey
+	}
+
 	tokens := strings.Split(s, ".")
-	secretKey := tokens[1]
+ 	secretKey := tokens[1]
 	return secretKey
 }

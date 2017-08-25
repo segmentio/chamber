@@ -194,10 +194,11 @@ func (s *SSMStore) List(service string, includeValues bool) ([]Secret, error) {
 	var nextToken *string
 	for {
 		describeParametersInput := &ssm.DescribeParametersInput{
-			Filters: []*ssm.ParametersFilter{
+			ParameterFilters: []*ssm.ParameterStringFilter{
 				{
-					Key:    aws.String("Name"),
-					Values: []*string{aws.String("/" + service + "/")},
+					Key:    aws.String("Path"),
+					Option: aws.String("OneLevel"),
+					Values: []*string{aws.String("/" + service)},
 				},
 			},
 			NextToken: nextToken,

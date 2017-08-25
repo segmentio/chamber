@@ -133,7 +133,12 @@ func (m *mockSSMClient) DescribeParameters(i *ssm.DescribeParametersInput) (*ssm
 		if err != nil {
 			return &ssm.DescribeParametersOutput{}, err
 		}
-		if match {
+		matchStringFilters, err := matchStringFilters(i.ParameterFilters, param)
+		if err != nil {
+			return &ssm.DescribeParametersOutput{}, err
+		}
+
+		if match && matchStringFilters {
 			parameters = append(parameters, param.meta)
 		}
 	}
@@ -171,6 +176,20 @@ func prefixInSlice(val *string, prefixes []*string) bool {
 	return false
 }
 
+func pathInSlice(val *string, paths []*string) bool {
+	tokens := strings.Split(*val, "/")
+	if len(tokens) < 2 {
+		return false
+	}
+	matchPath := "/" + tokens[1]
+	for _, path := range paths {
+		if matchPath == *path {
+			return true
+		}
+	}
+	return false
+}
+
 func matchFilters(filters []*ssm.ParametersFilter, param mockParameter) (bool, error) {
 	for _, filter := range filters {
 		var compareTo *string
@@ -191,6 +210,24 @@ func matchFilters(filters []*ssm.ParametersFilter, param mockParameter) (bool, e
 	return true, nil
 }
 
+func matchStringFilters(filters []*ssm.ParameterStringFilter, param mockParameter) (bool, error) {
+	for _, filter := range filters {
+		var compareTo *string
+		switch *filter.Key {
+		case "Path":
+			tokens := strings.Split(*param.meta.Name, "/")
+			if len(tokens) < 2 {
+				return false, errors.New("path filter used on non path value")
+			}
+			compareTo = aws.String("/" + tokens[1] + "/")
+		}
+		if !pathInSlice(compareTo, filter.Values) {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
 func NewTestSSMStore(mock ssmiface.SSMAPI) *SSMStore {
 	return &SSMStore{
 		svc: mock,
@@ -205,9 +242,9 @@ func TestWrite(t *testing.T) {
 		secretId := SecretId{Service: "test", Key: "mykey"}
 		err := store.Write(secretId, "value")
 		assert.Nil(t, err)
-		assert.Contains(t, mock.parameters, idToName(secretId))
-		assert.Equal(t, "value", *mock.parameters[idToName(secretId)].currentParam.Value)
-		assert.Equal(t, "1", *mock.parameters[idToName(secretId)].meta.Description)
+		assert.Contains(t, mock.parameters, store.idToName(secretId))
+		assert.Equal(t, "value", *mock.parameters[store.idToName(secretId)].currentParam.Value)
+		assert.Equal(t, "1", *mock.parameters[store.idToName(secretId)].meta.Description)
 	})
 
 	t.Run("Setting a key twice should create a new version", func(t *testing.T) {
@@ -217,10 +254,10 @@ func TestWrite(t *testing.T) {
 		err = store.Write(secretId, "newvalue")
 		assert.Nil(t, err)
 
-		assert.Contains(t, mock.parameters, idToName(secretId))
-		assert.Equal(t, "newvalue", *mock.parameters[idToName(secretId)].currentParam.Value)
-		assert.Equal(t, "2", *mock.parameters[idToName(secretId)].meta.Description)
-		assert.Equal(t, 1, len(mock.parameters[idToName(secretId)].history))
+		assert.Contains(t, mock.parameters, store.idToName(secretId))
+		assert.Equal(t, "newvalue", *mock.parameters[store.idToName(secretId)].currentParam.Value)
+		assert.Equal(t, "2", *mock.parameters[store.idToName(secretId)].meta.Description)
+		assert.Equal(t, 1, len(mock.parameters[store.idToName(secretId)].history))
 	})
 }
 
@@ -281,6 +318,166 @@ func TestList(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, 3, len(s))
 		sort.Sort(ByKey(s))
+		assert.Equal(t, "test.a", s[0].Meta.Key)
+		assert.Equal(t, "test.b", s[1].Meta.Key)
+		assert.Equal(t, "test.c", s[2].Meta.Key)
+	})
+
+	t.Run("List should not return values if includeValues is false", func(t *testing.T) {
+		s, err := store.List("test", false)
+		assert.Nil(t, err)
+		for _, secret := range s {
+			assert.Nil(t, secret.Value)
+		}
+	})
+
+	t.Run("List should return values if includeValues is true", func(t *testing.T) {
+		s, err := store.List("test", true)
+		assert.Nil(t, err)
+		for _, secret := range s {
+			assert.Equal(t, "value", *secret.Value)
+		}
+	})
+
+	t.Run("List should only return exact matches on service name", func(t *testing.T) {
+		store.Write(SecretId{Service: "match", Key: "a"}, "val")
+		store.Write(SecretId{Service: "matchlonger", Key: "a"}, "val")
+
+		s, err := store.List("match", false)
+		assert.Nil(t, err)
+		assert.Equal(t, 1, len(s))
+		assert.Equal(t, "match.a", s[0].Meta.Key)
+	})
+}
+
+func TestHistory(t *testing.T) {
+	mock := &mockSSMClient{parameters: map[string]mockParameter{}}
+	store := NewTestSSMStore(mock)
+
+	secrets := []SecretId{
+		{Service: "test", Key: "new"},
+		{Service: "test", Key: "update"},
+		{Service: "test", Key: "update"},
+		{Service: "test", Key: "update"},
+	}
+
+	for _, s := range secrets {
+		store.Write(s, "value")
+	}
+
+	t.Run("History for a non-existent key should return not found error", func(t *testing.T) {
+		_, err := store.History(SecretId{Service: "test", Key: "nope"})
+		assert.Equal(t, ErrSecretNotFound, err)
+	})
+
+	t.Run("History should return a single created event for new keys", func(t *testing.T) {
+		events, err := store.History(SecretId{Service: "test", Key: "new"})
+		assert.Nil(t, err)
+		assert.Equal(t, 1, len(events))
+		assert.Equal(t, Created, events[0].Type)
+	})
+
+	t.Run("Histor should return create followed by updates for keys that have been updated", func(t *testing.T) {
+		events, err := store.History(SecretId{Service: "test", Key: "update"})
+		assert.Nil(t, err)
+		assert.Equal(t, 3, len(events))
+		assert.Equal(t, Created, events[0].Type)
+		assert.Equal(t, Updated, events[1].Type)
+		assert.Equal(t, Updated, events[2].Type)
+	})
+}
+
+func NewTestSSMStoreWithPaths(mock ssmiface.SSMAPI) *SSMStore {
+	return &SSMStore{
+		svc: mock,
+		usePaths: true,
+	}
+}
+
+func TestWritePaths(t *testing.T) {
+	mock := &mockSSMClient{parameters: map[string]mockParameter{}}
+	store := NewTestSSMStoreWithPaths(mock)
+
+	t.Run("Setting a new key should work", func(t *testing.T) {
+		secretId := SecretId{Service: "test", Key: "mykey"}
+		err := store.Write(secretId, "value")
+		assert.Nil(t, err)
+		assert.Contains(t, mock.parameters, store.idToName(secretId))
+		assert.Equal(t, "value", *mock.parameters[store.idToName(secretId)].currentParam.Value)
+		assert.Equal(t, "1", *mock.parameters[store.idToName(secretId)].meta.Description)
+	})
+
+	t.Run("Setting a key twice should create a new version", func(t *testing.T) {
+		secretId := SecretId{Service: "test", Key: "multipleversions"}
+		err := store.Write(secretId, "value")
+		assert.Nil(t, err)
+		err = store.Write(secretId, "newvalue")
+		assert.Nil(t, err)
+
+		assert.Contains(t, mock.parameters, store.idToName(secretId))
+		assert.Equal(t, "newvalue", *mock.parameters[store.idToName(secretId)].currentParam.Value)
+		assert.Equal(t, "2", *mock.parameters[store.idToName(secretId)].meta.Description)
+		assert.Equal(t, 1, len(mock.parameters[store.idToName(secretId)].history))
+	})
+}
+
+func TestReadPaths(t *testing.T) {
+	mock := &mockSSMClient{parameters: map[string]mockParameter{}}
+	store := NewTestSSMStoreWithPaths(mock)
+	secretId := SecretId{Service: "test", Key: "key"}
+	store.Write(secretId, "value")
+	store.Write(secretId, "second value")
+	store.Write(secretId, "third value")
+
+	t.Run("Reading the latest value should work", func(t *testing.T) {
+		s, err := store.Read(secretId, -1)
+		assert.Nil(t, err)
+		assert.Equal(t, "third value", *s.Value)
+	})
+
+	t.Run("Reading specific versiosn should work", func(t *testing.T) {
+		first, err := store.Read(secretId, 1)
+		assert.Nil(t, err)
+		assert.Equal(t, "value", *first.Value)
+
+		second, err := store.Read(secretId, 2)
+		assert.Nil(t, err)
+		assert.Equal(t, "second value", *second.Value)
+
+		third, err := store.Read(secretId, 3)
+		assert.Nil(t, err)
+		assert.Equal(t, "third value", *third.Value)
+	})
+
+	t.Run("Reading a non-existent key should give not found err", func(t *testing.T) {
+		_, err := store.Read(SecretId{Service: "test", Key: "nope"}, -1)
+		assert.Equal(t, ErrSecretNotFound, err)
+	})
+
+	t.Run("Reading a non-existent version should give not found error", func(t *testing.T) {
+		_, err := store.Read(secretId, 30)
+		assert.Equal(t, ErrSecretNotFound, err)
+	})
+}
+
+func TestListPaths(t *testing.T) {
+	mock := &mockSSMClient{parameters: map[string]mockParameter{}}
+	store := NewTestSSMStoreWithPaths(mock)
+
+	secrets := []SecretId{
+		{Service: "test", Key: "a"},
+		{Service: "test", Key: "b"},
+		{Service: "test", Key: "c"},
+	}
+	for _, secret := range secrets {
+		store.Write(secret, "value")
+	}
+
+	t.Run("List should return all keys for a service", func(t *testing.T) {
+		s, err := store.List("test", false)
+		assert.Nil(t, err)
+		assert.Equal(t, 3, len(s))
+		sort.Sort(ByKey(s))
 		assert.Equal(t, "/test/a", s[0].Meta.Key)
 		assert.Equal(t, "/test/b", s[1].Meta.Key)
 		assert.Equal(t, "/test/c", s[2].Meta.Key)
@@ -313,9 +510,9 @@ func TestList(t *testing.T) {
 	})
 }
 
-func TestHistory(t *testing.T) {
+func TestHistoryPaths(t *testing.T) {
 	mock := &mockSSMClient{parameters: map[string]mockParameter{}}
-	store := NewTestSSMStore(mock)
+	store := NewTestSSMStoreWithPaths(mock)
 
 	secrets := []SecretId{
 		{Service: "test", Key: "new"},

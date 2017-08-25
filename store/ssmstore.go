@@ -153,30 +153,38 @@ func (s *SSMStore) readLatest(id SecretId) (Secret, error) {
 	if len(resp.Parameters) == 0 {
 		return Secret{}, ErrSecretNotFound
 	}
-
 	param := resp.Parameters[0]
 
 	// To get metadata, we need to use describe parameters
+	// There is no way to use describe parameters to get a single key
+	// if that key uses paths, so instead get all the keys for a path,
+	// then find the one you are looking for :(
 	describeParametersInput := &ssm.DescribeParametersInput{
-		Filters: []*ssm.ParametersFilter{
+		ParameterFilters: []*ssm.ParameterStringFilter{
 			{
-				Key:    aws.String("Name"),
-				Values: []*string{aws.String(idToName(id))},
+				Key:    aws.String("Path"),
+				Option: aws.String("OneLevel"),
+				Values: []*string{aws.String(basePath(idToName(id)))},
 			},
 		},
-		MaxResults: aws.Int64(1),
 	}
 
-	describeResp, err := s.svc.DescribeParameters(describeParametersInput)
-	if err != nil {
+	var parameterMeta *ssm.ParameterMetadata
+	if err := s.svc.DescribeParametersPages(describeParametersInput, func(o *ssm.DescribeParametersOutput, lastPage bool) bool {
+		for _, param := range o.Parameters {
+			if *param.Name == idToName(id) {
+				parameterMeta = param
+			}
+		}
+		return !lastPage
+	}); err != nil {
 		return Secret{}, err
 	}
 
-	if len(describeResp.Parameters) == 0 {
+	if parameterMeta == nil {
 		return Secret{}, ErrSecretNotFound
 	}
 
-	parameterMeta := describeResp.Parameters[0]
 	secretMeta := parameterMetaToSecretMeta(parameterMeta)
 
 	return Secret{
@@ -300,6 +308,14 @@ func (s *SSMStore) History(id SecretId) ([]ChangeEvent, error) {
 
 func idToName(id SecretId) string {
 	return fmt.Sprintf("/%s/%s", id.Service, id.Key)
+}
+
+func basePath(key string) string {
+	pathParts := strings.Split(key, "/")
+	if len(pathParts) == 1 {
+		return pathParts[0]
+	}
+	return "/" + pathParts[1]
 }
 
 func parameterMetaToSecretMeta(p *ssm.ParameterMetadata) SecretMetadata {

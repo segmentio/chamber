@@ -133,7 +133,12 @@ func (m *mockSSMClient) DescribeParameters(i *ssm.DescribeParametersInput) (*ssm
 		if err != nil {
 			return &ssm.DescribeParametersOutput{}, err
 		}
-		if match {
+		matchStringFilters, err := matchStringFilters(i.ParameterFilters, param)
+		if err != nil {
+			return &ssm.DescribeParametersOutput{}, err
+		}
+
+		if match && matchStringFilters {
 			parameters = append(parameters, param.meta)
 		}
 	}
@@ -162,6 +167,20 @@ func prefixInSlice(val *string, prefixes []*string) bool {
 	return false
 }
 
+func pathInSlice(val *string, paths []*string) bool {
+	tokens := strings.Split(*val, "/")
+	if len(tokens) < 2 {
+		return false
+	}
+	matchPath := "/" + tokens[1]
+	for _, path := range paths {
+		if matchPath == *path {
+			return true
+		}
+	}
+	return false
+}
+
 func matchFilters(filters []*ssm.ParametersFilter, param mockParameter) (bool, error) {
 	for _, filter := range filters {
 		var compareTo *string
@@ -176,6 +195,24 @@ func matchFilters(filters []*ssm.ParametersFilter, param mockParameter) (bool, e
 			return false, errors.New("invalid filter key")
 		}
 		if !prefixInSlice(compareTo, filter.Values) {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
+func matchStringFilters(filters []*ssm.ParameterStringFilter, param mockParameter) (bool, error) {
+	for _, filter := range filters {
+		var compareTo *string
+		switch *filter.Key {
+		case "Path":
+			tokens := strings.Split(*param.meta.Name, "/")
+			if len(tokens) < 2 {
+				return false, errors.New("path filter used on non path value")
+			}
+			compareTo = aws.String("/" + tokens[1] + "/")
+		}
+		if !pathInSlice(compareTo, filter.Values) {
 			return false, nil
 		}
 	}

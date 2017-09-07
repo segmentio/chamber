@@ -155,7 +155,6 @@ func (s *SSMStore) readLatest(id SecretId) (Secret, error) {
 	}
 
 	param := resp.Parameters[0]
-
 	// To get metadata, we need to use describe parameters
 	describeParametersInput := &ssm.DescribeParametersInput{
 		Filters: []*ssm.ParametersFilter{
@@ -167,17 +166,23 @@ func (s *SSMStore) readLatest(id SecretId) (Secret, error) {
 		MaxResults: aws.Int64(1),
 	}
 
-	describeResp, err := s.svc.DescribeParameters(describeParametersInput)
-	if err != nil {
+	var parameter *ssm.ParameterMetadata
+	if err := s.svc.DescribeParametersPages(describeParametersInput, func(o *ssm.DescribeParametersOutput, lastPage bool) bool {
+		for _, param := range o.Parameters {
+			if *param.Name == idToName(id) {
+				parameter = param
+			}
+		}
+		return !lastPage
+	}); err != nil {
 		return Secret{}, err
 	}
 
-	if len(describeResp.Parameters) == 0 {
+	if parameter == nil {
 		return Secret{}, ErrSecretNotFound
 	}
 
-	parameterMeta := describeResp.Parameters[0]
-	secretMeta := parameterMetaToSecretMeta(parameterMeta)
+	secretMeta := parameterMetaToSecretMeta(parameter)
 
 	return Secret{
 		Value: param.Value,

@@ -144,6 +144,15 @@ func (m *mockSSMClient) DescribeParameters(i *ssm.DescribeParametersInput) (*ssm
 	}, nil
 }
 
+func (m *mockSSMClient) DescribeParametersPages(i *ssm.DescribeParametersInput, fn func(*ssm.DescribeParametersOutput, bool) bool) error {
+	o, err := m.DescribeParameters(i)
+	if err != nil {
+		return err
+	}
+	fn(o, true)
+	return nil
+}
+
 func paramNameInSlice(name *string, slice []*string) bool {
 	for _, val := range slice {
 		if *val == *name {

@@ -20,7 +20,7 @@ const (
 )
 
 // validKeyFormat is the format that is expected for key names inside parameter store
-var validKeyFormat = regexp.MustCompile(`^\/[A-Za-z0-9-_]+\/[A-Za-z0-9-_]+$`)
+var validKeyFormat = regexp.MustCompile(`^\/[A-Za-z0-9-_]+\/[A-Za-z0-9-_\.]+$`)
 
 // SSMStore implements the Store interface for storing secrets in SSM Parameter
 // Store

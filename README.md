@@ -88,6 +88,19 @@ key             secret                          1               06-09 17:30:56  
 
 `read` provides the ability to print out the value of a single secret, as well as the secret's additional metadata. It does not provide the ability to print out multiple secrets in order to discourage accessing extra secret material that is unneeded. Parameter store automatically versions secrets and passing the `--version/-v` flag to read can print older versions of the secret. Default version (-1) is the latest secret.
 
+### AWS Region
+
+Chamber uses [AWS SDK for Go](https://github.com/aws/aws-sdk-go). To use a region other than what is specified in `$HOME/.aws/config`, set the environment variable "AWS_REGION".
+
+```bash
+$ AWS_REGION=us-west-2 chamber list service
+Key         Version                  LastModified      User
+apikey      3                        07-10 09:30:41    daniel-fuentes
+other       1                        07-10 09:30:35    daniel-fuentes
+```
+
+Chamber does not currently read the value of "AWS_DEFAULT_REGION". See [https://github.com/aws/aws-sdk-go#configuring-aws-region](https://github.com/aws/aws-sdk-go#configuring-aws-region) for more details.
+
 ## Releasing
 
 To cut a new release, just push a tag named `v<semver>` where `<semver>` is a valid semver version.  This tag will be used by Circle to automatically publish a github release.

@@ -6,6 +6,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/pkg/errors"
 	"github.com/segmentio/chamber/store"
 	"github.com/spf13/cobra"
 )
@@ -31,13 +32,13 @@ func list(cmd *cobra.Command, args []string) error {
 
 	service := strings.ToLower(args[0])
 	if err := validateService(service); err != nil {
-		return err
+		return errors.Wrap(err, "Failed to validate service")
 	}
 
 	secretStore := store.NewSSMStore()
 	secrets, err := secretStore.List(service, false)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Failed to list store contents")
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 8, 2, '\t', 0)

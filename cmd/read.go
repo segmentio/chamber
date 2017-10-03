@@ -6,6 +6,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/pkg/errors"
 	"github.com/segmentio/chamber/store"
 	"github.com/spf13/cobra"
 )
@@ -38,12 +39,12 @@ func read(cmd *cobra.Command, args []string) error {
 
 	service := strings.ToLower(args[0])
 	if err := validateService(service); err != nil {
-		return err
+		return errors.Wrap(err, "Failed to validate service")
 	}
 
 	key := strings.ToLower(args[1])
 	if err := validateKey(key); err != nil {
-		return err
+		return errors.Wrap(err, "Failed to validate key")
 	}
 
 	secretStore := store.NewSSMStore()
@@ -54,7 +55,7 @@ func read(cmd *cobra.Command, args []string) error {
 
 	secret, err := secretStore.Read(secretId, version)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Failed to read")
 	}
 
 	if quiet {

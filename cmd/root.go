@@ -31,7 +31,7 @@ var RootCmd = &cobra.Command{
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	if err := RootCmd.Execute(); err != nil {
-		fmt.Fprintf(os.Stderr, "%s\n", err)
+		fmt.Fprintf(os.Stderr, "chamber error: %s\n", err)
 		switch err {
 		case ErrTooFewArguments, ErrTooManyArguments:
 			RootCmd.Usage()

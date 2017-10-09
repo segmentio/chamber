@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"io/ioutil"
+	"os"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -15,7 +17,7 @@ var (
 
 // writeCmd represents the write command
 var writeCmd = &cobra.Command{
-	Use:   "write <service> <key> <value>",
+	Use:   "write <service> <key> <value|->",
 	Short: "write a secret",
 	RunE:  write,
 }
@@ -43,6 +45,14 @@ func write(cmd *cobra.Command, args []string) error {
 	}
 
 	value := args[2]
+	if value == "-" {
+		// Read value from standard input
+		v, err := ioutil.ReadAll(os.Stdin)
+		if err != nil {
+			return err
+		}
+		value = string(v)
+	}
 
 	secretStore := store.NewSSMStore()
 	secretId := store.SecretId{

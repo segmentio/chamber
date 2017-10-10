@@ -35,7 +35,7 @@ func list(cmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, "Failed to validate service")
 	}
 
-	secretStore := store.NewSSMStore()
+	secretStore := store.NewSSMStore(numRetries)
 	secrets, err := secretStore.List(service, false)
 	if err != nil {
 		return errors.Wrap(err, "Failed to list store contents")

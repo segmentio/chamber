@@ -12,11 +12,16 @@ import (
 var (
 	validKeyFormat     = regexp.MustCompile(`^[A-Za-z0-9-_]+$`)
 	validServiceFormat = regexp.MustCompile(`^[A-Za-z0-9-_]+$`)
+
+	numRetries int
 )
 
 const (
 	// ShortTimeFormat is a short format for printing timestamps
 	ShortTimeFormat = "01-02 15:04:05"
+
+	// DefaultNumRetries is the default for the number of retries we'll use for our SSM client
+	DefaultNumRetries = 10
 )
 
 // RootCmd represents the base command when called without any subcommands
@@ -25,6 +30,10 @@ var RootCmd = &cobra.Command{
 	Short:         "CLI for storing secrets",
 	SilenceUsage:  true,
 	SilenceErrors: true,
+}
+
+func init() {
+	RootCmd.PersistentFlags().IntVarP(&numRetries, "retries", "r", DefaultNumRetries, "For SSM, the number of retries we'll make before giving up")
 }
 
 // Execute adds all child commands to the root command sets flags appropriately.

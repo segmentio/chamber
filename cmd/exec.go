@@ -51,7 +51,7 @@ func execRun(cmd *cobra.Command, args []string) error {
 	}
 
 	env := environ(os.Environ())
-	secretStore := store.NewSSMStore()
+	secretStore := store.NewSSMStore(numRetries)
 	for _, service := range args {
 		if err := validateService(service); err != nil {
 			return errors.Wrap(err, "Failed to validate service")

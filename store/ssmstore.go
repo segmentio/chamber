@@ -154,7 +154,6 @@ func (s *SSMStore) readLatest(id SecretId) (Secret, error) {
 		return Secret{}, ErrSecretNotFound
 	}
 	param := resp.Parameters[0]
-
 	// To get metadata, we need to use describe parameters
 	// There is no way to use describe parameters to get a single key
 	// if that key uses paths, so instead get all the keys for a path,
@@ -169,11 +168,11 @@ func (s *SSMStore) readLatest(id SecretId) (Secret, error) {
 		},
 	}
 
-	var parameterMeta *ssm.ParameterMetadata
+	var parameter *ssm.ParameterMetadata
 	if err := s.svc.DescribeParametersPages(describeParametersInput, func(o *ssm.DescribeParametersOutput, lastPage bool) bool {
 		for _, param := range o.Parameters {
 			if *param.Name == idToName(id) {
-				parameterMeta = param
+				parameter = param
 			}
 		}
 		return !lastPage
@@ -181,11 +180,11 @@ func (s *SSMStore) readLatest(id SecretId) (Secret, error) {
 		return Secret{}, err
 	}
 
-	if parameterMeta == nil {
+	if parameter == nil {
 		return Secret{}, ErrSecretNotFound
 	}
 
-	secretMeta := parameterMetaToSecretMeta(parameterMeta)
+	secretMeta := parameterMetaToSecretMeta(parameter)
 
 	return Secret{
 		Value: param.Value,

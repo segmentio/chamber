@@ -46,7 +46,6 @@ func list(cmd *cobra.Command, args []string) error {
 	if listIncludeValues {
 		fmt.Fprintln(w, "Key\tValue\tVersion\tLastModified\tUser")
 		for _, secret := range secrets {
-			fmt.Println(secret)
 			fmt.Fprintf(w, "%s\t%s\t%d\t%s\t%s\n",
 				key(secret.Meta.Key),
 				*secret.Value,

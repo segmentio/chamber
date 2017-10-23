@@ -10,10 +10,11 @@ import (
 
 // Regex's used to validate service and key names
 var (
-	validKeyFormat     = regexp.MustCompile(`^[A-Za-z0-9-_]+$`)
+	validKeyFormat     = regexp.MustCompile(`^[\.A-Za-z0-9-_]+$`)
 	validServiceFormat = regexp.MustCompile(`^[A-Za-z0-9-_]+$`)
 
-	numRetries int
+	numRetries        int
+	listIncludeValues bool
 )
 
 const (
@@ -34,6 +35,7 @@ var RootCmd = &cobra.Command{
 
 func init() {
 	RootCmd.PersistentFlags().IntVarP(&numRetries, "retries", "r", DefaultNumRetries, "For SSM, the number of retries we'll make before giving up")
+	RootCmd.PersistentFlags().BoolVarP(&listIncludeValues, "include-values", "v", false, "When running `chamber list` key's values will also be output")
 }
 
 // Execute adds all child commands to the root command sets flags appropriately.
@@ -58,7 +60,7 @@ func validateService(service string) error {
 
 func validateKey(key string) error {
 	if !validKeyFormat.MatchString(key) {
-		return fmt.Errorf("Failed to validate key name '%s'.  Only alphanumeric, dashes, and underscores are allowed for key names", key)
+		return fmt.Errorf("Failed to validate key name '%s'.  Only alphanumeric, dashes, periods, and underscores are allowed for key names", key)
 	}
 	return nil
 }

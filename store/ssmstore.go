@@ -20,7 +20,7 @@ const (
 )
 
 // validKeyFormat is the format that is expected for key names inside parameter store
-var validKeyFormat = regexp.MustCompile(`^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$`)
+var validKeyFormat = regexp.MustCompile(`^\/[A-Za-z0-9-_]+\/[A-Za-z0-9-_\.]+$`)
 
 // SSMStore implements the Store interface for storing secrets in SSM Parameter
 // Store
@@ -153,17 +153,19 @@ func (s *SSMStore) readLatest(id SecretId) (Secret, error) {
 	if len(resp.Parameters) == 0 {
 		return Secret{}, ErrSecretNotFound
 	}
-
 	param := resp.Parameters[0]
 	// To get metadata, we need to use describe parameters
+	// There is no way to use describe parameters to get a single key
+	// if that key uses paths, so instead get all the keys for a path,
+	// then find the one you are looking for :(
 	describeParametersInput := &ssm.DescribeParametersInput{
-		Filters: []*ssm.ParametersFilter{
+		ParameterFilters: []*ssm.ParameterStringFilter{
 			{
-				Key:    aws.String("Name"),
-				Values: []*string{aws.String(idToName(id))},
+				Key:    aws.String("Path"),
+				Option: aws.String("OneLevel"),
+				Values: []*string{aws.String(basePath(idToName(id)))},
 			},
 		},
-		MaxResults: aws.Int64(1),
 	}
 
 	var parameter *ssm.ParameterMetadata
@@ -199,10 +201,11 @@ func (s *SSMStore) List(service string, includeValues bool) ([]Secret, error) {
 	var nextToken *string
 	for {
 		describeParametersInput := &ssm.DescribeParametersInput{
-			Filters: []*ssm.ParametersFilter{
+			ParameterFilters: []*ssm.ParameterStringFilter{
 				{
-					Key:    aws.String("Name"),
-					Values: []*string{aws.String(service + ".")},
+					Key:    aws.String("Path"),
+					Option: aws.String("OneLevel"),
+					Values: []*string{aws.String("/" + service)},
 				},
 			},
 			NextToken: nextToken,
@@ -303,7 +306,15 @@ func (s *SSMStore) History(id SecretId) ([]ChangeEvent, error) {
 }
 
 func idToName(id SecretId) string {
-	return fmt.Sprintf("%s.%s", id.Service, id.Key)
+	return fmt.Sprintf("/%s/%s", id.Service, id.Key)
+}
+
+func basePath(key string) string {
+	pathParts := strings.Split(key, "/")
+	if len(pathParts) == 1 {
+		return pathParts[0]
+	}
+	return "/" + pathParts[1]
 }
 
 func parameterMetaToSecretMeta(p *ssm.ParameterMetadata) SecretMetadata {

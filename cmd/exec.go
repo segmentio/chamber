@@ -63,6 +63,7 @@ func execRun(cmd *cobra.Command, args []string) error {
 		}
 		for _, secret := range secrets {
 			envVarKey := strings.ToUpper(key(secret.Meta.Key))
+			envVarKey = strings.Replace(envVarKey, ".", "_", -1)
 			envVarKey = strings.Replace(envVarKey, "-", "_", -1)
 
 			if env.IsSet(envVarKey) {

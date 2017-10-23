@@ -133,7 +133,12 @@ func (m *mockSSMClient) DescribeParameters(i *ssm.DescribeParametersInput) (*ssm
 		if err != nil {
 			return &ssm.DescribeParametersOutput{}, err
 		}
-		if match {
+		matchStringFilters, err := matchStringFilters(i.ParameterFilters, param)
+		if err != nil {
+			return &ssm.DescribeParametersOutput{}, err
+		}
+
+		if match && matchStringFilters {
 			parameters = append(parameters, param.meta)
 		}
 	}
@@ -171,6 +176,20 @@ func prefixInSlice(val *string, prefixes []*string) bool {
 	return false
 }
 
+func pathInSlice(val *string, paths []*string) bool {
+	tokens := strings.Split(*val, "/")
+	if len(tokens) < 2 {
+		return false
+	}
+	matchPath := "/" + tokens[1]
+	for _, path := range paths {
+		if matchPath == *path {
+			return true
+		}
+	}
+	return false
+}
+
 func matchFilters(filters []*ssm.ParametersFilter, param mockParameter) (bool, error) {
 	for _, filter := range filters {
 		var compareTo *string
@@ -185,6 +204,24 @@ func matchFilters(filters []*ssm.ParametersFilter, param mockParameter) (bool, e
 			return false, errors.New("invalid filter key")
 		}
 		if !prefixInSlice(compareTo, filter.Values) {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
+func matchStringFilters(filters []*ssm.ParameterStringFilter, param mockParameter) (bool, error) {
+	for _, filter := range filters {
+		var compareTo *string
+		switch *filter.Key {
+		case "Path":
+			tokens := strings.Split(*param.meta.Name, "/")
+			if len(tokens) < 2 {
+				return false, errors.New("path filter used on non path value")
+			}
+			compareTo = aws.String("/" + tokens[1] + "/")
+		}
+		if !pathInSlice(compareTo, filter.Values) {
 			return false, nil
 		}
 	}
@@ -281,9 +318,9 @@ func TestList(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, 3, len(s))
 		sort.Sort(ByKey(s))
-		assert.Equal(t, "test.a", s[0].Meta.Key)
-		assert.Equal(t, "test.b", s[1].Meta.Key)
-		assert.Equal(t, "test.c", s[2].Meta.Key)
+		assert.Equal(t, "/test/a", s[0].Meta.Key)
+		assert.Equal(t, "/test/b", s[1].Meta.Key)
+		assert.Equal(t, "/test/c", s[2].Meta.Key)
 	})
 
 	t.Run("List should not return values if includeValues is false", func(t *testing.T) {
@@ -309,7 +346,7 @@ func TestList(t *testing.T) {
 		s, err := store.List("match", false)
 		assert.Nil(t, err)
 		assert.Equal(t, 1, len(s))
-		assert.Equal(t, "match.a", s[0].Meta.Key)
+		assert.Equal(t, "/match/a", s[0].Meta.Key)
 	})
 }
 

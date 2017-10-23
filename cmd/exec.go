@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -9,6 +8,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/pkg/errors"
 	"github.com/segmentio/chamber/store"
 	"github.com/spf13/cobra"
 )
@@ -51,15 +51,15 @@ func execRun(cmd *cobra.Command, args []string) error {
 	}
 
 	env := environ(os.Environ())
-	secretStore := store.NewSSMStore()
+	secretStore := store.NewSSMStore(numRetries)
 	for _, service := range args {
 		if err := validateService(service); err != nil {
-			return err
+			return errors.Wrap(err, "Failed to validate service")
 		}
 
 		secrets, err := secretStore.List(strings.ToLower(service), true)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "Failed to list store contents")
 		}
 		for _, secret := range secrets {
 			envVarKey := strings.ToUpper(key(secret.Meta.Key))
@@ -93,7 +93,7 @@ func execRun(cmd *cobra.Command, args []string) error {
 	var waitStatus syscall.WaitStatus
 	if err := ecmd.Run(); err != nil {
 		if err != nil {
-			return err
+			return errors.Wrap(err, "Failed to run command")
 		}
 		if exitError, ok := err.(*exec.ExitError); ok {
 			waitStatus = exitError.Sys().(syscall.WaitStatus)

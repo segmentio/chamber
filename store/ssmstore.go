@@ -29,7 +29,7 @@ type SSMStore struct {
 }
 
 // NewSSMStore creates a new SSMStore
-func NewSSMStore() *SSMStore {
+func NewSSMStore(numRetries int) *SSMStore {
 	region, ok := os.LookupEnv("AWS_REGION")
 	if !ok {
 		// If region is not set, attempt to determine it via ec2 metadata API
@@ -41,7 +41,7 @@ func NewSSMStore() *SSMStore {
 	ssmSession := session.Must(session.NewSession(&aws.Config{
 		Region: aws.String(region),
 	}))
-	svc := ssm.New(ssmSession)
+	svc := ssm.New(ssmSession, &aws.Config{MaxRetries: aws.Int(numRetries)})
 	return &SSMStore{
 		svc: svc,
 	}

@@ -21,7 +21,7 @@ func exec(command string, args []string, env []string) error {
 	ecmd.Stderr = os.Stderr
 	ecmd.Env = env
 
-	signals := make([]os.Signal, 31)
+	signals := make([]os.Signal, 30)
 	for i := range signals {
 		signals[i] = syscall.Signal(i + 1)
 	}

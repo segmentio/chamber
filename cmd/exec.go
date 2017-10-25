@@ -3,10 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"os/exec"
-	"os/signal"
 	"strings"
-	"syscall"
 
 	"github.com/pkg/errors"
 	"github.com/segmentio/chamber/store"
@@ -72,34 +69,7 @@ func execRun(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	ecmd := exec.Command(command, commandArgs...)
-	ecmd.Stdin = os.Stdin
-	ecmd.Stdout = os.Stdout
-	ecmd.Stderr = os.Stderr
-	ecmd.Env = env
-
-	// Forward SIGINT, SIGTERM, SIGKILL to the child command
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGTERM, os.Interrupt, os.Kill)
-
-	go func() {
-		sig := <-sigChan
-		if ecmd.Process != nil {
-			ecmd.Process.Signal(sig)
-		}
-	}()
-
-	var waitStatus syscall.WaitStatus
-	if err := ecmd.Run(); err != nil {
-		if err != nil {
-			return errors.Wrap(err, "Failed to run command")
-		}
-		if exitError, ok := err.(*exec.ExitError); ok {
-			waitStatus = exitError.Sys().(syscall.WaitStatus)
-			os.Exit(waitStatus.ExitStatus())
-		}
-	}
-	return nil
+	return exec(command, commandArgs, env)
 }
 
 // environ is a slice of strings representing the environment, in the form "key=value".

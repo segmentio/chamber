@@ -40,7 +40,7 @@ func execRun(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(commandPart) == 0 {
-		return errors.New("must specify command to run")
+		return ErrCommandMissing
 	}
 
 	command := commandPart[0]

@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 )
 
 const (
@@ -30,6 +31,18 @@ type SSMStore struct {
 
 // NewSSMStore creates a new SSMStore
 func NewSSMStore(numRetries int) *SSMStore {
+	endpointResolver := func(service, region string, optFns ...func(*endpoints.Options)) (endpoints.ResolvedEndpoint, error) {
+		customSsmEndpoint, ok := os.LookupEnv("CHAMBER_AWS_SSM_ENDPOINT")
+
+		if ok {
+			return endpoints.ResolvedEndpoint{
+				URL: customSsmEndpoint,
+			}, nil
+		} else {
+			return endpoints.DefaultResolver().EndpointFor(service, region, optFns...)
+		}
+	}
+
 	region, ok := os.LookupEnv("AWS_REGION")
 	if !ok {
 		// If region is not set, attempt to determine it via ec2 metadata API
@@ -40,6 +53,7 @@ func NewSSMStore(numRetries int) *SSMStore {
 
 	ssmSession := session.Must(session.NewSession(&aws.Config{
 		Region: aws.String(region),
+		EndpointResolver: endpoints.ResolverFunc(endpointResolver),
 	}))
 	svc := ssm.New(ssmSession, &aws.Config{MaxRetries: aws.Int(numRetries)})
 	return &SSMStore{

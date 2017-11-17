@@ -340,7 +340,7 @@ func TestHistory(t *testing.T) {
 		assert.Equal(t, Created, events[0].Type)
 	})
 
-	t.Run("Histor should return create followed by updates for keys that have been updated", func(t *testing.T) {
+	t.Run("History should return create followed by updates for keys that have been updated", func(t *testing.T) {
 		events, err := store.History(SecretId{Service: "test", Key: "update"})
 		assert.Nil(t, err)
 		assert.Equal(t, 3, len(events))

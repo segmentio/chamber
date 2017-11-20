@@ -134,6 +134,12 @@ Chamber does not currently read the value of "AWS_DEFAULT_REGION". See
 [https://github.com/aws/aws-sdk-go#configuring-aws-region](https://github.com/aws/aws-sdk-go#configuring-aws-region)
 for more details.
 
+### Using Path Based Keys
+
+If you'd prefer to use path based keys (`/service/key`) instead of the default period separated keys (`service.key`), you
+can set the environment variable `CHAMBER_USE_PATHS` to 1.  This environment variable must be set when writing and reading keys.
+
+
 ## Releasing
 
 To cut a new release, just push a tag named `v<semver>` where `<semver>` is a

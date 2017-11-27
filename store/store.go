@@ -57,4 +57,5 @@ type Store interface {
 	Read(id SecretId, version int) (Secret, error)
 	List(service string, includeValues bool) ([]Secret, error)
 	History(id SecretId) ([]ChangeEvent, error)
+	Delete(id SecretId) error
 }

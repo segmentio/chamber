@@ -117,6 +117,16 @@ that is unneeded. Parameter store automatically versions secrets and passing
 the `--version/-v` flag to read can print older versions of the secret. Default
 version (-1) is the latest secret.
 
+
+### Deleting
+```bash
+$ chamber delete service key
+```
+
+`delete` provides the ability to remove a secret from chamber permanently,
+including the secret's additional metadata. There is no way to recover a
+secret once it has been deleted so care should be taken with this command.
+
 ### AWS Region
 
 Chamber uses [AWS SDK for Go](https://github.com/aws/aws-sdk-go). To use a

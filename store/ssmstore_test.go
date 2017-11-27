@@ -158,6 +158,17 @@ func (m *mockSSMClient) DescribeParametersPages(i *ssm.DescribeParametersInput, 
 	return nil
 }
 
+func (m *mockSSMClient) DeleteParameter(i *ssm.DeleteParameterInput) (*ssm.DeleteParameterOutput, error) {
+	_, ok := m.parameters[*i.Name]
+	if !ok {
+		return &ssm.DeleteParameterOutput{}, errors.New("secret not found")
+	}
+
+	delete(m.parameters, *i.Name)
+
+	return &ssm.DeleteParameterOutput{}, nil
+}
+
 func paramNameInSlice(name *string, slice []*string) bool {
 	for _, val := range slice {
 		if *val == *name {
@@ -389,7 +400,7 @@ func TestHistory(t *testing.T) {
 
 func NewTestSSMStoreWithPaths(mock ssmiface.SSMAPI) *SSMStore {
 	return &SSMStore{
-		svc: mock,
+		svc:      mock,
 		usePaths: true,
 	}
 }
@@ -544,6 +555,26 @@ func TestHistoryPaths(t *testing.T) {
 		assert.Equal(t, Created, events[0].Type)
 		assert.Equal(t, Updated, events[1].Type)
 		assert.Equal(t, Updated, events[2].Type)
+	})
+}
+
+func TestDelete(t *testing.T) {
+	mock := &mockSSMClient{parameters: map[string]mockParameter{}}
+	store := NewTestSSMStore(mock)
+
+	secretId := SecretId{Service: "test", Key: "key"}
+	store.Write(secretId, "value")
+
+	t.Run("Deleting secret should work", func(t *testing.T) {
+		err := store.Delete(secretId)
+		assert.Nil(t, err)
+		err = store.Delete(secretId)
+		assert.Equal(t, ErrSecretNotFound, err)
+	})
+
+	t.Run("Deleting missing secret should fail", func(t *testing.T) {
+		err := store.Delete(SecretId{Service: "test", Key: "nonkey"})
+		assert.Equal(t, ErrSecretNotFound, err)
 	})
 }
 

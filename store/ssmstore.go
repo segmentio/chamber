@@ -23,7 +23,6 @@ const (
 // when using paths
 var validPathKeyFormat = regexp.MustCompile(`^\/[A-Za-z0-9-_]+\/[A-Za-z0-9-_]+$`)
 
-
 // validKeyFormat is the format that is expected for key names inside parameter store when
 // not using paths
 var validKeyFormat = regexp.MustCompile(`^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$`)
@@ -34,7 +33,7 @@ var _ Store = &SSMStore{}
 // SSMStore implements the Store interface for storing secrets in SSM Parameter
 // Store
 type SSMStore struct {
-	svc ssmiface.SSMAPI
+	svc      ssmiface.SSMAPI
 	usePaths bool
 }
 
@@ -60,7 +59,7 @@ func NewSSMStore(numRetries int) *SSMStore {
 	}
 
 	return &SSMStore{
-		svc: svc,
+		svc:      svc,
 		usePaths: usePaths,
 	}
 }
@@ -118,8 +117,28 @@ func (s *SSMStore) Read(id SecretId, version int) (Secret, error) {
 	return s.readVersion(id, version)
 }
 
-func (s *SSMStore) readVersion(id SecretId, version int) (Secret, error) {
+// Delete removes a secret from the parameter store. Note this removes all
+// versions of the secret.
+func (s *SSMStore) Delete(id SecretId) error {
+	// first read to ensure parameter present
+	_, err := s.Read(id, -1)
+	if err != nil {
+		return err
+	}
 
+	deleteParameterInput := &ssm.DeleteParameterInput{
+		Name: aws.String(s.idToName(id)),
+	}
+
+	_, err = s.svc.DeleteParameter(deleteParameterInput)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *SSMStore) readVersion(id SecretId, version int) (Secret, error) {
 	getParameterHistoryInput := &ssm.GetParameterHistoryInput{
 		Name:           aws.String(s.idToName(id)),
 		WithDecryption: aws.Bool(true),

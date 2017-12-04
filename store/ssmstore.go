@@ -47,6 +47,10 @@ func NewSSMStore(numRetries int) *SSMStore {
 		region, _ = ec2metadataSvc.Region()
 	}
 
+	if regionOverride, ok := os.LookupEnv("CHAMBER_AWS_REGION"); ok {
+		region = regionOverride
+	}
+
 	ssmSession := session.Must(session.NewSession(&aws.Config{
 		Region: aws.String(region),
 	}))

@@ -144,6 +144,8 @@ Chamber does not currently read the value of "AWS_DEFAULT_REGION". See
 [https://github.com/aws/aws-sdk-go#configuring-aws-region](https://github.com/aws/aws-sdk-go#configuring-aws-region)
 for more details.
 
+If you'd like to use a different region for chamber without changing `AWS_REGION`, you can use `CHAMBER_AWS_REGION` to override just for chamber.
+
 ### Using Path Based Keys
 
 If you'd prefer to use path based keys (`/service/key`) instead of the default period separated keys (`service.key`), you

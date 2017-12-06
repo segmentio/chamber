@@ -267,6 +267,7 @@ func (s *SSMStore) List(service string, includeValues bool) ([]Secret, error) {
 						Values: []*string{aws.String("/" + service)},
 					},
 				},
+				MaxResults: aws.Int64(50),
 				NextToken: nextToken,
 			}
 		} else {
@@ -277,6 +278,7 @@ func (s *SSMStore) List(service string, includeValues bool) ([]Secret, error) {
 						Values: []*string{aws.String(service + ".")},
 					},
 				},
+				MaxResults: aws.Int64(50),
 				NextToken: nextToken,
 			}
 		}

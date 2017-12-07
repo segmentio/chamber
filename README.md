@@ -76,6 +76,15 @@ Listing secrets should show the key names for a given service, along with other
 useful metadata including when the secret was last modified, who modified it,
 and what the current version is.
 
+```bash
+$ chamber list -e service
+Key         Version                  LastModified      User             Value
+apikey      2                        06-09 17:30:56    daniel-fuentes   apikeyvalue
+other       1                        06-09 17:30:34    daniel-fuentes   othervalue
+```
+
+Listing secrets with expand parameter should show the key names and values for a given service, along with other useful metadata including when the secret was last modified, who modified it,
+and what the current version is.
 
 ### Historic view
 

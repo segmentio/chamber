@@ -48,28 +48,24 @@ func list(cmd *cobra.Command, args []string) error {
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 8, 2, '\t', 0)
 
+	fmt.Fprint(w, "Key\tVersion\tLastModified\tUser")
 	if withValues {
-		fmt.Fprintln(w, "Key\tVersion\tLastModified\tUser\tValue")
-
-		for _, secret := range secrets {
-			fmt.Fprintf(w, "%s\t%d\t%s\t%s\t%s\n",
-				key(secret.Meta.Key),
-				secret.Meta.Version,
-				secret.Meta.Created.Local().Format(ShortTimeFormat),
-				secret.Meta.CreatedBy,
-				*secret.Value)
-		}
-	} else {
-		fmt.Fprintln(w, "Key\tVersion\tLastModified\tUser")
-
-		for _, secret := range secrets {
-			fmt.Fprintf(w, "%s\t%d\t%s\t%s\n",
-				key(secret.Meta.Key),
-				secret.Meta.Version,
-				secret.Meta.Created.Local().Format(ShortTimeFormat),
-				secret.Meta.CreatedBy)
-		}
+		fmt.Fprint(w, "\tValue")
 	}
+	fmt.Fprintln(w, "")
+
+	for _, secret := range secrets {
+		fmt.Fprintf(w, "%s\t%d\t%s\t%s",
+			key(secret.Meta.Key),
+			secret.Meta.Version,
+			secret.Meta.Created.Local().Format(ShortTimeFormat),
+			secret.Meta.CreatedBy)
+		if withValues {
+			fmt.Fprintf(w, "\t%s", *secret.Value)
+		}
+		fmt.Fprintln(w, "")
+	}
+
 	w.Flush()
 	return nil
 }

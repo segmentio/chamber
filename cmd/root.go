@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -29,7 +30,6 @@ var RootCmd = &cobra.Command{
 	Use:           "chamber",
 	Short:         "CLI for storing secrets",
 	SilenceUsage:  true,
-	SilenceErrors: true,
 }
 
 func init() {
@@ -39,11 +39,9 @@ func init() {
 // Execute adds all child commands to the root command sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	if err := RootCmd.Execute(); err != nil {
-		fmt.Fprintf(os.Stderr, "chamber error: %s\n", err)
-		switch err {
-		case ErrTooFewArguments, ErrTooManyArguments:
-			RootCmd.Usage()
+	if cmd, err := RootCmd.ExecuteC(); err != nil {
+		if strings.Contains(err.Error(), "arg(s)") || strings.Contains(err.Error(), "usage") {
+			cmd.Usage()
 		}
 		os.Exit(1)
 	}

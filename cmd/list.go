@@ -15,6 +15,7 @@ import (
 var listCmd = &cobra.Command{
 	Use:   "list <service>",
 	Short: "List the secrets set for a service",
+	Args:  cobra.ExactArgs(1),
 	RunE:  list,
 }
 
@@ -23,13 +24,6 @@ func init() {
 }
 
 func list(cmd *cobra.Command, args []string) error {
-	if len(args) < 1 {
-		return ErrTooFewArguments
-	}
-	if len(args) > 1 {
-		return ErrTooManyArguments
-	}
-
 	service := strings.ToLower(args[0])
 	if err := validateService(service); err != nil {
 		return errors.Wrap(err, "Failed to validate service")

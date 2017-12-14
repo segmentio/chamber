@@ -202,7 +202,7 @@
 			"revisionTime": "2017-03-23T00:38:48Z"
 		},
 		{
-			"checksumSHA1": "9guv02oL7uLkwqQNjJv8AJxWXmQ=",
+			"checksumSHA1": "ynJSWoF6v+3zMnh9R0QmmG6iGV8=",
 			"path": "github.com/pkg/errors",
 			"revision": "ff09b135c25aae272398c51a07235b90a75aa4f0",
 			"revisionTime": "2017-03-16T20:15:38Z"
@@ -215,10 +215,10 @@
 			"revisionTime": "2016-01-29T19:31:06Z"
 		},
 		{
-			"checksumSHA1": "q4eQ3EqPmvAISYOp3DD/GrccXtY=",
+			"checksumSHA1": "aG5wPXVGAEu90TjPFNZFRtox2Zo=",
 			"path": "github.com/spf13/cobra",
-			"revision": "31694f19adeeaeb0a0e5fe95441b390d757753d2",
-			"revisionTime": "2017-06-21T17:26:46Z"
+			"revision": "ccaecb155a2177302cb56cae929251a256d0f646",
+			"revisionTime": "2017-12-07T07:49:35Z"
 		},
 		{
 			"checksumSHA1": "STxYqRb4gnlSr3mRpT+Igfdz/kM=",

@@ -23,8 +23,8 @@ var (
 )
 
 func init() {
+	listCmd.Flags().BoolVarP(&withValues, "expand", "e", false, "Expand parameter list with values")
 	RootCmd.AddCommand(listCmd)
-	listCmd.PersistentFlags().BoolVarP(&withValues, "expand", "e", false, "Expand parameter list with values")
 }
 
 func list(cmd *cobra.Command, args []string) error {

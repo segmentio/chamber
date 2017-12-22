@@ -1,9 +1,7 @@
 package store
 
 import (
-	"errors"
 	"fmt"
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -13,11 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
-)
-
-const (
-	// DefaultKeyID is the default alias for the KMS key used to encrypt/decrypt secrets
-	DefaultKeyID = "alias/parameter_store_key"
+	"github.com/pkg/errors"
 )
 
 // validPathKeyFormat is the format that is expected for key names inside parameter store
@@ -37,14 +31,12 @@ var _ Store = &SSMStore{}
 // SSMStore implements the Store interface for storing secrets in SSM Parameter
 // Store
 type SSMStore struct {
-	svc      ssmiface.SSMAPI
-	base     string
-	usePaths bool
+	svc    ssmiface.SSMAPI
+	config *Config
 }
 
-// NewSSMStore creates a new SSMStore
-func NewSSMStore(numRetries int) (*SSMStore, error) {
-	region, ok := os.LookupEnv("AWS_REGION")
+func newSSMClient(config *Config) *ssm.SSM {
+	region, ok := config.AwsRegion()
 	if !ok {
 		// If region is not set, attempt to determine it via ec2 metadata API
 		session := session.New()
@@ -52,47 +44,109 @@ func NewSSMStore(numRetries int) (*SSMStore, error) {
 		region, _ = ec2metadataSvc.Region()
 	}
 
-	if regionOverride, ok := os.LookupEnv("CHAMBER_AWS_REGION"); ok {
-		region = regionOverride
-	}
-
 	ssmSession := session.Must(session.NewSession(&aws.Config{
 		Region: aws.String(region),
 	}))
-	svc := ssm.New(ssmSession, &aws.Config{MaxRetries: aws.Int(numRetries)})
+	return ssm.New(ssmSession, &aws.Config{MaxRetries: aws.Int(config.Retries())})
+}
 
-	usePaths := false
-	_, ok = os.LookupEnv("CHAMBER_USE_PATHS")
-	if ok {
-		usePaths = true
-	}
-
-	base, ok := os.LookupEnv("CHAMBER_BASE")
-	if ok {
+// NewSSMStore creates a new SSMStore
+func NewSSMStore(config *Config) (*SSMStore, error) {
+	if base, ok := config.Base(); ok {
 		if !validBaseFormat.MatchString(base) {
-			return nil, errors.New(fmt.Sprintf("base path is invalid. It should match %s", validBaseFormat))
+			return nil, errors.Errorf("base path is invalid. It should match %s", validBaseFormat)
 		}
-	} else {
-		base = ""
 	}
 
 	return &SSMStore{
-		svc:      svc,
-		base:     base,
-		usePaths: usePaths,
+		svc:    newSSMClient(config),
+		config: config,
 	}, nil
 }
 
-func (s *SSMStore) KMSKey() string {
-	fromEnv, ok := os.LookupEnv("CHAMBER_KMS_KEY_ALIAS")
-	if !ok {
-		return DefaultKeyID
+func MergeConfigFromSSM(config *Config) (bool, error) {
+	if baseConfig := config.BaseConfigPath(); baseConfig != "" {
+		if !validBaseFormat.MatchString(baseConfig) {
+			return false, errors.Errorf("base configuration path is invalid. It should match %s", validBaseFormat)
+		}
+
+		svc := newSSMClient(config)
+		resp, err := svc.GetParameters(&ssm.GetParametersInput{
+			Names:          []*string{aws.String(baseConfig)},
+			WithDecryption: aws.Bool(true),
+		})
+		if err != nil {
+			return false, errors.Wrapf(err, "there was a problem retrieving chamber config from SSM at %s", baseConfig)
+		}
+		if len(resp.Parameters) == 0 {
+			return false, nil
+		}
+		if err := config.MergeConfig(*resp.Parameters[0].Value); err != nil {
+			return false, errors.Wrapf(err, "invalid chamber configuration at SSM parameter %s", baseConfig)
+		}
 	}
-	if !strings.HasPrefix(fromEnv, "alias/") {
-		return fmt.Sprintf("alias/%s", fromEnv)
+	return true, nil
+}
+
+func (s *SSMStore) SaveCurrentConfigToSSM() error {
+	base, ok := s.config.Base()
+	if !ok {
+		return errors.New("base is not set. Do not know where to save config to...")
 	}
 
-	return fromEnv
+	configStr, err := s.config.Marshal()
+	if !ok {
+		return errors.Wrapf(err, "unable to serialize configuration")
+	}
+
+	putParameterInput := &ssm.PutParameterInput{
+		KeyId:       aws.String(s.config.KmsKeyAlias()),
+		Name:        aws.String(base),
+		Type:        aws.String("SecureString"),
+		Value:       aws.String(configStr),
+		Overwrite:   aws.Bool(true),
+		Description: aws.String("Chamber configuration"),
+	}
+
+	// This API call returns an empty struct
+	_, err = s.svc.PutParameter(putParameterInput)
+	if err != nil {
+		return errors.Wrapf(err, "unable to put configuration to SSM at %s", base)
+	}
+
+	return nil
+}
+
+func (s *SSMStore) ClearCurrentConfig() error {
+	if base, ok := s.config.Base(); ok {
+		describeParametersInput := &ssm.DescribeParametersInput{
+			ParameterFilters: []*ssm.ParameterStringFilter{
+				{
+					Key:    aws.String("Name"),
+					Option: aws.String("Equals"),
+					Values: []*string{aws.String(base)},
+				},
+			},
+			MaxResults: aws.Int64(1),
+		}
+		desc, err := s.svc.DescribeParameters(describeParametersInput)
+		if err != nil {
+			return err
+		}
+		// No config present
+		if len(desc.Parameters) == 0 {
+			return nil
+		}
+
+		_, err = s.svc.DeleteParameter(&ssm.DeleteParameterInput{
+			Name: aws.String(base),
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // Write writes a given value to a secret identified by id.  If the secret
@@ -109,7 +163,7 @@ func (s *SSMStore) Write(id SecretId, value string) error {
 	}
 
 	putParameterInput := &ssm.PutParameterInput{
-		KeyId:       aws.String(s.KMSKey()),
+		KeyId:       aws.String(s.config.KmsKeyAlias()),
 		Name:        aws.String(s.idToName(id)),
 		Type:        aws.String("SecureString"),
 		Value:       aws.String(value),
@@ -362,14 +416,15 @@ func (s *SSMStore) History(id SecretId) ([]ChangeEvent, error) {
 }
 
 func (s *SSMStore) serviceToSsm(service string) string {
-	if s.base == "" && !s.usePaths {
+	base, ok := s.config.Base()
+	if !ok && !s.config.UsePaths() {
 		return service
 	}
-	return fmt.Sprintf("%s/%s", s.base, service)
+	return fmt.Sprintf("%s/%s", base, service)
 }
 
 func (s *SSMStore) serviceToSsmSuffixed(service string) string {
-	if s.usePaths {
+	if s.config.UsePaths() {
 		return s.serviceToSsm(service) + "/"
 	}
 	return s.serviceToSsm(service) + "."
@@ -381,17 +436,17 @@ func (s *SSMStore) idToName(id SecretId) string {
 
 func (s *SSMStore) validateName(name string) bool {
 	nameToMatch := name
-	if s.base != "" {
-		stripPath := s.base
-		if !s.usePaths {
-			stripPath = s.base + "/"
+	if base, ok := s.config.Base(); ok {
+		stripPath := base
+		if !s.config.UsePaths() {
+			stripPath = base + "/"
 		}
 		if !strings.HasPrefix(name, stripPath) {
 			return false
 		}
 		nameToMatch = name[len(stripPath):]
 	}
-	if s.usePaths {
+	if s.config.UsePaths() {
 		return validPathKeyFormat.MatchString(nameToMatch)
 	}
 	return validKeyFormat.MatchString(nameToMatch)

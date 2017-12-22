@@ -42,7 +42,7 @@ func execRun(cmd *cobra.Command, args []string) error {
 	services, command, commandArgs := args[:dashIx], args[dashIx], args[dashIx+1:]
 
 	env := environ(os.Environ())
-	secretStore, err := store.NewSSMStore(numRetries)
+	secretStore, err := store.NewSSMStore(config)
 	if err != nil {
 		return err
 	}

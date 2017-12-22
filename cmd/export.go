@@ -38,7 +38,7 @@ func init() {
 func runExport(cmd *cobra.Command, args []string) error {
 	var err error
 
-	secretStore, err := store.NewSSMStore(numRetries)
+	secretStore, err := store.NewSSMStore(config)
 	if err != nil {
 		return err
 	}

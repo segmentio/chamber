@@ -41,7 +41,7 @@ func read(cmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, "Failed to validate key")
 	}
 
-	secretStore, err := store.NewSSMStore(numRetries)
+	secretStore, err := store.NewSSMStore(config)
 	if err != nil {
 		return err
 	}

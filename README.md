@@ -54,6 +54,46 @@ By default, chamber stores secrets at the top level of SSM tree. If you wish to
 scope parameters at some SSM subpath, specify it with `CHAMBER_BASE` environment
 variable.
 
+What is more, chamber expects to find its configuration (in JSON format) at the
+SSM parameter specified via base path. You may use `--skip-base-config` command
+line parameter (or `CHAMBER_SKIP_BASE_CONFIG=1` environment variable) to force
+chamber to stick to your local configuration only. Use `chamber config show`,
+`chamber config save` and `chamber config clear` commands to preview or
+manipulate current configuration in the base path.
+
+In order to initialize a proper base config, setup `chamber` in your local
+environment as appropriate (via environment variables or command line flags)
+and issue `chamber config save`. Or, alternatively, add an SSM parameter at
+base path via other means, e.g. with
+[terraform](https://www.terraform.io/docs/providers/aws/r/ssm\_parameter.html).
+You may use either type `String` or `SecureString` for this SSM parameter.
+Check `chamber config show` for possible configuration keys.
+
+```HCL
+variable "chamber_config" {
+  type = "map",
+  default = {
+    kms-key-alias = "alias/chamber_config_key",
+    retries = "3"
+  }
+}
+
+resource "aws_ssm_parameter" "chamber_config" {
+  name  = "/sample/chamber/base/path"
+  type  = "String"
+  value = "${jsonencode(var.chamber_config)}"
+}
+```
+
+Then just use `-b` flag or `CHAMBER_BASE` environment variable to make
+chamber read and use this configuration:
+
+```sh
+    chamber -b /sample/chamber/base/path config show
+    chamber -b /sample/chamber/base/path list my-service
+    ...
+```
+
 ## Usage
 
 ### Writing Secrets

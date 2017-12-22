@@ -38,7 +38,10 @@ func init() {
 func runExport(cmd *cobra.Command, args []string) error {
 	var err error
 
-	secretStore := store.NewSSMStore(numRetries)
+	secretStore, err := store.NewSSMStore(numRetries)
+	if err != nil {
+		return err
+	}
 	params := make(map[string]string)
 	for _, service := range args {
 		if err := validateService(service); err != nil {

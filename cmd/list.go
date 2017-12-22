@@ -34,7 +34,10 @@ func list(cmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, "Failed to validate service")
 	}
 
-	secretStore := store.NewSSMStore(numRetries)
+	secretStore, err := store.NewSSMStore(numRetries)
+	if err != nil {
+		return err
+	}
 	secrets, err := secretStore.List(service, withValues)
 	if err != nil {
 		return errors.Wrap(err, "Failed to list store contents")
@@ -66,6 +69,14 @@ func list(cmd *cobra.Command, args []string) error {
 
 func key(s string) string {
 	_, usePaths := os.LookupEnv("CHAMBER_USE_PATHS")
+
+	if base, ok := os.LookupEnv("CHAMBER_BASE"); ok {
+		stripPath := base
+		if !usePaths {
+			stripPath = base + "/"
+		}
+		s = s[len(stripPath):]
+	}
 	if usePaths {
 		tokens := strings.Split(s, "/")
 		secretKey := tokens[2]

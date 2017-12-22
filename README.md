@@ -48,6 +48,12 @@ resource "aws_kms_alias" "parameter_store_alias" {
 If you'd like to use an alternate KMS key to encrypt your secrets, you can set
 the environment variable `CHAMBER_KMS_KEY_ALIAS`.
 
+### Base path
+
+By default, chamber stores secrets at the top level of SSM tree. If you wish to
+scope parameters at some SSM subpath, specify it with `CHAMBER_BASE` environment
+variable.
+
 ## Usage
 
 ### Writing Secrets

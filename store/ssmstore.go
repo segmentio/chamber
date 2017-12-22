@@ -1,6 +1,7 @@
 package store
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"regexp"
@@ -27,6 +28,9 @@ var validPathKeyFormat = regexp.MustCompile(`^\/[A-Za-z0-9-_]+\/[A-Za-z0-9-_]+$`
 // not using paths
 var validKeyFormat = regexp.MustCompile(`^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$`)
 
+// validBaseFormat is the format that is expected base path.
+var validBaseFormat = regexp.MustCompile(`^(/[A-Za-z0-9-_]+)+$`)
+
 // ensure SSMStore confirms to Store interface
 var _ Store = &SSMStore{}
 
@@ -34,11 +38,12 @@ var _ Store = &SSMStore{}
 // Store
 type SSMStore struct {
 	svc      ssmiface.SSMAPI
+	base     string
 	usePaths bool
 }
 
 // NewSSMStore creates a new SSMStore
-func NewSSMStore(numRetries int) *SSMStore {
+func NewSSMStore(numRetries int) (*SSMStore, error) {
 	region, ok := os.LookupEnv("AWS_REGION")
 	if !ok {
 		// If region is not set, attempt to determine it via ec2 metadata API
@@ -62,10 +67,20 @@ func NewSSMStore(numRetries int) *SSMStore {
 		usePaths = true
 	}
 
+	base, ok := os.LookupEnv("CHAMBER_BASE")
+	if ok {
+		if !validBaseFormat.MatchString(base) {
+			return nil, errors.New(fmt.Sprintf("base path is invalid. It should match %s", validBaseFormat))
+		}
+	} else {
+		base = ""
+	}
+
 	return &SSMStore{
 		svc:      svc,
+		base:     base,
 		usePaths: usePaths,
-	}
+	}, nil
 }
 
 func (s *SSMStore) KMSKey() string {
@@ -199,51 +214,27 @@ func (s *SSMStore) readLatest(id SecretId) (Secret, error) {
 		return Secret{}, ErrSecretNotFound
 	}
 	param := resp.Parameters[0]
-	var parameter *ssm.ParameterMetadata
-	var describeParametersInput *ssm.DescribeParametersInput
 
 	// To get metadata, we need to use describe parameters
-
-	if s.usePaths {
-		// There is no way to use describe parameters to get a single key
-		// if that key uses paths, so instead get all the keys for a path,
-		// then find the one you are looking for :(
-		describeParametersInput = &ssm.DescribeParametersInput{
-			ParameterFilters: []*ssm.ParameterStringFilter{
-				{
-					Key:    aws.String("Path"),
-					Option: aws.String("OneLevel"),
-					Values: []*string{aws.String(basePath(s.idToName(id)))},
-				},
+	describeParametersInput := &ssm.DescribeParametersInput{
+		ParameterFilters: []*ssm.ParameterStringFilter{
+			{
+				Key:    aws.String("Name"),
+				Option: aws.String("Equals"),
+				Values: []*string{aws.String(s.idToName(id))},
 			},
-		}
-	} else {
-		describeParametersInput = &ssm.DescribeParametersInput{
-			Filters: []*ssm.ParametersFilter{
-				{
-					Key:    aws.String("Name"),
-					Values: []*string{aws.String(s.idToName(id))},
-				},
-			},
-			MaxResults: aws.Int64(1),
-		}
+		},
+		MaxResults: aws.Int64(1),
 	}
-	if err := s.svc.DescribeParametersPages(describeParametersInput, func(o *ssm.DescribeParametersOutput, lastPage bool) bool {
-		for _, param := range o.Parameters {
-			if *param.Name == s.idToName(id) {
-				parameter = param
-			}
-		}
-		return !lastPage
-	}); err != nil {
+	desc, err := s.svc.DescribeParameters(describeParametersInput)
+	if err != nil {
 		return Secret{}, err
 	}
-
-	if parameter == nil {
+	if len(desc.Parameters) == 0 {
 		return Secret{}, ErrSecretNotFound
 	}
 
-	secretMeta := parameterMetaToSecretMeta(parameter)
+	secretMeta := parameterMetaToSecretMeta(desc.Parameters[0])
 
 	return Secret{
 		Value: param.Value,
@@ -261,29 +252,16 @@ func (s *SSMStore) List(service string, includeValues bool) ([]Secret, error) {
 	for {
 		var describeParametersInput *ssm.DescribeParametersInput
 
-		if s.usePaths {
-			describeParametersInput = &ssm.DescribeParametersInput{
-				ParameterFilters: []*ssm.ParameterStringFilter{
-					{
-						Key:    aws.String("Path"),
-						Option: aws.String("OneLevel"),
-						Values: []*string{aws.String("/" + service)},
-					},
+		describeParametersInput = &ssm.DescribeParametersInput{
+			ParameterFilters: []*ssm.ParameterStringFilter{
+				{
+					Key:    aws.String("Name"),
+					Option: aws.String("BeginsWith"),
+					Values: []*string{aws.String(s.serviceToSsmSuffixed(service))},
 				},
-				MaxResults: aws.Int64(50),
-				NextToken:  nextToken,
-			}
-		} else {
-			describeParametersInput = &ssm.DescribeParametersInput{
-				Filters: []*ssm.ParametersFilter{
-					{
-						Key:    aws.String("Name"),
-						Values: []*string{aws.String(service + ".")},
-					},
-				},
-				MaxResults: aws.Int64(50),
-				NextToken:  nextToken,
-			}
+			},
+			MaxResults: aws.Int64(50),
+			NextToken:  nextToken,
 		}
 
 		resp, err := s.svc.DescribeParameters(describeParametersInput)
@@ -383,27 +361,40 @@ func (s *SSMStore) History(id SecretId) ([]ChangeEvent, error) {
 	return events, nil
 }
 
-func (s *SSMStore) idToName(id SecretId) string {
-	if s.usePaths {
-		return fmt.Sprintf("/%s/%s", id.Service, id.Key)
+func (s *SSMStore) serviceToSsm(service string) string {
+	if s.base == "" && !s.usePaths {
+		return service
 	}
+	return fmt.Sprintf("%s/%s", s.base, service)
+}
 
-	return fmt.Sprintf("%s.%s", id.Service, id.Key)
+func (s *SSMStore) serviceToSsmSuffixed(service string) string {
+	if s.usePaths {
+		return s.serviceToSsm(service) + "/"
+	}
+	return s.serviceToSsm(service) + "."
+}
+
+func (s *SSMStore) idToName(id SecretId) string {
+	return s.serviceToSsmSuffixed(id.Service) + id.Key
 }
 
 func (s *SSMStore) validateName(name string) bool {
+	nameToMatch := name
+	if s.base != "" {
+		stripPath := s.base
+		if !s.usePaths {
+			stripPath = s.base + "/"
+		}
+		if !strings.HasPrefix(name, stripPath) {
+			return false
+		}
+		nameToMatch = name[len(stripPath):]
+	}
 	if s.usePaths {
-		return validPathKeyFormat.MatchString(name)
+		return validPathKeyFormat.MatchString(nameToMatch)
 	}
-	return validKeyFormat.MatchString(name)
-}
-
-func basePath(key string) string {
-	pathParts := strings.Split(key, "/")
-	if len(pathParts) == 1 {
-		return pathParts[0]
-	}
-	return "/" + pathParts[1]
+	return validKeyFormat.MatchString(nameToMatch)
 }
 
 func parameterMetaToSecretMeta(p *ssm.ParameterMetadata) SecretMetadata {

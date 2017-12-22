@@ -12,6 +12,7 @@ import (
 var deleteCmd = &cobra.Command{
 	Use:   "delete <service> <key>",
 	Short: "Delete a secret, including all versions",
+	Args:  cobra.ExactArgs(2),
 	RunE:  delete,
 }
 
@@ -20,13 +21,6 @@ func init() {
 }
 
 func delete(cmd *cobra.Command, args []string) error {
-	if len(args) < 2 {
-		return ErrTooFewArguments
-	}
-	if len(args) > 2 {
-		return ErrTooManyArguments
-	}
-
 	service := strings.ToLower(args[0])
 	if err := validateService(service); err != nil {
 		return errors.Wrap(err, "Failed to validate service")

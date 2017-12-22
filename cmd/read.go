@@ -19,6 +19,7 @@ var (
 	readCmd = &cobra.Command{
 		Use:   "read <service> <key>",
 		Short: "Read a specific secret from the parameter store",
+		Args:  cobra.ExactArgs(2),
 		RunE:  read,
 	}
 )
@@ -30,13 +31,6 @@ func init() {
 }
 
 func read(cmd *cobra.Command, args []string) error {
-	if len(args) < 2 {
-		return ErrTooFewArguments
-	}
-	if len(args) > 2 {
-		return ErrTooManyArguments
-	}
-
 	service := strings.ToLower(args[0])
 	if err := validateService(service); err != nil {
 		return errors.Wrap(err, "Failed to validate service")

@@ -117,6 +117,22 @@ that is unneeded. Parameter store automatically versions secrets and passing
 the `--version/-v` flag to read can print older versions of the secret. Default
 version (-1) is the latest secret.
 
+### Exporting
+```bash
+$ chamber export [--format <format>] [--output-file <file>]  <service...>
+{"key","secret"}
+```
+
+`export` providers ability to export secrets in various file formats. The following
+file formats are supported:
+
+* json (default)
+* java-properties
+* csv
+* tsv
+
+File is written to standard output by default but you may specify an output
+file.
 
 ### Deleting
 ```bash

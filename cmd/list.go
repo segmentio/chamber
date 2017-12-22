@@ -19,7 +19,12 @@ var listCmd = &cobra.Command{
 	RunE:  list,
 }
 
+var (
+	withValues bool
+)
+
 func init() {
+	listCmd.Flags().BoolVarP(&withValues, "expand", "e", false, "Expand parameter list with values")
 	RootCmd.AddCommand(listCmd)
 }
 
@@ -30,20 +35,31 @@ func list(cmd *cobra.Command, args []string) error {
 	}
 
 	secretStore := store.NewSSMStore(numRetries)
-	secrets, err := secretStore.List(service, false)
+	secrets, err := secretStore.List(service, withValues)
 	if err != nil {
 		return errors.Wrap(err, "Failed to list store contents")
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 8, 2, '\t', 0)
-	fmt.Fprintln(w, "Key\tVersion\tLastModified\tUser")
+
+	fmt.Fprint(w, "Key\tVersion\tLastModified\tUser")
+	if withValues {
+		fmt.Fprint(w, "\tValue")
+	}
+	fmt.Fprintln(w, "")
+
 	for _, secret := range secrets {
-		fmt.Fprintf(w, "%s\t%d\t%s\t%s\n",
+		fmt.Fprintf(w, "%s\t%d\t%s\t%s",
 			key(secret.Meta.Key),
 			secret.Meta.Version,
 			secret.Meta.Created.Local().Format(ShortTimeFormat),
 			secret.Meta.CreatedBy)
+		if withValues {
+			fmt.Fprintf(w, "\t%s", *secret.Value)
+		}
+		fmt.Fprintln(w, "")
 	}
+
 	w.Flush()
 	return nil
 }
@@ -57,6 +73,6 @@ func key(s string) string {
 	}
 
 	tokens := strings.Split(s, ".")
- 	secretKey := tokens[1]
+	secretKey := tokens[1]
 	return secretKey
 }

@@ -154,7 +154,10 @@ func (s *SSMStore) readVersion(id SecretId, version int) (Secret, error) {
 	}
 
 	for _, history := range resp.Parameters {
-		thisVersion, _ := strconv.Atoi(*history.Description)
+		thisVersion := 0
+		if history.Description != nil {
+			thisVersion, _ = strconv.Atoi(*history.Description)
+		}
 		if thisVersion == version {
 			return Secret{
 				Value: history.Value,
@@ -268,7 +271,7 @@ func (s *SSMStore) List(service string, includeValues bool) ([]Secret, error) {
 					},
 				},
 				MaxResults: aws.Int64(50),
-				NextToken: nextToken,
+				NextToken:  nextToken,
 			}
 		} else {
 			describeParametersInput = &ssm.DescribeParametersInput{
@@ -279,7 +282,7 @@ func (s *SSMStore) List(service string, includeValues bool) ([]Secret, error) {
 					},
 				},
 				MaxResults: aws.Int64(50),
-				NextToken: nextToken,
+				NextToken:  nextToken,
 			}
 		}
 
@@ -353,7 +356,10 @@ func (s *SSMStore) History(id SecretId) ([]ChangeEvent, error) {
 	for _, history := range resp.Parameters {
 		// Disregard error here, if Atoi fails (secret created outside of
 		// Chamber), then we use version 0
-		version, _ := strconv.Atoi(*history.Description)
+		version := 0
+		if history.Description != nil {
+			version, _ = strconv.Atoi(*history.Description)
+		}
 		events = append(events, ChangeEvent{
 			Type:    getChangeType(version),
 			Time:    *history.LastModifiedDate,
@@ -401,7 +407,10 @@ func basePath(key string) string {
 }
 
 func parameterMetaToSecretMeta(p *ssm.ParameterMetadata) SecretMetadata {
-	version, _ := strconv.Atoi(*p.Description)
+	version := 0
+	if p.Description != nil {
+		version, _ = strconv.Atoi(*p.Description)
+	}
 	return SecretMetadata{
 		Created:   *p.LastModifiedDate,
 		CreatedBy: *p.LastModifiedUser,

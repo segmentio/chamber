@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bufio"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -10,15 +11,20 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// writeCmd represents the write command
-var writeCmd = &cobra.Command{
-	Use:   "write <service> <key> <value|->",
-	Short: "write a secret",
-	Args:  cobra.ExactArgs(3),
-	RunE:  write,
-}
+var (
+	singleline bool
+
+	// writeCmd represents the write command
+	writeCmd = &cobra.Command{
+		Use:   "write <service> <key> <value|->",
+		Short: "write a secret",
+		Args:  cobra.ExactArgs(3),
+		RunE:  write,
+	}
+)
 
 func init() {
+	writeCmd.Flags().BoolVarP(&singleline, "singleline", "s", false, "Insert single line parameter (end with \\n)")
 	RootCmd.AddCommand(writeCmd)
 }
 
@@ -36,11 +42,20 @@ func write(cmd *cobra.Command, args []string) error {
 	value := args[2]
 	if value == "-" {
 		// Read value from standard input
-		v, err := ioutil.ReadAll(os.Stdin)
-		if err != nil {
-			return err
+		if singleline {
+			buf := bufio.NewReader(os.Stdin)
+			v, err := buf.ReadString('\n')
+			if err != nil {
+				return err
+			}
+			value = strings.TrimSuffix(v, "\n")
+		} else {
+			v, err := ioutil.ReadAll(os.Stdin)
+			if err != nil {
+				return err
+			}
+			value = string(v)
 		}
-		value = string(v)
 	}
 
 	secretStore := store.NewSSMStore(numRetries)

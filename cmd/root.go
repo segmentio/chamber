@@ -27,9 +27,9 @@ const (
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
-	Use:           "chamber",
-	Short:         "CLI for storing secrets",
-	SilenceUsage:  true,
+	Use:          "chamber",
+	Short:        "CLI for storing secrets",
+	SilenceUsage: true,
 }
 
 func init() {

@@ -30,7 +30,7 @@ var execCmd = &cobra.Command{
 		}
 		return nil
 	},
-	RunE:  execRun,
+	RunE: execRun,
 }
 
 func init() {

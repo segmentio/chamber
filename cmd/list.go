@@ -50,7 +50,7 @@ func list(cmd *cobra.Command, args []string) error {
 
 	for _, secret := range secrets {
 		fmt.Fprintf(w, "%s\t%d\t%s\t%s",
-			key(secret.Meta.Key),
+			secret.Id.Key,
 			secret.Meta.Version,
 			secret.Meta.Created.Local().Format(ShortTimeFormat),
 			secret.Meta.CreatedBy)
@@ -62,17 +62,4 @@ func list(cmd *cobra.Command, args []string) error {
 
 	w.Flush()
 	return nil
-}
-
-func key(s string) string {
-	_, usePaths := os.LookupEnv("CHAMBER_USE_PATHS")
-	if usePaths {
-		tokens := strings.Split(s, "/")
-		secretKey := tokens[2]
-		return secretKey
-	}
-
-	tokens := strings.Split(s, ".")
-	secretKey := tokens[1]
-	return secretKey
 }

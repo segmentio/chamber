@@ -11,7 +11,7 @@ import (
 
 // Regex's used to validate service and key names
 var (
-	validKeyFormat     = regexp.MustCompile(`^[A-Za-z0-9-_]+$`)
+	validKeyFormat     = regexp.MustCompile(`^[A-Za-z0-9-_.]+$`)
 	validServiceFormat = regexp.MustCompile(`^[A-Za-z0-9-_]+$`)
 
 	numRetries int
@@ -56,7 +56,7 @@ func validateService(service string) error {
 
 func validateKey(key string) error {
 	if !validKeyFormat.MatchString(key) {
-		return fmt.Errorf("Failed to validate key name '%s'.  Only alphanumeric, dashes, and underscores are allowed for key names", key)
+		return fmt.Errorf("Failed to validate key name '%s'.  Only alphanumeric, dashes, underscores and dots are allowed for key names", key)
 	}
 	return nil
 }

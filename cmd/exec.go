@@ -53,8 +53,9 @@ func execRun(cmd *cobra.Command, args []string) error {
 			return errors.Wrap(err, "Failed to list store contents")
 		}
 		for _, secret := range secrets {
-			envVarKey := strings.ToUpper(key(secret.Meta.Key))
+			envVarKey := strings.ToUpper(secret.Id.Key)
 			envVarKey = strings.Replace(envVarKey, "-", "_", -1)
+			envVarKey = strings.Replace(envVarKey, ".", "_", -1)
 
 			if env.IsSet(envVarKey) {
 				fmt.Fprintf(os.Stderr, "warning: overwriting environment variable %s\n", envVarKey)

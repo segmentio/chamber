@@ -50,7 +50,7 @@ func runExport(cmd *cobra.Command, args []string) error {
 			return errors.Wrapf(err, "Failed to list store contents for service %s", service)
 		}
 		for _, secret := range secrets {
-			k := key(secret.Meta.Key)
+			k := secret.Id.Key
 			if _, ok := params[k]; ok {
 				fmt.Fprintf(os.Stderr, "warning: parameter %s specified more than once (overriden by service %s)\n", k, service)
 			}

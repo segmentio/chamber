@@ -2,6 +2,7 @@ package store
 
 import (
 	"errors"
+	"os"
 	"sort"
 	"strings"
 	"testing"
@@ -243,6 +244,30 @@ func NewTestSSMStore(mock ssmiface.SSMAPI) *SSMStore {
 	return &SSMStore{
 		svc: mock,
 	}
+}
+
+func TestNewSSMStore(t *testing.T) {
+	t.Run("Using region override should take precedence over other settings", func(t *testing.T) {
+		os.Setenv("CHAMBER_AWS_REGION", "us-east-1")
+		os.Setenv("AWS_REGION", "us-west-1")
+		os.Setenv("AWS_DEFAULT_REGION", "us-west-2")
+
+		s := NewSSMStore(1)
+		assert.Equal(t, "us-east-1", aws.StringValue(s.svc.(*ssm.SSM).Config.Region))
+		os.Unsetenv("CHAMBER_AWS_REGION")
+		os.Unsetenv("AWS_REGION")
+		os.Unsetenv("AWS_DEFAULT_REGION")
+	})
+
+	t.Run("Should use AWS_REGION if it is set", func(t *testing.T) {
+		os.Setenv("AWS_REGION", "us-west-1")
+
+		s := NewSSMStore(1)
+		assert.Equal(t, "us-west-1", aws.StringValue(s.svc.(*ssm.SSM).Config.Region))
+
+		os.Unsetenv("AWS_REGION")
+	})
+
 }
 
 func TestWrite(t *testing.T) {

@@ -21,32 +21,22 @@ func exec(command string, args []string, env []string) error {
 	ecmd.Stderr = os.Stderr
 	ecmd.Env = env
 
-	signals := make([]os.Signal, 30)
-	for i := range signals {
-		signals[i] = syscall.Signal(i + 1)
-	}
+	signal.Notify(sigChan)
 
-	// Forward SIGINT, SIGTERM, SIGKILL to the child command
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, signals...)
+	if err := ecmd.Start(); err != nil {
+		return errors.Wrap(err, "Failed to start command")
+	}
 
 	go func() {
 		sig := <-sigChan
-		if ecmd.Process != nil {
-			ecmd.Process.Signal(sig)
-		}
+		ecmd.Process.Signal(sig)
 	}()
 
-	var waitStatus syscall.WaitStatus
-	if err := ecmd.Run(); err != nil {
-		if err != nil {
-			return errors.Wrap(err, "Failed to run command")
-		}
-		if exitError, ok := err.(*osexec.ExitError); ok {
-			waitStatus = exitError.Sys().(syscall.WaitStatus)
-			os.Exit(waitStatus.ExitStatus())
-		}
+	if status, err := emcd.Wait(); err != nil {
+		emcd.Signal(os.Kill)
+		return errors.Wrap(err, "Failed to wait for command termination")
+	} else {
+		waitStatus := status.Sys().(syscall.WaitStatus)
+		os.Exit(waitStatus.ExitStatus())
 	}
-
-	return nil
 }

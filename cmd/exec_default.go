@@ -21,6 +21,7 @@ func exec(command string, args []string, env []string) error {
 	ecmd.Stderr = os.Stderr
 	ecmd.Env = env
 
+	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan)
 
 	if err := ecmd.Start(); err != nil {
@@ -32,11 +33,12 @@ func exec(command string, args []string, env []string) error {
 		ecmd.Process.Signal(sig)
 	}()
 
-	if status, err := emcd.Wait(); err != nil {
-		emcd.Signal(os.Kill)
+	if err := ecmd.Wait(); err != nil {
+		ecmd.Process.Signal(os.Kill)
 		return errors.Wrap(err, "Failed to wait for command termination")
-	} else {
-		waitStatus := status.Sys().(syscall.WaitStatus)
-		os.Exit(waitStatus.ExitStatus())
 	}
+
+	waitStatus := ecmd.ProcessState.Sys().(syscall.WaitStatus)
+	os.Exit(waitStatus.ExitStatus())
+	return nil // unreachable but Go doesn't know about it
 }

@@ -27,6 +27,9 @@ var validPathKeyFormat = regexp.MustCompile(`^\/[A-Za-z0-9-_]+\/[A-Za-z0-9-_]+$`
 // not using paths
 var validKeyFormat = regexp.MustCompile(`^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$`)
 
+// KMS key ID seems to be an RFC 4122
+var looksLikeKmsKeyId = regexp.MustCompile("^[A-Za-z0-9]{8}-[A-Za-z0-9]{4}-[A-Za-z0-9]{4}-[A-Za-z0-9]{4}-[A-Za-z0-9]{12}$")
+
 // ensure SSMStore confirms to Store interface
 var _ Store = &SSMStore{}
 
@@ -69,11 +72,18 @@ func NewSSMStore(numRetries int) *SSMStore {
 }
 
 func (s *SSMStore) KMSKey() string {
-	fromEnv, ok := os.LookupEnv("CHAMBER_KMS_KEY_ALIAS")
+	fromEnv, ok := os.LookupEnv("CHAMBER_KMS_KEY")
 	if !ok {
-		return DefaultKeyID
+		fromEnv, ok = os.LookupEnv("CHAMBER_KMS_KEY_ALIAS")
+		if !ok {
+			return DefaultKeyID
+		}
 	}
-	if !strings.HasPrefix(fromEnv, "alias/") {
+	if strings.HasPrefix(fromEnv, "arn:aws:kms:") {
+		return fromEnv
+	} else if looksLikeKmsKeyId.MatchString(fromEnv) {
+		return fromEnv
+	} else if !strings.HasPrefix(fromEnv, "alias/") {
 		return fmt.Sprintf("alias/%s", fromEnv)
 	}
 

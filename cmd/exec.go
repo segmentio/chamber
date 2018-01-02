@@ -30,7 +30,7 @@ var execCmd = &cobra.Command{
 		}
 		return nil
 	},
-	RunE:  execRun,
+	RunE: execRun,
 }
 
 func init() {
@@ -42,7 +42,10 @@ func execRun(cmd *cobra.Command, args []string) error {
 	services, command, commandArgs := args[:dashIx], args[dashIx], args[dashIx+1:]
 
 	env := environ(os.Environ())
-	secretStore := store.NewSSMStore(numRetries)
+	secretStore, err := store.NewSSMStore(config)
+	if err != nil {
+		return err
+	}
 	for _, service := range services {
 		if err := validateService(service); err != nil {
 			return errors.Wrap(err, "Failed to validate service")

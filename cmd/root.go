@@ -1,11 +1,13 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"regexp"
 	"strings"
 
+	"github.com/segmentio/chamber/store"
 	"github.com/spf13/cobra"
 )
 
@@ -14,7 +16,32 @@ var (
 	validKeyFormat     = regexp.MustCompile(`^[A-Za-z0-9-_]+$`)
 	validServiceFormat = regexp.MustCompile(`^[A-Za-z0-9-_]+$`)
 
-	numRetries int
+	config         *store.Config
+	base           string
+	skipBaseConfig bool
+	numRetries     int
+
+	mandatoryBaseConfigPreRunE = func(cmd *cobra.Command, args []string) error {
+		present, err := store.MergeConfigFromSSM(config)
+		if err != nil {
+			return err
+		}
+		if !present {
+			return errors.New("chamber configuration not found at current base path. Consider using --skip-base-config if that is desirable")
+		}
+		return nil
+	}
+
+	optionalBaseConfigPreRunE = func(cmd *cobra.Command, args []string) error {
+		present, err := store.MergeConfigFromSSM(config)
+		if err != nil {
+			return err
+		}
+		if !present {
+			fmt.Fprintf(os.Stderr, "WARNING: chamber configuration not found at current base path but proceeding anyway")
+		}
+		return nil
+	}
 )
 
 const (
@@ -27,13 +54,22 @@ const (
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
-	Use:           "chamber",
-	Short:         "CLI for storing secrets",
-	SilenceUsage:  true,
+	Use:               "chamber",
+	Short:             "CLI for storing secrets",
+	SilenceUsage:      true,
+	PersistentPreRunE: mandatoryBaseConfigPreRunE,
 }
 
 func init() {
+	config = store.NewConfig()
 	RootCmd.PersistentFlags().IntVarP(&numRetries, "retries", "r", DefaultNumRetries, "For SSM, the number of retries we'll make before giving up")
+	config.BindPFlag(store.ConfigRetries, RootCmd.PersistentFlags().Lookup("retries"))
+
+	RootCmd.PersistentFlags().StringVarP(&base, "base", "b", "", "Base path. If not specified, chamber operates at SSM root level")
+	config.BindPFlag(store.ConfigBase, RootCmd.PersistentFlags().Lookup("base"))
+
+	RootCmd.PersistentFlags().BoolVar(&skipBaseConfig, "skip-base-config", false, "Skip loading configuration from base path")
+	config.BindPFlag(store.ConfigSkipBaseConfig, RootCmd.PersistentFlags().Lookup("skip-base-config"))
 }
 
 // Execute adds all child commands to the root command sets flags appropriately.

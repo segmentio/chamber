@@ -39,25 +39,31 @@ type SSMStore struct {
 
 // NewSSMStore creates a new SSMStore
 func NewSSMStore(numRetries int) *SSMStore {
-	region, ok := os.LookupEnv("AWS_REGION")
-	if !ok {
-		// If region is not set, attempt to determine it via ec2 metadata API
-		session := session.New()
-		ec2metadataSvc := ec2metadata.New(session)
-		region, _ = ec2metadataSvc.Region()
-	}
+	var region *string
 
 	if regionOverride, ok := os.LookupEnv("CHAMBER_AWS_REGION"); ok {
-		region = regionOverride
+		region = aws.String(regionOverride)
 	}
-
 	ssmSession := session.Must(session.NewSession(&aws.Config{
-		Region: aws.String(region),
+		Region: region,
 	}))
-	svc := ssm.New(ssmSession, &aws.Config{MaxRetries: aws.Int(numRetries)})
+
+	// If region is still not set, attempt to determine it via ec2 metadata API
+	region = nil
+	if aws.StringValue(ssmSession.Config.Region) == "" {
+		session := session.New()
+		ec2metadataSvc := ec2metadata.New(session)
+		if regionOverride, err := ec2metadataSvc.Region(); err == nil {
+			region = aws.String(regionOverride)
+		}
+	}
+	svc := ssm.New(ssmSession, &aws.Config{
+		MaxRetries: aws.Int(numRetries),
+		Region:     region,
+	})
 
 	usePaths := false
-	_, ok = os.LookupEnv("CHAMBER_USE_PATHS")
+	_, ok := os.LookupEnv("CHAMBER_USE_PATHS")
 	if ok {
 		usePaths = true
 	}

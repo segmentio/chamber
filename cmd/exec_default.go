@@ -29,8 +29,10 @@ func exec(command string, args []string, env []string) error {
 	}
 
 	go func() {
-		sig := <-sigChan
-		ecmd.Process.Signal(sig)
+		for {
+			sig := <-sigChan
+			ecmd.Process.Signal(sig)
+		}
 	}()
 
 	if err := ecmd.Wait(); err != nil {

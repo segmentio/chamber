@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/segmentio/events"
 	"github.com/spf13/cobra"
 )
 
@@ -27,9 +28,9 @@ const (
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
-	Use:           "chamber",
-	Short:         "CLI for storing secrets",
-	SilenceUsage:  true,
+	Use:          "chamber",
+	Short:        "CLI for storing secrets",
+	SilenceUsage: true,
 }
 
 func init() {
@@ -43,6 +44,7 @@ func Execute() {
 		if strings.Contains(err.Error(), "arg(s)") || strings.Contains(err.Error(), "usage") {
 			cmd.Usage()
 		}
+		events.Log(err.Error())
 		os.Exit(1)
 	}
 }

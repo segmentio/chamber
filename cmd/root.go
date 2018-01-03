@@ -43,8 +43,10 @@ func Execute() {
 	if cmd, err := RootCmd.ExecuteC(); err != nil {
 		if strings.Contains(err.Error(), "arg(s)") || strings.Contains(err.Error(), "usage") {
 			cmd.Usage()
+		} else {
+			events.Log(err.Error())
 		}
-		events.Log(err.Error())
+
 		os.Exit(1)
 	}
 }

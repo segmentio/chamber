@@ -27,7 +27,7 @@ var execCmd = &cobra.Command{
 		}
 		return nil
 	},
-	RunE:  execRun,
+	RunE: execRun,
 }
 
 func init() {
@@ -50,7 +50,14 @@ func execRun(cmd *cobra.Command, args []string) error {
 			return errors.Wrap(err, "Failed to list store contents")
 		}
 		for _, secret := range secrets {
-			envVarKey := strings.ToUpper(key(secret.Meta.Key))
+			var envVarKey string
+
+			if caseSensitive {
+				envVarKey = key(secret.Meta.Key)
+			} else {
+				envVarKey = strings.ToUpper(key(secret.Meta.Key))
+			}
+
 			envVarKey = strings.Replace(envVarKey, "-", "_", -1)
 
 			if env.IsSet(envVarKey) {

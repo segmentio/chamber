@@ -221,6 +221,18 @@
 			"revisionTime": "2016-01-29T19:31:06Z"
 		},
 		{
+			"checksumSHA1": "GSeYfnRDZBxAti6yVcturdvoZB0=",
+			"path": "github.com/segmentio/events",
+			"revision": "406fcabaf3d3a8c0d790b3bbf7e3f795e277124e",
+			"revisionTime": "2017-09-11T16:45:58Z"
+		},
+		{
+			"checksumSHA1": "Yx24XGtfkzSijUU3y6AStin4GqM=",
+			"path": "github.com/segmentio/events/ecslogs",
+			"revision": "406fcabaf3d3a8c0d790b3bbf7e3f795e277124e",
+			"revisionTime": "2017-09-11T16:45:58Z"
+		},
+		{
 			"checksumSHA1": "aG5wPXVGAEu90TjPFNZFRtox2Zo=",
 			"path": "github.com/spf13/cobra",
 			"revision": "ccaecb155a2177302cb56cae929251a256d0f646",

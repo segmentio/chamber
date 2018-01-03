@@ -27,7 +27,6 @@ var (
 func init() {
 	readCmd.Flags().IntVarP(&version, "version", "v", -1, "The version number of the secret. Defaults to latest.")
 	readCmd.Flags().BoolVarP(&quiet, "quiet", "q", false, "Only print the secret")
-
 	RootCmd.AddCommand(readCmd)
 }
 

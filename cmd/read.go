@@ -27,6 +27,7 @@ var (
 func init() {
 	readCmd.Flags().IntVarP(&version, "version", "v", -1, "The version number of the secret. Defaults to latest.")
 	readCmd.Flags().BoolVarP(&quiet, "quiet", "q", false, "Only print the secret")
+
 	RootCmd.AddCommand(readCmd)
 }
 
@@ -36,7 +37,14 @@ func read(cmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, "Failed to validate service")
 	}
 
-	key := strings.ToLower(args[1])
+	var key string
+
+	if caseSensitive {
+		key = args[1]
+	} else {
+		key = strings.ToLower(args[1])
+	}
+
 	if err := validateKey(key); err != nil {
 		return errors.Wrap(err, "Failed to validate key")
 	}

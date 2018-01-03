@@ -34,7 +34,14 @@ func write(cmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, "Failed to validate service")
 	}
 
-	key := strings.ToLower(args[1])
+	var key string
+
+	if caseSensitive {
+		key = args[1]
+	} else {
+		key = strings.ToLower(args[1])
+	}
+
 	if err := validateKey(key); err != nil {
 		return errors.Wrap(err, "Failed to validate key")
 	}

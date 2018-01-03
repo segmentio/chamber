@@ -11,6 +11,8 @@ import (
 
 // Regex's used to validate service and key names
 var (
+	caseSensitive bool
+
 	validKeyFormat     = regexp.MustCompile(`^[A-Za-z0-9-_]+$`)
 	validServiceFormat = regexp.MustCompile(`^[A-Za-z0-9-_]+$`)
 
@@ -27,12 +29,13 @@ const (
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
-	Use:           "chamber",
-	Short:         "CLI for storing secrets",
-	SilenceUsage:  true,
+	Use:          "chamber",
+	Short:        "CLI for storing secrets",
+	SilenceUsage: true,
 }
 
 func init() {
+	RootCmd.PersistentFlags().BoolVarP(&caseSensitive, "case-sensitive", "c", false, "Use case-sensitive keys")
 	RootCmd.PersistentFlags().IntVarP(&numRetries, "retries", "r", DefaultNumRetries, "For SSM, the number of retries we'll make before giving up")
 }
 

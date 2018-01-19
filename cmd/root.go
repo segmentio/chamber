@@ -12,7 +12,7 @@ import (
 // Regex's used to validate service and key names
 var (
 	validKeyFormat     = regexp.MustCompile(`^[A-Za-z0-9-_]+$`)
-	validServiceFormat = regexp.MustCompile(`^[A-Za-z0-9-_]+$`)
+	validServiceFormat = regexp.MustCompile(`^[A-Za-z0-9-_\/]+$`)
 
 	numRetries     int
 	chamberVersion string

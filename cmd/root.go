@@ -12,7 +12,7 @@ import (
 // Regex's used to validate service and key names
 var (
 	validKeyFormat     = regexp.MustCompile(`^[A-Za-z0-9-_]+$`)
-	validServiceFormat = regexp.MustCompile(`^[A-Za-z0-9-_]+$`)
+	validServiceFormat = regexp.MustCompile(`^[A-Za-z0-9-_\/]+$`)
 
 	numRetries int
 )
@@ -27,9 +27,9 @@ const (
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
-	Use:           "chamber",
-	Short:         "CLI for storing secrets",
-	SilenceUsage:  true,
+	Use:          "chamber",
+	Short:        "CLI for storing secrets",
+	SilenceUsage: true,
 }
 
 func init() {

@@ -3,6 +3,8 @@
 Chamber is a tool for managing secrets.  Currently it does so by storing
 secrets in SSM Parameter Store, an AWS service for storing secrets.
 
+For detailed info about using chamber, read [The Right Way To Manage Secrets](https://aws.amazon.com/blogs/mt/the-right-way-to-store-secrets-using-parameter-store/)
+
 ## Authenticating
 
 Using `chamber` requires you to be running in an environment with an

@@ -139,6 +139,7 @@ file formats are supported:
 * java-properties
 * csv
 * tsv
+* dotenv
 
 File is written to standard output by default but you may specify an output
 file.

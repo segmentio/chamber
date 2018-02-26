@@ -30,7 +30,7 @@ var (
 )
 
 func init() {
-	exportCmd.Flags().StringVarP(&exportFormat, "format", "f", "json", "Output format (json, java-properties, csv, tsv)")
+	exportCmd.Flags().StringVarP(&exportFormat, "format", "f", "json", "Output format (json, java-properties, csv, tsv, dotenv)")
 	exportCmd.Flags().StringVarP(&exportOutput, "output-file", "o", "", "Output file (default is standard output)")
 	RootCmd.AddCommand(exportCmd)
 }
@@ -78,6 +78,8 @@ func runExport(cmd *cobra.Command, args []string) error {
 		err = exportAsCsv(params, w)
 	case "tsv":
 		err = exportAsTsv(params, w)
+	case "dotenv":
+		err = exportAsEnvFile(params, w)
 	default:
 		err = errors.Errorf("Unsupported export format: %s", exportFormat)
 	}
@@ -86,6 +88,18 @@ func runExport(cmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, "Unable to export parameters")
 	}
 
+	return nil
+}
+
+func exportAsEnvFile(params map[string]string, w io.Writer) error {
+	// Env File like:
+	// KEY=VAL
+	// OTHER=OTHERVAL
+	for _, k := range sortedKeys(params) {
+		key := strings.ToUpper(k)
+		key = strings.Replace(key, "-", "_", -1)
+		w.Write([]byte(fmt.Sprintf("%s=%s\n", key, params[k])))
+	}
 	return nil
 }
 

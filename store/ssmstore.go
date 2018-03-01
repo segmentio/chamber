@@ -21,11 +21,11 @@ const (
 
 // validPathKeyFormat is the format that is expected for key names inside parameter store
 // when using paths
-var validPathKeyFormat = regexp.MustCompile(`^\/[A-Za-z0-9-_]+\/[A-Za-z0-9-_]+$`)
+var validPathKeyFormat = regexp.MustCompile(`^\/([A-Za-z0-9-_]+)\/([A-Za-z0-9-_.]+)$`)
 
 // validKeyFormat is the format that is expected for key names inside parameter store when
 // not using paths
-var validKeyFormat = regexp.MustCompile(`^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$`)
+var validKeyFormat = regexp.MustCompile(`^([A-Za-z0-9-_]+)\.([A-Za-z0-9-_.]+)$`)
 
 // ensure SSMStore confirms to Store interface
 var _ Store = &SSMStore{}
@@ -166,6 +166,7 @@ func (s *SSMStore) readVersion(id SecretId, version int) (Secret, error) {
 		}
 		if thisVersion == version {
 			return Secret{
+				Id:    id,
 				Value: history.Value,
 				Meta: SecretMetadata{
 					Created:   *history.LastModifiedDate,
@@ -252,6 +253,7 @@ func (s *SSMStore) readLatest(id SecretId) (Secret, error) {
 	secretMeta := parameterMetaToSecretMeta(parameter)
 
 	return Secret{
+		Id:    id,
 		Value: param.Value,
 		Meta:  secretMeta,
 	}, nil
@@ -298,11 +300,13 @@ func (s *SSMStore) List(service string, includeValues bool) ([]Secret, error) {
 		}
 
 		for _, meta := range resp.Parameters {
-			if !s.validateName(*meta.Name) {
+			secretId, ok := s.nameToId(*meta.Name)
+			if !ok {
 				continue
 			}
 			secretMeta := parameterMetaToSecretMeta(meta)
 			secrets[secretMeta.Key] = Secret{
+				Id:    secretId,
 				Value: nil,
 				Meta:  secretMeta,
 			}
@@ -397,11 +401,20 @@ func (s *SSMStore) idToName(id SecretId) string {
 	return fmt.Sprintf("%s.%s", id.Service, id.Key)
 }
 
-func (s *SSMStore) validateName(name string) bool {
+func (s *SSMStore) nameToId(name string) (SecretId, bool) {
+	var m []string
 	if s.usePaths {
-		return validPathKeyFormat.MatchString(name)
+		m = validPathKeyFormat.FindStringSubmatch(name)
+	} else {
+		m = validKeyFormat.FindStringSubmatch(name)
 	}
-	return validKeyFormat.MatchString(name)
+	if m == nil {
+		return SecretId{}, false
+	}
+	return SecretId{
+		Service: m[1],
+		Key:     m[2],
+	}, true
 }
 
 func basePath(key string) string {

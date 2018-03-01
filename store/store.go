@@ -34,6 +34,7 @@ type SecretId struct {
 }
 
 type Secret struct {
+	Id    SecretId
 	Value *string
 	Meta  SecretMetadata
 }

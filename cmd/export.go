@@ -45,16 +45,16 @@ func runExport(cmd *cobra.Command, args []string) error {
 			return errors.Wrapf(err, "Failed to validate service %s", service)
 		}
 
-		secrets, err := secretStore.List(strings.ToLower(service), true)
+		rawSecrets, err := secretStore.ListRaw(strings.ToLower(service))
 		if err != nil {
 			return errors.Wrapf(err, "Failed to list store contents for service %s", service)
 		}
-		for _, secret := range secrets {
-			k := key(secret.Meta.Key)
+		for _, rawSecret := range rawSecrets {
+			k := key(rawSecret.Key)
 			if _, ok := params[k]; ok {
 				fmt.Fprintf(os.Stderr, "warning: parameter %s specified more than once (overriden by service %s)\n", k, service)
 			}
-			params[k] = *secret.Value
+			params[k] = rawSecret.Value
 		}
 	}
 

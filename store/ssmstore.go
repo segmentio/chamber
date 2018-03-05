@@ -344,6 +344,31 @@ func (s *SSMStore) List(service string, includeValues bool) ([]Secret, error) {
 	return values(secrets), nil
 }
 
+// ListRaw lists all secrets keys and values for a given service. Does not include any
+// other meta-data. Uses faster AWS APIs with much higher rate-limits. Suitable for
+// use in production environments.
+func (s *SSMStore) ListRaw(service string) ([]RawSecret, error) {
+	// Delegate to List
+	secrets, err := s.List(service, true)
+
+	if err != nil {
+		return nil, err
+	}
+
+	rawSecrets := make([]RawSecret, len(secrets))
+	for i, secret := range secrets {
+		rawSecrets[i] = RawSecret{
+			Key: secret.Meta.Key,
+
+			// This dereference is safe because we trust List to have given us the values
+			// that we asked-for
+			Value: *secret.Value,
+		}
+	}
+
+	return rawSecrets, nil
+}
+
 // History returns a list of events that have occured regarding the given
 // secret.
 func (s *SSMStore) History(id SecretId) ([]ChangeEvent, error) {

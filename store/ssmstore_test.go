@@ -386,6 +386,44 @@ func TestList(t *testing.T) {
 	})
 }
 
+func TestListRaw(t *testing.T) {
+	mock := &mockSSMClient{parameters: map[string]mockParameter{}}
+	store := NewTestSSMStore(mock)
+
+	secrets := []SecretId{
+		{Service: "test", Key: "a"},
+		{Service: "test", Key: "b"},
+		{Service: "test", Key: "c"},
+	}
+	for _, secret := range secrets {
+		store.Write(secret, "value")
+	}
+
+	t.Run("ListRaw should return all keys and values for a service", func(t *testing.T) {
+		s, err := store.ListRaw("test")
+		assert.Nil(t, err)
+		assert.Equal(t, 3, len(s))
+		sort.Sort(ByKeyRaw(s))
+		assert.Equal(t, "test.a", s[0].Key)
+		assert.Equal(t, "test.b", s[1].Key)
+		assert.Equal(t, "test.c", s[2].Key)
+
+		assert.Equal(t, "value", s[0].Value)
+		assert.Equal(t, "value", s[1].Value)
+		assert.Equal(t, "value", s[2].Value)
+	})
+
+	t.Run("List should only return exact matches on service name", func(t *testing.T) {
+		store.Write(SecretId{Service: "match", Key: "a"}, "val")
+		store.Write(SecretId{Service: "matchlonger", Key: "a"}, "val")
+
+		s, err := store.ListRaw("match")
+		assert.Nil(t, err)
+		assert.Equal(t, 1, len(s))
+		assert.Equal(t, "match.a", s[0].Key)
+	})
+}
+
 func TestHistory(t *testing.T) {
 	mock := &mockSSMClient{parameters: map[string]mockParameter{}}
 	store := NewTestSSMStore(mock)
@@ -608,3 +646,9 @@ type ByKey []Secret
 func (a ByKey) Len() int           { return len(a) }
 func (a ByKey) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a ByKey) Less(i, j int) bool { return a[i].Meta.Key < a[j].Meta.Key }
+
+type ByKeyRaw []RawSecret
+
+func (a ByKeyRaw) Len() int           { return len(a) }
+func (a ByKeyRaw) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a ByKeyRaw) Less(i, j int) bool { return a[i].Key < a[j].Key }

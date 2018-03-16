@@ -63,10 +63,10 @@ func NewSSMStore(numRetries int) *SSMStore {
 		Region:     region,
 	})
 
-	usePaths := false
-	_, ok := os.LookupEnv("CHAMBER_USE_PATHS")
+	usePaths := true
+	_, ok := os.LookupEnv("CHAMBER_NO_PATHS")
 	if ok {
-		usePaths = true
+		usePaths = false
 	}
 
 	return &SSMStore{

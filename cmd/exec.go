@@ -27,7 +27,7 @@ var execCmd = &cobra.Command{
 		}
 		return nil
 	},
-	RunE:  execRun,
+	RunE: execRun,
 }
 
 func init() {
@@ -45,18 +45,18 @@ func execRun(cmd *cobra.Command, args []string) error {
 			return errors.Wrap(err, "Failed to validate service")
 		}
 
-		secrets, err := secretStore.List(strings.ToLower(service), true)
+		rawSecrets, err := secretStore.ListRaw(strings.ToLower(service))
 		if err != nil {
 			return errors.Wrap(err, "Failed to list store contents")
 		}
-		for _, secret := range secrets {
-			envVarKey := strings.ToUpper(key(secret.Meta.Key))
+		for _, rawSecret := range rawSecrets {
+			envVarKey := strings.ToUpper(key(rawSecret.Key))
 			envVarKey = strings.Replace(envVarKey, "-", "_", -1)
 
 			if env.IsSet(envVarKey) {
 				fmt.Fprintf(os.Stderr, "warning: overwriting environment variable %s\n", envVarKey)
 			}
-			env.Set(envVarKey, *secret.Value)
+			env.Set(envVarKey, rawSecret.Value)
 		}
 	}
 

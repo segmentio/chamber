@@ -38,6 +38,12 @@ type Secret struct {
 	Meta  SecretMetadata
 }
 
+// A secret without any metadata
+type RawSecret struct {
+	Value string
+	Key   string
+}
+
 type SecretMetadata struct {
 	Created   time.Time
 	CreatedBy string
@@ -56,6 +62,7 @@ type Store interface {
 	Write(id SecretId, value string) error
 	Read(id SecretId, version int) (Secret, error)
 	List(service string, includeValues bool) ([]Secret, error)
+	ListRaw(service string) ([]RawSecret, error)
 	History(id SecretId) ([]ChangeEvent, error)
 	Delete(id SecretId) error
 }

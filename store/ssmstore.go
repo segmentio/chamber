@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -361,6 +362,23 @@ func (s *SSMStore) ListRaw(service string) ([]RawSecret, error) {
 
 			resp, err := s.svc.GetParametersByPath(getParametersByPathInput)
 			if err != nil {
+				// If the error is an access-denied exception
+				awsErr, isAwserr := err.(awserr.Error)
+				if isAwserr {
+					if awsErr.Code() == "AccessDeniedException" && strings.Contains(awsErr.Message(), "is not authorized to perform: ssm:GetParametersByPath on resource") {
+						// Fall-back to using the old list method in case some users haven't updated their IAM permissions yet, but warn about it and
+						// tell them to fix their permissions
+						fmt.Fprintf(
+							os.Stderr,
+							"Warning: %s\nFalling-back to using ssm:DescribeParameters. This may cause delays or failures due to AWS rate-limiting.\n"+
+								"This is behavior deprecated and will be removed in a future version of chamber. Please update your IAM permissions to grant ssm:GetParametersByPath.\n\n",
+							awsErr)
+
+						// Delegate to List
+						return s.listRawViaList(service)
+					}
+				}
+
 				return nil, err
 			}
 
@@ -390,27 +408,10 @@ func (s *SSMStore) ListRaw(service string) ([]RawSecret, error) {
 		}
 		return rawSecrets, nil
 
-	} else {
-		// Delegate to List
-		secrets, err := s.List(service, true)
-
-		if err != nil {
-			return nil, err
-		}
-
-		rawSecrets := make([]RawSecret, len(secrets))
-		for i, secret := range secrets {
-			rawSecrets[i] = RawSecret{
-				Key: secret.Meta.Key,
-
-				// This dereference is safe because we trust List to have given us the values
-				// that we asked-for
-				Value: *secret.Value,
-			}
-		}
-
-		return rawSecrets, nil
 	}
+
+	// Delete to List (which uses the DescribeParameters API)
+	return s.listRawViaList(service)
 }
 
 // History returns a list of events that have occured regarding the given
@@ -456,6 +457,28 @@ func (s *SSMStore) History(id SecretId) ([]ChangeEvent, error) {
 		Version: current.Meta.Version,
 	})
 	return events, nil
+}
+
+func (s *SSMStore) listRawViaList(service string) ([]RawSecret, error) {
+	// Delegate to List
+	secrets, err := s.List(service, true)
+
+	if err != nil {
+		return nil, err
+	}
+
+	rawSecrets := make([]RawSecret, len(secrets))
+	for i, secret := range secrets {
+		rawSecrets[i] = RawSecret{
+			Key: secret.Meta.Key,
+
+			// This dereference is safe because we trust List to have given us the values
+			// that we asked-for
+			Value: *secret.Value,
+		}
+	}
+
+	return rawSecrets, nil
 }
 
 func (s *SSMStore) idToName(id SecretId) string {

@@ -11,6 +11,12 @@ Starting with version 2.0, chamber uses parameter store's path based API by defa
 
 As a side effect of this change, if you didn't use path based secrets before 2.0, you will need to set `CHAMBER_NO_PATHS` to enable the old behavior.  This option is deprecated, and We recommend only using this setting for supporting existing applications.
 
+To migrate to the new format, you can take advantage of the `export` and `import` commands.  For example, if you wanted to convert secrets for service `foo` to the new format using chamber 2.0, you can do:
+
+```bash
+$ CHAMBER_NO_PATHS chamber export foo | chamber import foo -
+```
+
 ## Authenticating
 
 Using `chamber` requires you to be running in an environment with an

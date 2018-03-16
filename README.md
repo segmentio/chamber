@@ -140,7 +140,7 @@ $ chamber export [--format <format>] [--output-file <file>]  <service...>
 {"key","secret"}
 ```
 
-`export` providers ability to export secrets in various file formats. The following
+`export` provides ability to export secrets in various file formats. The following
 file formats are supported:
 
 * json (default)
@@ -151,6 +151,16 @@ file formats are supported:
 
 File is written to standard output by default but you may specify an output
 file.
+
+### Importing
+```bash
+$ chamber import <service> <filepath>
+```
+
+`import` provides the ability to import secrets from a json file (like the kind
+you get from `chamber export`).
+
+You can set `filepath` to `-` to instead read input from stdin.
 
 ### Deleting
 ```bash

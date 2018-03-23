@@ -5,6 +5,18 @@ secrets in SSM Parameter Store, an AWS service for storing secrets.
 
 For detailed info about using chamber, read [The Right Way To Manage Secrets](https://aws.amazon.com/blogs/mt/the-right-way-to-store-secrets-using-parameter-store/)
 
+## 2.0 Breaking Changes
+
+Starting with version 2.0, chamber uses parameter store's path based API by default.  Chamber pre-2.0 supported this API using the `CHAMBER_USE_PATHS` environment variable.  The paths based API has performance benefits and is the recommended best practice by AWS.
+
+As a side effect of this change, if you didn't use path based secrets before 2.0, you will need to set `CHAMBER_NO_PATHS` to enable the old behavior.  This option is deprecated, and We recommend only using this setting for supporting existing applications.
+
+To migrate to the new format, you can take advantage of the `export` and `import` commands.  For example, if you wanted to convert secrets for service `foo` to the new format using chamber 2.0, you can do:
+
+```bash
+$ CHAMBER_NO_PATHS chamber export foo | chamber import foo -
+```
+
 ## Authenticating
 
 Using `chamber` requires you to be running in an environment with an
@@ -134,7 +146,7 @@ $ chamber export [--format <format>] [--output-file <file>]  <service...>
 {"key","secret"}
 ```
 
-`export` providers ability to export secrets in various file formats. The following
+`export` provides ability to export secrets in various file formats. The following
 file formats are supported:
 
 * json (default)
@@ -145,6 +157,16 @@ file formats are supported:
 
 File is written to standard output by default but you may specify an output
 file.
+
+### Importing
+```bash
+$ chamber import <service> <filepath>
+```
+
+`import` provides the ability to import secrets from a json file (like the kind
+you get from `chamber export`).
+
+You can set `filepath` to `-` to instead read input from stdin.
 
 ### Deleting
 ```bash
@@ -173,12 +195,6 @@ Chamber does not currently read the value of "AWS_DEFAULT_REGION". See
 for more details.
 
 If you'd like to use a different region for chamber without changing `AWS_REGION`, you can use `CHAMBER_AWS_REGION` to override just for chamber.
-
-### Using Path Based Keys
-
-If you'd prefer to use path based keys (`/service/key`) instead of the default period separated keys (`service.key`), you
-can set the environment variable `CHAMBER_USE_PATHS` to 1.  This environment variable must be set when writing and reading keys.
-
 
 ## Releasing
 

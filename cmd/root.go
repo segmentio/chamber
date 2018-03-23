@@ -14,7 +14,8 @@ var (
 	validKeyFormat     = regexp.MustCompile(`^[A-Za-z0-9-_]+$`)
 	validServiceFormat = regexp.MustCompile(`^[A-Za-z0-9-_]+$`)
 
-	numRetries int
+	numRetries     int
+	chamberVersion string
 )
 
 const (
@@ -27,9 +28,9 @@ const (
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
-	Use:           "chamber",
-	Short:         "CLI for storing secrets",
-	SilenceUsage:  true,
+	Use:          "chamber",
+	Short:        "CLI for storing secrets",
+	SilenceUsage: true,
 }
 
 func init() {
@@ -38,7 +39,8 @@ func init() {
 
 // Execute adds all child commands to the root command sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
-func Execute() {
+func Execute(vers string) {
+	chamberVersion = vers
 	if cmd, err := RootCmd.ExecuteC(); err != nil {
 		if strings.Contains(err.Error(), "arg(s)") || strings.Contains(err.Error(), "usage") {
 			cmd.Usage()

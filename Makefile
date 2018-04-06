@@ -5,14 +5,14 @@ release: gh-release clean dist
 	govendor sync
 	github-release release \
 	--security-token $$GH_LOGIN \
-	--user segmentio \
+	--user ixydo \
 	--repo chamber \
 	--tag $(VERSION) \
 	--name $(VERSION)
 
 	github-release upload \
 	--security-token $$GH_LOGIN \
-	--user segmentio \
+	--user ixydo \
 	--repo chamber \
 	--tag $(VERSION) \
 	--name chamber-$(VERSION)-darwin-amd64 \
@@ -20,7 +20,7 @@ release: gh-release clean dist
 
 	github-release upload \
 	--security-token $$GH_LOGIN \
-	--user segmentio \
+	--user ixydo \
 	--repo chamber \
 	--tag $(VERSION) \
 	--name chamber-$(VERSION)-linux-amd64 \

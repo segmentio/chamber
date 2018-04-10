@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -62,10 +63,10 @@ func NewSSMStore(numRetries int) *SSMStore {
 		Region:     region,
 	})
 
-	usePaths := false
-	_, ok := os.LookupEnv("CHAMBER_USE_PATHS")
+	usePaths := true
+	_, ok := os.LookupEnv("CHAMBER_NO_PATHS")
 	if ok {
-		usePaths = true
+		usePaths = false
 	}
 
 	return &SSMStore{
@@ -344,6 +345,75 @@ func (s *SSMStore) List(service string, includeValues bool) ([]Secret, error) {
 	return values(secrets), nil
 }
 
+// ListRaw lists all secrets keys and values for a given service. Does not include any
+// other meta-data. Uses faster AWS APIs with much higher rate-limits. Suitable for
+// use in production environments.
+func (s *SSMStore) ListRaw(service string) ([]RawSecret, error) {
+	if s.usePaths {
+		secrets := map[string]RawSecret{}
+		var nextToken *string
+		for {
+			getParametersByPathInput := &ssm.GetParametersByPathInput{
+				MaxResults:     aws.Int64(10),
+				NextToken:      nextToken,
+				Path:           aws.String("/" + service + "/"),
+				WithDecryption: aws.Bool(true),
+			}
+
+			resp, err := s.svc.GetParametersByPath(getParametersByPathInput)
+			if err != nil {
+				// If the error is an access-denied exception
+				awsErr, isAwserr := err.(awserr.Error)
+				if isAwserr {
+					if awsErr.Code() == "AccessDeniedException" && strings.Contains(awsErr.Message(), "is not authorized to perform: ssm:GetParametersByPath on resource") {
+						// Fall-back to using the old list method in case some users haven't updated their IAM permissions yet, but warn about it and
+						// tell them to fix their permissions
+						fmt.Fprintf(
+							os.Stderr,
+							"Warning: %s\nFalling-back to using ssm:DescribeParameters. This may cause delays or failures due to AWS rate-limiting.\n"+
+								"This is behavior deprecated and will be removed in a future version of chamber. Please update your IAM permissions to grant ssm:GetParametersByPath.\n\n",
+							awsErr)
+
+						// Delegate to List
+						return s.listRawViaList(service)
+					}
+				}
+
+				return nil, err
+			}
+
+			for _, param := range resp.Parameters {
+				if !s.validateName(*param.Name) {
+					continue
+				}
+
+				secrets[*param.Name] = RawSecret{
+					Value: *param.Value,
+					Key:   *param.Name,
+				}
+			}
+
+			if resp.NextToken == nil {
+				break
+			}
+
+			nextToken = resp.NextToken
+		}
+
+		rawSecrets := make([]RawSecret, len(secrets))
+		i := 0
+		for _, rawSecret := range secrets {
+			rawSecrets[i] = rawSecret
+			i += 1
+		}
+		return rawSecrets, nil
+
+	}
+
+	// Delete to List (which uses the DescribeParameters API)
+	return s.listRawViaList(service)
+}
+
 // History returns a list of events that have occured regarding the given
 // secret.
 func (s *SSMStore) History(id SecretId) ([]ChangeEvent, error) {
@@ -387,6 +457,28 @@ func (s *SSMStore) History(id SecretId) ([]ChangeEvent, error) {
 		Version: current.Meta.Version,
 	})
 	return events, nil
+}
+
+func (s *SSMStore) listRawViaList(service string) ([]RawSecret, error) {
+	// Delegate to List
+	secrets, err := s.List(service, true)
+
+	if err != nil {
+		return nil, err
+	}
+
+	rawSecrets := make([]RawSecret, len(secrets))
+	for i, secret := range secrets {
+		rawSecrets[i] = RawSecret{
+			Key: secret.Meta.Key,
+
+			// This dereference is safe because we trust List to have given us the values
+			// that we asked-for
+			Value: *secret.Value,
+		}
+	}
+
+	return rawSecrets, nil
 }
 
 func (s *SSMStore) idToName(id SecretId) string {

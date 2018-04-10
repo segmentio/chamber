@@ -150,6 +150,29 @@ func (m *mockSSMClient) DescribeParameters(i *ssm.DescribeParametersInput) (*ssm
 	}, nil
 }
 
+func (m *mockSSMClient) GetParametersByPath(i *ssm.GetParametersByPathInput) (*ssm.GetParametersByPathOutput, error) {
+	parameters := []*ssm.Parameter{}
+
+	for _, param := range m.parameters {
+		// Match ParameterFilters
+		doesMatchStringFilters, err := matchStringFilters(i.ParameterFilters, param)
+		if err != nil {
+			return &ssm.GetParametersByPathOutput{}, err
+		}
+
+		doesMatchPathFilter := *i.Path == "/" || strings.HasPrefix(*param.meta.Name, *i.Path)
+
+		if doesMatchStringFilters && doesMatchPathFilter {
+			parameters = append(parameters, param.currentParam)
+		}
+	}
+
+	return &ssm.GetParametersByPathOutput{
+		Parameters: parameters,
+		NextToken:  nil,
+	}, nil
+}
+
 func (m *mockSSMClient) DescribeParametersPages(i *ssm.DescribeParametersInput, fn func(*ssm.DescribeParametersOutput, bool) bool) error {
 	o, err := m.DescribeParameters(i)
 	if err != nil {
@@ -232,9 +255,22 @@ func matchStringFilters(filters []*ssm.ParameterStringFilter, param mockParamete
 				return false, errors.New("path filter used on non path value")
 			}
 			compareTo = aws.String("/" + tokens[1] + "/")
-		}
-		if !pathInSlice(compareTo, filter.Values) {
-			return false, nil
+
+			if !pathInSlice(compareTo, filter.Values) {
+				return false, nil
+			}
+
+		case "Name":
+			if *filter.Option == "BeginsWith" {
+				result := false
+				for _, value := range filter.Values {
+					if strings.HasPrefix(*param.meta.Name, *value) {
+						result = true
+					}
+				}
+
+				return result, nil
+			}
 		}
 	}
 	return true, nil
@@ -383,6 +419,82 @@ func TestList(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, 1, len(s))
 		assert.Equal(t, "match.a", s[0].Meta.Key)
+	})
+}
+
+func TestListRaw(t *testing.T) {
+	mock := &mockSSMClient{parameters: map[string]mockParameter{}}
+	store := NewTestSSMStore(mock)
+
+	secrets := []SecretId{
+		{Service: "test", Key: "a"},
+		{Service: "test", Key: "b"},
+		{Service: "test", Key: "c"},
+	}
+	for _, secret := range secrets {
+		store.Write(secret, "value")
+	}
+
+	t.Run("ListRaw should return all keys and values for a service", func(t *testing.T) {
+		s, err := store.ListRaw("test")
+		assert.Nil(t, err)
+		assert.Equal(t, 3, len(s))
+		sort.Sort(ByKeyRaw(s))
+		assert.Equal(t, "test.a", s[0].Key)
+		assert.Equal(t, "test.b", s[1].Key)
+		assert.Equal(t, "test.c", s[2].Key)
+
+		assert.Equal(t, "value", s[0].Value)
+		assert.Equal(t, "value", s[1].Value)
+		assert.Equal(t, "value", s[2].Value)
+	})
+
+	t.Run("List should only return exact matches on service name", func(t *testing.T) {
+		store.Write(SecretId{Service: "match", Key: "a"}, "val")
+		store.Write(SecretId{Service: "matchlonger", Key: "a"}, "val")
+
+		s, err := store.ListRaw("match")
+		assert.Nil(t, err)
+		assert.Equal(t, 1, len(s))
+		assert.Equal(t, "match.a", s[0].Key)
+	})
+}
+
+func TestListRawWithPaths(t *testing.T) {
+	mock := &mockSSMClient{parameters: map[string]mockParameter{}}
+	store := NewTestSSMStoreWithPaths(mock)
+
+	secrets := []SecretId{
+		{Service: "test", Key: "a"},
+		{Service: "test", Key: "b"},
+		{Service: "test", Key: "c"},
+	}
+	for _, secret := range secrets {
+		store.Write(secret, "value")
+	}
+
+	t.Run("ListRaw should return all keys and values for a service", func(t *testing.T) {
+		s, err := store.ListRaw("test")
+		assert.Nil(t, err)
+		assert.Equal(t, 3, len(s))
+		sort.Sort(ByKeyRaw(s))
+		assert.Equal(t, "/test/a", s[0].Key)
+		assert.Equal(t, "/test/b", s[1].Key)
+		assert.Equal(t, "/test/c", s[2].Key)
+
+		assert.Equal(t, "value", s[0].Value)
+		assert.Equal(t, "value", s[1].Value)
+		assert.Equal(t, "value", s[2].Value)
+	})
+
+	t.Run("List should only return exact matches on service name", func(t *testing.T) {
+		store.Write(SecretId{Service: "match", Key: "a"}, "val")
+		store.Write(SecretId{Service: "matchlonger", Key: "a"}, "val")
+
+		s, err := store.ListRaw("match")
+		assert.Nil(t, err)
+		assert.Equal(t, 1, len(s))
+		assert.Equal(t, "/match/a", s[0].Key)
 	})
 }
 
@@ -608,3 +720,9 @@ type ByKey []Secret
 func (a ByKey) Len() int           { return len(a) }
 func (a ByKey) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a ByKey) Less(i, j int) bool { return a[i].Meta.Key < a[j].Meta.Key }
+
+type ByKeyRaw []RawSecret
+
+func (a ByKeyRaw) Len() int           { return len(a) }
+func (a ByKeyRaw) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a ByKeyRaw) Less(i, j int) bool { return a[i].Key < a[j].Key }

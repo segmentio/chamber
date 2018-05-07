@@ -1,6 +1,12 @@
 VERSION := $(shell git describe --tags --always --dirty="-dev")
 LDFLAGS := -ldflags='-X "main.Version=$(VERSION)"'
 
+build: deps
+	go build -o ./dist/chamber
+
+deps: govendor
+	@govendor sync
+
 release: gh-release clean dist
 	govendor sync
 	github-release release \
@@ -35,7 +41,7 @@ dist:
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build $(LDFLAGS) -o dist/chamber-$(VERSION)-linux-amd64
 
 gh-release:
-	go get -u github.com/aktau/github-release
+	@which github-release >/dev/null || go get -u github.com/aktau/github-release
 
 govendor:
-	go get -u github.com/kardianos/govendor
+	@which govendor >/dev/null || go get -u github.com/kardianos/govendor

@@ -30,10 +30,6 @@ func init() {
 
 func list(cmd *cobra.Command, args []string) error {
 	service := strings.ToLower(args[0])
-	if err := validateService(service); err != nil {
-		return errors.Wrap(err, "Failed to validate service")
-	}
-
 	secretStore := store.NewSSMStore(numRetries)
 	secrets, err := secretStore.List(service, withValues)
 	if err != nil {

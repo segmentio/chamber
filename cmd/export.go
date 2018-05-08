@@ -41,10 +41,6 @@ func runExport(cmd *cobra.Command, args []string) error {
 	secretStore := store.NewSSMStore(numRetries)
 	params := make(map[string]string)
 	for _, service := range args {
-		if err := validateService(service); err != nil {
-			return errors.Wrapf(err, "Failed to validate service %s", service)
-		}
-
 		rawSecrets, err := secretStore.ListRaw(strings.ToLower(service))
 		if err != nil {
 			return errors.Wrapf(err, "Failed to list store contents for service %s", service)

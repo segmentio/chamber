@@ -27,9 +27,6 @@ func init() {
 
 func importRun(cmd *cobra.Command, args []string) error {
 	service := strings.ToLower(args[0])
-	if err := validateService(service); err != nil {
-		return errors.Wrap(err, "Failed to validate service")
-	}
 
 	var in io.Reader
 	var err error

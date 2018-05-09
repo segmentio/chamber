@@ -58,20 +58,20 @@ func execRun(cmd *cobra.Command, args []string) error {
 			}
 		}
 	} else {
-		fmt.Fprint(os.Stdout, "info: 'CLUSTER' environment variable is not set; will not fetch secrets from parameter store")
+		fmt.Fprint(os.Stdout, "info: 'CLUSTER_NAME' environment variable is not set; will not fetch secrets from parameter store")
 	}
 
 	return exec(command, commandArgs, env)
 }
 
 func isRunningInCluster() bool {
-	cluster := os.Getenv("CLUSTER")
+	cluster := os.Getenv("CLUSTER_NAME")
 	return len(cluster) > 0
 }
 
 func gladlyService(service string) string {
 	// format of cluster is master.gladly.qa or production1.gladly.com
-	cluster := os.Getenv("CLUSTER")
+	cluster := os.Getenv("CLUSTER_NAME")
 	envIndex := strings.Index(cluster, ".")
 	environment := cluster[:envIndex]
 	namespace := cluster[envIndex+1:]

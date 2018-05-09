@@ -39,24 +39,43 @@ func execRun(cmd *cobra.Command, args []string) error {
 	services, command, commandArgs := args[:dashIx], args[dashIx], args[dashIx+1:]
 
 	env := environ(os.Environ())
-	secretStore := store.NewSSMStore(numRetries)
-	for _, service := range services {
-		rawSecrets, err := secretStore.ListRaw(strings.ToLower(service))
-		if err != nil {
-			return errors.Wrap(err, "Failed to list store contents")
-		}
-		for _, rawSecret := range rawSecrets {
-			envVarKey := strings.ToUpper(key(rawSecret.Key))
-			envVarKey = strings.Replace(envVarKey, "-", "_", -1)
-
-			if env.IsSet(envVarKey) {
-				fmt.Fprintf(os.Stderr, "warning: overwriting environment variable %s\n", envVarKey)
+	// Only lookup keys if CLUSTER environment variable is set
+	if isRunningInCluster() {
+		secretStore := store.NewSSMStore(numRetries)
+		for _, service := range services {
+			rawSecrets, err := secretStore.ListRaw(gladlyService(service))
+			if err != nil {
+				return errors.Wrap(err, "Failed to list store contents")
 			}
-			env.Set(envVarKey, rawSecret.Value)
+			for _, rawSecret := range rawSecrets {
+				envVarKey := strings.ToUpper(key(rawSecret.Key))
+				envVarKey = strings.Replace(envVarKey, "-", "_", -1)
+
+				if env.IsSet(envVarKey) {
+					fmt.Fprintf(os.Stderr, "warning: overwriting environment variable %s\n", envVarKey)
+				}
+				env.Set(envVarKey, rawSecret.Value)
+			}
 		}
+	} else {
+		fmt.Fprint(os.Stdout, "info: 'CLUSTER' environment variable is not set; will not fetch secrets from parameter store")
 	}
 
 	return exec(command, commandArgs, env)
+}
+
+func isRunningInCluster() bool {
+	cluster := os.Getenv("CLUSTER")
+	return len(cluster) > 0
+}
+
+func gladlyService(service string) string {
+	// format of cluster is master.gladly.qa or production1.gladly.com
+	cluster := os.Getenv("CLUSTER")
+	envIndex := strings.Index(cluster, ".")
+	environment := cluster[:envIndex]
+	namespace := cluster[envIndex+1:]
+	return strings.ToLower(fmt.Sprintf("clusters/%v/%v/%v", namespace, environment, service))
 }
 
 // environ is a slice of strings representing the environment, in the form "key=value".

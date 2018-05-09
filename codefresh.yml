@@ -1,0 +1,27 @@
+version: '1.0'
+steps:
+  build:
+    type: build
+    title: Build Docker Image
+    dockerfile: Dockerfile
+    image_name: sagan/${{CF_REPO_NAME}}
+
+  tag_branch:
+    type: push
+    title: Push docker image as branch
+    candidate: ${{build}}
+    registry: dockerhub
+    tags:
+      - ${{CF_BRANCH_TAG_NORMALIZED}}
+
+  tag_latest:
+    type: push
+    title: Tag master as latest
+    candidate: ${{build}}
+    tags:
+      - latest
+    registry: dockerhub
+    when:
+      branch:
+        only:
+          - master

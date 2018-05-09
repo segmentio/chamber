@@ -41,9 +41,14 @@ func NewSSMStore(numRetries int) *SSMStore {
 	if regionOverride, ok := os.LookupEnv("CHAMBER_AWS_REGION"); ok {
 		region = aws.String(regionOverride)
 	}
-	ssmSession := session.Must(session.NewSession(&aws.Config{
-		Region: region,
-	}))
+	ssmSession := session.Must(session.NewSessionWithOptions(
+		session.Options{
+			Config: aws.Config{
+				Region: region,
+			},
+			SharedConfigState: session.SharedConfigEnable,
+		},
+	))
 
 	// If region is still not set, attempt to determine it via ec2 metadata API
 	region = nil

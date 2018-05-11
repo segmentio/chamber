@@ -17,6 +17,10 @@ RUN make test
 
 FROM alpine:3.7 as production
 
+ENV USER gladly
+RUN addgroup -S $USER && adduser -S $USER $USER
+USER gladly
+
 COPY --from=builder /go/src/github.com/segmentio/chamber/bin/chamber /
 
 ENTRYPOINT ["/chamber"]

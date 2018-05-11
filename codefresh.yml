@@ -6,6 +6,14 @@ steps:
     dockerfile: Dockerfile
     image_name: sagan/${{CF_REPO_NAME}}
 
+  run_twistlock_scan:
+    type: composition
+    title: Run Twistlock scan
+    composition: twistlock-scan
+    composition_candidates:
+      scan_service:
+        image: sagan/twistcli:latest
+
   tag_branch:
     type: push
     title: Push docker image as branch
@@ -13,6 +21,7 @@ steps:
     registry: dockerhub
     tags:
       - ${{CF_BRANCH_TAG_NORMALIZED}}
+      - ${{CF_BRANCH_TAG_NORMALIZED}}-${{CF_SHORT_REVISION}}
 
   tag_latest:
     type: push
@@ -20,6 +29,7 @@ steps:
     candidate: ${{build}}
     tags:
       - latest
+      - ${{CF_REVISION}}
     registry: dockerhub
     when:
       branch:

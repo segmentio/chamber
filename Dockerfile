@@ -17,7 +17,7 @@ RUN make test
 
 FROM alpine:3.7 as production
 
-COPY --from=builder /go/src/github.com/segmentio/chamber/dist/chamber /
+COPY --from=builder /go/src/github.com/segmentio/chamber/bin/chamber /
 
 ENTRYPOINT ["/chamber"]
 

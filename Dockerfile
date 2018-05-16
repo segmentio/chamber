@@ -17,6 +17,8 @@ RUN make test
 
 FROM alpine:3.7 as production
 
+RUN apk --no-cache add ca-certificates
+
 ENV USER gladly
 RUN addgroup -S $USER && adduser -S $USER $USER
 USER gladly

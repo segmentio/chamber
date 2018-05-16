@@ -50,8 +50,14 @@ func Execute(vers string) {
 }
 
 func validateKey(key string) error {
-	if !validKeyFormat.MatchString(key) {
-		return fmt.Errorf("Failed to validate key name '%s'.  Only alphanumeric, dashes, and underscores are allowed for key names", key)
-	}
 	return nil
+}
+
+func gladlyService(service string) string {
+	// format of cluster is master.gladly.qa or production1.gladly.com
+	cluster := os.Getenv("CLUSTER")
+	envIndex := strings.Index(cluster, ".")
+	environment := cluster[:envIndex]
+	namespace := cluster[envIndex+1:]
+	return strings.ToLower(fmt.Sprintf("clusters/%v/%v/%v", namespace, environment, service))
 }

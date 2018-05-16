@@ -56,7 +56,7 @@ func write(cmd *cobra.Command, args []string) error {
 
 	secretStore := store.NewSSMStore(numRetries)
 	secretId := store.SecretId{
-		Service: service,
+		Service: gladlyService(service),
 		Key:     key,
 	}
 

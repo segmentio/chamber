@@ -69,15 +69,6 @@ func isRunningInCluster() bool {
 	return len(cluster) > 0
 }
 
-func gladlyService(service string) string {
-	// format of cluster is master.gladly.qa or production1.gladly.com
-	cluster := os.Getenv("CLUSTER")
-	envIndex := strings.Index(cluster, ".")
-	environment := cluster[:envIndex]
-	namespace := cluster[envIndex+1:]
-	return strings.ToLower(fmt.Sprintf("clusters/%v/%v/%v", namespace, environment, service))
-}
-
 // environ is a slice of strings representing the environment, in the form "key=value".
 type environ []string
 

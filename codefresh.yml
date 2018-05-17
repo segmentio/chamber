@@ -13,6 +13,10 @@ steps:
     composition_candidates:
       scan_service:
         image: sagan/twistcli:latest
+    when:
+      branch:
+        ignore:
+          - master
 
   tag_branch:
     type: push

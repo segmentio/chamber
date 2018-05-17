@@ -30,7 +30,7 @@ func init() {
 
 func write(cmd *cobra.Command, args []string) error {
 	service := strings.ToLower(args[0])
-	key := strings.ToUpper(args[1])
+	key := strings.ToLower(args[1])
 	if err := validateKey(key); err != nil {
 		return errors.Wrap(err, "Failed to validate key")
 	}

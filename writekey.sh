@@ -2,7 +2,7 @@
 
 if [ "$#" -ne 4 ]; then
     echo "Invalid ammount of parameters"
-    echo "Example: ./write-secret.sh CLUSTER SERVICE KEY_NAME KEY_VALUE"
+    echo "Example: ./writekey.sh CLUSTER SERVICE KEY_NAME KEY_VALUE"
     exit 1
 fi
 

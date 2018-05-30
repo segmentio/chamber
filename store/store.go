@@ -63,6 +63,12 @@ type Store interface {
 	Read(id SecretId, version int) (Secret, error)
 	List(service string, includeValues bool) ([]Secret, error)
 	ListRaw(service string) ([]RawSecret, error)
+	ListRawMask(service string, mask MaskOptions) ([]RawSecret, error)
 	History(id SecretId) ([]ChangeEvent, error)
 	Delete(id SecretId) error
+}
+
+type MaskOptions struct {
+	Enable  bool
+	Pattern string
 }

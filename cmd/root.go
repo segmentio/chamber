@@ -56,6 +56,10 @@ func validateKey(key string) error {
 func gladlyService(service string) string {
 	// format of cluster is master.gladly.qa or production1.gladly.com
 	cluster := os.Getenv("CLUSTER")
+	if cluster == "" {
+		return strings.ToLower(service)
+	}
+
 	envIndex := strings.Index(cluster, ".")
 	environment := cluster[:envIndex]
 	namespace := cluster[envIndex+1:]

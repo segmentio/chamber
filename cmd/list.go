@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 	"text/tabwriter"
 
@@ -21,10 +22,16 @@ var listCmd = &cobra.Command{
 
 var (
 	withValues bool
+	sortByTime bool
+	sortByUser bool
+	sortByVersion bool
 )
 
 func init() {
 	listCmd.Flags().BoolVarP(&withValues, "expand", "e", false, "Expand parameter list with values")
+	listCmd.Flags().BoolVarP(&sortByTime, "time", "t", false, "Sort by modified time")
+	listCmd.Flags().BoolVarP(&sortByUser, "user", "u", false, "Sort by user")
+	listCmd.Flags().BoolVarP(&sortByVersion, "version", "v", false, "Sort by version")
 	RootCmd.AddCommand(listCmd)
 }
 
@@ -47,6 +54,17 @@ func list(cmd *cobra.Command, args []string) error {
 		fmt.Fprint(w, "\tValue")
 	}
 	fmt.Fprintln(w, "")
+
+	sort.Sort(ByName(secrets))
+	if sortByTime {
+		sort.Sort(ByTime(secrets))
+	}
+	if sortByUser {
+		sort.Sort(ByUser(secrets))
+	}
+	if sortByVersion {
+		sort.Sort(ByVersion(secrets))
+	}
 
 	for _, secret := range secrets {
 		fmt.Fprintf(w, "%s\t%d\t%s\t%s",
@@ -76,3 +94,23 @@ func key(s string) string {
 	secretKey := tokens[1]
 	return secretKey
 }
+
+type ByName []store.Secret
+func (a ByName) Len() int { return len(a)}
+func (a ByName) Swap(i, j int) { a[i], a[j] = a[j], a[i]}
+func (a ByName) Less(i, j int) bool { return a[i].Meta.Key < a[j].Meta.Key }
+
+type ByTime []store.Secret
+func (a ByTime) Len() int { return len(a)}
+func (a ByTime) Swap(i, j int) { a[i], a[j] = a[j], a[i]}
+func (a ByTime) Less(i, j int) bool { return a[i].Meta.Created.Before(a[j].Meta.Created) }
+
+type ByUser []store.Secret
+func (a ByUser) Len() int { return len(a)}
+func (a ByUser) Swap(i, j int) { a[i], a[j] = a[j], a[i]}
+func (a ByUser) Less(i, j int) bool { return a[i].Meta.CreatedBy < a[j].Meta.CreatedBy }
+
+type ByVersion []store.Secret
+func (a ByVersion) Len() int { return len(a)}
+func (a ByVersion) Swap(i, j int) { a[i], a[j] = a[j], a[i]}
+func (a ByVersion) Less(i, j int) bool { return a[i].Meta.Version < a[j].Meta.Version }

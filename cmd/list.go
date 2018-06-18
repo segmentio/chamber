@@ -7,7 +7,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/pkg/errors"
-	"github.com/segmentio/chamber/store"
+	"github.com/chanzuckerberg/chamber/store"
 	"github.com/spf13/cobra"
 )
 
@@ -20,11 +20,13 @@ var listCmd = &cobra.Command{
 }
 
 var (
+	includeDeleted bool
 	withValues bool
 )
 
 func init() {
 	listCmd.Flags().BoolVarP(&withValues, "expand", "e", false, "Expand parameter list with values")
+	listCmd.Flags().BoolVarP(&includeDeleted, "deleted", "d", false, "Include parameters marked as deleted")
 	RootCmd.AddCommand(listCmd)
 }
 
@@ -35,10 +37,12 @@ func list(cmd *cobra.Command, args []string) error {
 	}
 
 	secretStore := store.NewSSMStore(numRetries)
-	secrets, err := secretStore.List(service, withValues)
+	fmt.Printf("Include deleted? %#v\n", includeDeleted)
+	secrets, err := secretStore.List(service, withValues, includeDeleted)
 	if err != nil {
 		return errors.Wrap(err, "Failed to list store contents")
 	}
+	fmt.Printf("Secrets: %#v\n", secrets)
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 8, 2, '\t', 0)
 

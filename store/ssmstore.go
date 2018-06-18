@@ -154,6 +154,49 @@ func (s *SSMStore) Delete(id SecretId) error {
 	return nil
 }
 
+func (s *SSMStore) TagDeleted(id SecretId) error {
+	tags := []*ssm.Tag{
+		&ssm.Tag{
+			Key: aws.String("Deleted2"),
+			Value: aws.String("true"),
+		},
+	}
+	return s.Tag(id, tags)
+}
+
+// Tag adds tags to a parameter.
+func (s *SSMStore) Tag(id SecretId, tags []*ssm.Tag) error {
+	// first read to ensure parameter present
+	_, err := s.Read(id, -1)
+	if err != nil {
+		return err
+	}
+
+	// list tags for resource
+	listTagsForResourceInput := &ssm.ListTagsForResourceInput{
+		ResourceId: aws.String(s.idToName(id)),
+		ResourceType: aws.String("Parameter"),
+	}
+
+	_, err = s.svc.ListTagsForResource(listTagsForResourceInput)
+	if err != nil {
+		return err
+	}
+
+	addTagsToResourceInput := &ssm.AddTagsToResourceInput{
+		ResourceId: aws.String(s.idToName(id)),
+		ResourceType: aws.String("Parameter"),
+		Tags: tags,
+	}
+
+	_, err = s.svc.AddTagsToResource(addTagsToResourceInput)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s *SSMStore) readVersion(id SecretId, version int) (Secret, error) {
 	getParameterHistoryInput := &ssm.GetParameterHistoryInput{
 		Name:           aws.String(s.idToName(id)),
@@ -163,6 +206,11 @@ func (s *SSMStore) readVersion(id SecretId, version int) (Secret, error) {
 	resp, err := s.svc.GetParameterHistory(getParameterHistoryInput)
 	if err != nil {
 		return Secret{}, ErrSecretNotFound
+	}
+
+	isDeleted, err := s.isDeleted(s.idToName(id))
+	if err != nil {
+		return Secret{}, err
 	}
 
 	for _, history := range resp.Parameters {
@@ -179,6 +227,7 @@ func (s *SSMStore) readVersion(id SecretId, version int) (Secret, error) {
 					Version:   thisVersion,
 					Key:       *history.Name,
 				},
+				Deleted: isDeleted,
 			}, nil
 		}
 	}
@@ -257,16 +306,22 @@ func (s *SSMStore) readLatest(id SecretId) (Secret, error) {
 
 	secretMeta := parameterMetaToSecretMeta(parameter)
 
+	isDeleted, err := s.isDeleted(s.idToName(id))
+	if err != nil {
+		return Secret{}, err
+	}
+
 	return Secret{
 		Value: param.Value,
 		Meta:  secretMeta,
+		Deleted: isDeleted,
 	}, nil
 }
 
 // List lists all secrets for a given service.  If includeValues is true,
 // then those secrets are decrypted and returned, otherwise only the metadata
 // about a secret is returned.
-func (s *SSMStore) List(service string, includeValues bool) ([]Secret, error) {
+func (s *SSMStore) List(service string, includeValues bool, includeDeleted bool) ([]Secret, error) {
 	secrets := map[string]Secret{}
 
 	var nextToken *string
@@ -321,6 +376,19 @@ func (s *SSMStore) List(service string, includeValues bool) ([]Secret, error) {
 		nextToken = resp.NextToken
 	}
 
+	if !includeDeleted {
+		secretKeys := keys(secrets)
+		for _, secretKey := range secretKeys {
+			isDeleted, err := s.isDeleted(secretKey)
+			if err != nil {
+				return nil, err
+			}
+			if isDeleted {
+				delete(secrets, secretKey)
+			}
+		}
+	}
+
 	if includeValues {
 		secretKeys := keys(secrets)
 		for i := 0; i < len(secretKeys); i += 10 {
@@ -359,10 +427,10 @@ func (s *SSMStore) ListRaw(service string) ([]RawSecret, error) {
 		var nextToken *string
 		for {
 			getParametersByPathInput := &ssm.GetParametersByPathInput{
-				MaxResults:     aws.Int64(10),
-				NextToken:      nextToken,
-				Path:           aws.String("/" + service + "/"),
-				WithDecryption: aws.Bool(true),
+				MaxResults:       aws.Int64(10),
+				NextToken:        nextToken,
+				Path:             aws.String("/" + service + "/"),
+				WithDecryption:   aws.Bool(true),
 			}
 
 			resp, err := s.svc.GetParametersByPath(getParametersByPathInput)
@@ -388,7 +456,12 @@ func (s *SSMStore) ListRaw(service string) ([]RawSecret, error) {
 			}
 
 			for _, param := range resp.Parameters {
-				if !s.validateName(*param.Name) {
+				isDeleted, err := s.isDeleted(*param.Name)
+				if err != nil {
+					return nil, err
+				}
+
+				if isDeleted || !s.validateName(*param.Name) {
 					continue
 				}
 
@@ -466,7 +539,7 @@ func (s *SSMStore) History(id SecretId) ([]ChangeEvent, error) {
 
 func (s *SSMStore) listRawViaList(service string) ([]RawSecret, error) {
 	// Delegate to List
-	secrets, err := s.List(service, true)
+	secrets, err := s.List(service, true, false)
 
 	if err != nil {
 		return nil, err
@@ -484,6 +557,26 @@ func (s *SSMStore) listRawViaList(service string) ([]RawSecret, error) {
 	}
 
 	return rawSecrets, nil
+}
+
+func (s *SSMStore) isDeleted(key string) (bool, error) {
+	listTagsForResourceInput := &ssm.ListTagsForResourceInput{
+		ResourceId: aws.String(key),
+		ResourceType: aws.String("Parameter"),
+	}
+
+	resp, err := s.svc.ListTagsForResource(listTagsForResourceInput)
+	if err != nil {
+		return false, err
+	}
+
+	for _, tag := range resp.TagList {
+		key := *tag.Key
+		if (key == "Deleted") {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func (s *SSMStore) idToName(id SecretId) string {

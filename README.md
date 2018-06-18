@@ -1,3 +1,11 @@
+# CZI - Chamber
+
+This repo is a fork of original Chamber tool ([segmentio/chamber](https://github.com/segmentio/chamber)). THer goal is to add the following functionality:
+* (WIP) Add inheritance. Allow loading multiple parameters for hierarchically named services. For instance, `<project>-<env>-<service>` would load all parameters for the specified project (`<project>`), for the env within the project (`<project>-<env>`) and for the specific service in inverse order of precedence.
+* (WIP) Replace behavior of delete action to tag deleted credentials instead of removing them from parameter store. The goal is to allow recovery in case of misdeletion of credentials.
+* (WIP) Allow reverting parameters to a specific version.
+* (WIP) Fix issues that prevent adding parameters with certain values (e.g. values that start with "--")
+
 # Chamber
 
 Chamber is a tool for managing secrets.  Currently it does so by storing

@@ -12,7 +12,7 @@ import (
 
 	"github.com/magiconair/properties"
 	"github.com/pkg/errors"
-	"github.com/segmentio/chamber/store"
+	"github.com/chanzuckerberg/chamber/store"
 	"github.com/spf13/cobra"
 )
 

@@ -4,19 +4,24 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/segmentio/chamber/store"
+	"github.com/chanzuckerberg/chamber/store"
 	"github.com/spf13/cobra"
 )
 
-// deleteCmd represents the delete command
-var deleteCmd = &cobra.Command{
-	Use:   "delete <service> <key>",
-	Short: "Delete a secret, including all versions",
-	Args:  cobra.ExactArgs(2),
-	RunE:  delete,
-}
+var (
+	force bool
+
+	// deleteCmd represents the delete command
+	deleteCmd = &cobra.Command{
+		Use:   "delete <service> <key>",
+		Short: "Tag a secreted as deleted (it will not be Delete a secret, including all versions",
+		Args:  cobra.ExactArgs(2),
+		RunE:  delete,
+	}
+)
 
 func init() {
+	deleteCmd.Flags().BoolVarP(&force, "force", "f", false, "Actually delete a secret, including all versions (non-reversible).")
 	RootCmd.AddCommand(deleteCmd)
 }
 
@@ -37,5 +42,8 @@ func delete(cmd *cobra.Command, args []string) error {
 		Key:     key,
 	}
 
-	return secretStore.Delete(secretId)
+	if force {
+		return secretStore.Delete(secretId)
+	}
+	return secretStore.TagDeleted(secretId)
 }

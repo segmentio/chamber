@@ -386,7 +386,7 @@ func TestList(t *testing.T) {
 	}
 
 	t.Run("List should return all keys for a service", func(t *testing.T) {
-		s, err := store.List("test", false)
+		s, err := store.List("test", false, false)
 		assert.Nil(t, err)
 		assert.Equal(t, 3, len(s))
 		sort.Sort(ByKey(s))
@@ -396,7 +396,7 @@ func TestList(t *testing.T) {
 	})
 
 	t.Run("List should not return values if includeValues is false", func(t *testing.T) {
-		s, err := store.List("test", false)
+		s, err := store.List("test", false, false)
 		assert.Nil(t, err)
 		for _, secret := range s {
 			assert.Nil(t, secret.Value)
@@ -404,7 +404,7 @@ func TestList(t *testing.T) {
 	})
 
 	t.Run("List should return values if includeValues is true", func(t *testing.T) {
-		s, err := store.List("test", true)
+		s, err := store.List("test", true, false)
 		assert.Nil(t, err)
 		for _, secret := range s {
 			assert.Equal(t, "value", *secret.Value)
@@ -415,7 +415,7 @@ func TestList(t *testing.T) {
 		store.Write(SecretId{Service: "match", Key: "a"}, "val")
 		store.Write(SecretId{Service: "matchlonger", Key: "a"}, "val")
 
-		s, err := store.List("match", false)
+		s, err := store.List("match", false, false)
 		assert.Nil(t, err)
 		assert.Equal(t, 1, len(s))
 		assert.Equal(t, "match.a", s[0].Meta.Key)
@@ -622,7 +622,7 @@ func TestListPaths(t *testing.T) {
 	}
 
 	t.Run("List should return all keys for a service", func(t *testing.T) {
-		s, err := store.List("test", false)
+		s, err := store.List("test", false, false)
 		assert.Nil(t, err)
 		assert.Equal(t, 3, len(s))
 		sort.Sort(ByKey(s))
@@ -632,7 +632,7 @@ func TestListPaths(t *testing.T) {
 	})
 
 	t.Run("List should not return values if includeValues is false", func(t *testing.T) {
-		s, err := store.List("test", false)
+		s, err := store.List("test", false, false)
 		assert.Nil(t, err)
 		for _, secret := range s {
 			assert.Nil(t, secret.Value)
@@ -640,7 +640,7 @@ func TestListPaths(t *testing.T) {
 	})
 
 	t.Run("List should return values if includeValues is true", func(t *testing.T) {
-		s, err := store.List("test", true)
+		s, err := store.List("test", true, false)
 		assert.Nil(t, err)
 		for _, secret := range s {
 			assert.Equal(t, "value", *secret.Value)
@@ -651,7 +651,7 @@ func TestListPaths(t *testing.T) {
 		store.Write(SecretId{Service: "match", Key: "a"}, "val")
 		store.Write(SecretId{Service: "matchlonger", Key: "a"}, "val")
 
-		s, err := store.List("match", false)
+		s, err := store.List("match", false, false)
 		assert.Nil(t, err)
 		assert.Equal(t, 1, len(s))
 		assert.Equal(t, "/match/a", s[0].Meta.Key)

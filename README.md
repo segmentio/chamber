@@ -126,6 +126,19 @@ example, if you do `chamber exec app apptwo -- ...` and both apps have a secret
 named `api_key`, the `api_key` from `apptwo` will be the one set in your
 environment.
 
+### Exec Local
+```bash
+$ chamber execlocal <service...> -- <your executable>
+```
+
+`execlocal` populates the environment with the secrets from the specified files
+and executes the given command.
+
+Secrets from files are loaded in the order specified in the command.  For
+example, if you do `chamber execlocal .env .env1 -- ...` and both files have a secret
+named `API_KEY`, the `API_KEY` from `.env1` will be the one set in your
+environment.
+
 ### Reading
 ```bash
 $ chamber read service key

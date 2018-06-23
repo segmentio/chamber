@@ -128,7 +128,7 @@ environment.
 
 ### Exec Local
 ```bash
-$ chamber execlocal <service...> -- <your executable>
+$ chamber execlocal <file...> -- <your executable>
 ```
 
 `execlocal` populates the environment with the secrets from the specified files

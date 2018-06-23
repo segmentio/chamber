@@ -62,8 +62,3 @@ func validateKey(key string) error {
 	}
 	return nil
 }
-
-func validateFile(file string) error {
-	_, err := os.Stat(file)
-	return err
-}

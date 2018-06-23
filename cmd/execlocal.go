@@ -95,3 +95,8 @@ func listRaw(file string) ([]store.RawSecret, error) {
 
 	return secrets, nil
 }
+
+func validateFile(file string) error {
+	_, err := os.Stat(file)
+	return err
+}

@@ -139,6 +139,11 @@ example, if you do `chamber execlocal .env .env1 -- ...` and both files have a s
 named `API_KEY`, the `API_KEY` from `.env1` will be the one set in your
 environment.
 
+Files should contain environment variables in the following format:
+```bash
+KEY=VALUE
+```
+
 ### Reading
 ```bash
 $ chamber read service key

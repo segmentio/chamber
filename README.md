@@ -14,7 +14,7 @@ As a side effect of this change, if you didn't use path based secrets before 2.0
 To migrate to the new format, you can take advantage of the `export` and `import` commands.  For example, if you wanted to convert secrets for service `foo` to the new format using chamber 2.0, you can do:
 
 ```bash
-$ CHAMBER_NO_PATHS chamber export foo | chamber import foo -
+$ CHAMBER_NO_PATHS=1 chamber export foo | chamber import foo -
 ```
 
 ## Authenticating

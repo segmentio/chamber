@@ -20,6 +20,7 @@ import (
 var (
 	exportFormat string
 	exportOutput string
+	exportMask = &store.MaskOptions{}
 
 	exportCmd = &cobra.Command{
 		Use:   "export <service...>",
@@ -30,6 +31,8 @@ var (
 )
 
 func init() {
+	exportCmd.Flags().StringVarP(&exportMask.Pattern, "mask-pattern", "p", "***MASKED***", "Custom mask if Masking is Enabled")
+	exportCmd.Flags().BoolVarP(&exportMask.Enable, "mask", "m", false, "Enable/Disable masking of Secure Strings")
 	exportCmd.Flags().StringVarP(&exportFormat, "format", "f", "json", "Output format (json, java-properties, csv, tsv, dotenv)")
 	exportCmd.Flags().StringVarP(&exportOutput, "output-file", "o", "", "Output file (default is standard output)")
 	RootCmd.AddCommand(exportCmd)
@@ -37,6 +40,7 @@ func init() {
 
 func runExport(cmd *cobra.Command, args []string) error {
 	var err error
+	var rawSecrets []store.RawSecret
 
 	secretStore := store.NewSSMStore(numRetries)
 	params := make(map[string]string)
@@ -45,7 +49,11 @@ func runExport(cmd *cobra.Command, args []string) error {
 			return errors.Wrapf(err, "Failed to validate service %s", service)
 		}
 
-		rawSecrets, err := secretStore.ListRaw(strings.ToLower(service))
+		if exportMask.Enable {
+			rawSecrets, err = secretStore.ListRawMask(strings.ToLower(service), *exportMask)
+		} else {
+			rawSecrets, err = secretStore.ListRaw(strings.ToLower(service))
+		}
 		if err != nil {
 			return errors.Wrapf(err, "Failed to list store contents for service %s", service)
 		}

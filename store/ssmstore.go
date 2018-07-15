@@ -354,6 +354,13 @@ func (s *SSMStore) List(service string, includeValues bool) ([]Secret, error) {
 // other meta-data. Uses faster AWS APIs with much higher rate-limits. Suitable for
 // use in production environments.
 func (s *SSMStore) ListRaw(service string) ([]RawSecret, error) {
+	return s.ListRawMask(service, MaskOptions{Enable: false, Pattern: ""})
+}
+
+// ListRawMask lists all secrets keys and values for a given service. Does not include any
+// other meta-data. Uses faster AWS APIs with much higher rate-limits. Suitable for
+// use in production environments.  Masks secrets.
+func (s *SSMStore) ListRawMask(service string, mask MaskOptions) ([]RawSecret, error) {
 	if s.usePaths {
 		secrets := map[string]RawSecret{}
 		var nextToken *string
@@ -362,7 +369,7 @@ func (s *SSMStore) ListRaw(service string) ([]RawSecret, error) {
 				MaxResults:     aws.Int64(10),
 				NextToken:      nextToken,
 				Path:           aws.String("/" + service + "/"),
-				WithDecryption: aws.Bool(true),
+				WithDecryption: aws.Bool(!mask.Enable),
 			}
 
 			resp, err := s.svc.GetParametersByPath(getParametersByPathInput)
@@ -387,13 +394,19 @@ func (s *SSMStore) ListRaw(service string) ([]RawSecret, error) {
 				return nil, err
 			}
 
+			var retVal *string
 			for _, param := range resp.Parameters {
 				if !s.validateName(*param.Name) {
 					continue
 				}
 
+				if *param.Type == ssm.ParameterTypeSecureString && mask.Enable {
+					retVal = aws.String(mask.Pattern)
+				} else {
+					retVal = param.Value
+				}
 				secrets[*param.Name] = RawSecret{
-					Value: *param.Value,
+					Value: *retVal,
 					Key:   *param.Name,
 				}
 			}

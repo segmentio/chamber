@@ -367,21 +367,17 @@ func (s *S3Store) readLatest(service string) (latest, error) {
 
 	resp, err := s.svc.GetObject(getObjectInput)
 	if err != nil {
-		return latest{}, err
-	}
-
-	raw, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return latest{}, err
-	}
-
-	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			if aerr.Code() == s3.ErrCodeNoSuchKey {
 				// Index doesn't exist yet, return an empty index
 				return latest{Latest: map[string]string{}}, nil
 			}
 		}
+		return latest{}, err
+	}
+
+	raw, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
 		return latest{}, err
 	}
 

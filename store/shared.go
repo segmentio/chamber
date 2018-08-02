@@ -21,7 +21,8 @@ func getSession(numRetries int) (*session.Session, *string) {
 	retSession := session.Must(session.NewSessionWithOptions(
 		session.Options{
 			Config: aws.Config{
-				Region: region,
+				Region:     region,
+				MaxRetries: aws.Int(numRetries),
 			},
 			SharedConfigState: session.SharedConfigEnable,
 		},

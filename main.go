@@ -1,6 +1,6 @@
 package main
 
-import "github.com/segmentio/chamber/cmd"
+import "github.com/gospotcheck/chamber/cmd"
 
 func main() {
 	cmd.Execute()

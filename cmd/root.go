@@ -74,33 +74,16 @@ func validateKey(key string) error {
 }
 
 func getSecretStore() store.Store {
-	backend, ok := os.LookupEnv(BackendEnvVar)
-	if !ok {
-		backend = SSMBackend
-	}
+	backend := strings.ToUpper(os.Getenv(BackendEnvVar))
 
-	backend = strings.ToUpper(backend)
-	if !stringInSlice(backend, Backends) {
-		// TODO: warn user
-		backend = SSMBackend
-	}
-
+	var s store.Store
 	switch backend {
-	case SSMBackend:
-		return store.NewSSMStore(numRetries)
 	case S3Backend:
-		return store.NewS3Store(numRetries)
+		s = store.NewS3Store(numRetries)
+	case SSMBackend:
+		fallthrough
+	default:
+		s = store.NewSSMStore(numRetries)
 	}
-
-	// This line is unreachable, but necessary to satisfy the compiler
-	panic("unreachable")
-}
-
-func stringInSlice(v string, sl []string) bool {
-	for _, val := range sl {
-		if v == val {
-			return true
-		}
-	}
-	return false
+	return s
 }

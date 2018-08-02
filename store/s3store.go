@@ -17,7 +17,6 @@ import (
 )
 
 const (
-	DefaultBucket   = "chamber-secrets"
 	MaximumVersions = 100
 	BucketEnvVar    = "CHAMBER_S3_BUCKET"
 
@@ -70,9 +69,10 @@ func NewS3Store(numRetries int) *S3Store {
 		Region:     region,
 	})
 
-	bucket := DefaultBucket
-	if b, ok := os.LookupEnv(BucketEnvVar); ok {
-		bucket = b
+	bucket, ok := os.LookupEnv(BucketEnvVar)
+	if !ok {
+		fmt.Fprintf(os.Stderr, "Must set %s for s3 backend\n", BucketEnvVar)
+		os.Exit(1)
 	}
 
 	return &S3Store{

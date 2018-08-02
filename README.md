@@ -200,7 +200,7 @@ If you'd like to use a different region for chamber without changing `AWS_REGION
 
 By default, chamber store secrets in AWS Parameter Store.  We now also provide an experimental S3 backend for storing secrets in S3 instead.
 
-To configure chamber to use the S3 backend, set `CHAMBER_SECRET_BACKEND` to `S3`, and `CHAMBER_S3_BUCKET` to an existing S3 bucket (by default, chamber will attempt to use a bucket named `chamber-secrets`).
+To configure chamber to use the S3 backend, set `CHAMBER_SECRET_BACKEND` to `S3`, and `CHAMBER_S3_BUCKET` to an existing S3 bucket.  Preferably, this bucket should reject uploads that do not set the server side encryption header ([see this doc for details how](https://aws.amazon.com/blogs/security/how-to-prevent-uploads-of-unencrypted-objects-to-amazon-s3/))
 
 This feature is experimental, and not currently meant for production work.
 

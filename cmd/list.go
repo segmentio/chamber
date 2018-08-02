@@ -7,7 +7,6 @@ import (
 	"text/tabwriter"
 
 	"github.com/pkg/errors"
-	"github.com/segmentio/chamber/store"
 	"github.com/spf13/cobra"
 )
 
@@ -34,7 +33,7 @@ func list(cmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, "Failed to validate service")
 	}
 
-	secretStore := store.NewSSMStore(numRetries)
+	secretStore := getSecretStore()
 	secrets, err := secretStore.List(service, withValues)
 	if err != nil {
 		return errors.Wrap(err, "Failed to list store contents")

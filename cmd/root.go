@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/segmentio/chamber/store"
 	"github.com/spf13/cobra"
 )
 
@@ -25,6 +26,15 @@ const (
 	// DefaultNumRetries is the default for the number of retries we'll use for our SSM client
 	DefaultNumRetries = 10
 )
+
+const (
+	SSMBackend = "SSM"
+	S3Backend  = "S3"
+
+	BackendEnvVar = "CHAMBER_SECRET_BACKEND"
+)
+
+var Backends = []string{SSMBackend, S3Backend}
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
@@ -61,4 +71,36 @@ func validateKey(key string) error {
 		return fmt.Errorf("Failed to validate key name '%s'.  Only alphanumeric, dashes, and underscores are allowed for key names", key)
 	}
 	return nil
+}
+
+func getSecretStore() store.Store {
+	backend, ok := os.LookupEnv(BackendEnvVar)
+	if !ok {
+		backend = SSMBackend
+	}
+
+	backend = strings.ToUpper(backend)
+	if !stringInSlice(backend, Backends) {
+		// TODO: warn user
+		backend = SSMBackend
+	}
+
+	switch backend {
+	case SSMBackend:
+		return store.NewSSMStore(numRetries)
+	case S3Backend:
+		return store.NewS3Store(numRetries)
+	}
+
+	// This line is unreachable, but necessary to satisfy the compiler
+	panic("unreachable")
+}
+
+func stringInSlice(v string, sl []string) bool {
+	for _, val := range sl {
+		if v == val {
+			return true
+		}
+	}
+	return false
 }

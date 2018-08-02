@@ -31,7 +31,7 @@ func delete(cmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, "Failed to validate key")
 	}
 
-	secretStore := store.NewSSMStore(numRetries)
+	secretStore := getSecretStore()
 	secretId := store.SecretId{
 		Service: service,
 		Key:     key,

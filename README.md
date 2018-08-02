@@ -196,6 +196,14 @@ for more details.
 
 If you'd like to use a different region for chamber without changing `AWS_REGION`, you can use `CHAMBER_AWS_REGION` to override just for chamber.
 
+## S3 Backend (experimental)
+
+By default, chamber store secrets in AWS Parameter Store.  We now also provide an experimental S3 backend for storing secrets in S3 instead.
+
+To configure chamber to use the S3 backend, set `CHAMBER_SECRET_BACKEND` to `S3`, and `CHAMBER_S3_BUCKET` to an existing S3 bucket (by default, chamber will attempt to use a bucket named `chamber-secrets`).
+
+This feature is experimental, and not currently meant for production work.
+
 ## Releasing
 
 To cut a new release, just push a tag named `v<semver>` where `<semver>` is a

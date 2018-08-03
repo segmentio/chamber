@@ -51,7 +51,7 @@ func importRun(cmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, "Failed to decode input as json")
 	}
 
-	secretStore := store.NewSSMStore(numRetries)
+	secretStore := getSecretStore()
 
 	for key, value := range toBeImported {
 		secretId := store.SecretId{

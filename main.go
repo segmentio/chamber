@@ -1,8 +1,6 @@
 package main
 
 import (
-	"time"
-
 	"github.com/segmentio/chamber/cmd"
 )
 
@@ -12,6 +10,5 @@ var (
 )
 
 func main() {
-	time.Sleep(5 * time.Second)
 	cmd.Execute(Version)
 }

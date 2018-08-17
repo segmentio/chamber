@@ -43,7 +43,7 @@ func execRun(cmd *cobra.Command, args []string) error {
 	if isRunningInCluster() {
 		secretStore := store.NewSSMStore(numRetries)
 		for _, service := range services {
-			rawSecrets, err := secretStore.ListRaw(gladlyService(service))
+			rawSecrets, err := ListRaw(secretStore, gladlyService(service))
 			if err != nil {
 				return errors.Wrap(err, "Failed to list store contents")
 			}

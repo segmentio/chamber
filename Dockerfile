@@ -8,6 +8,7 @@ ENV PROJECT_DIR=$GOPATH/src/github.com/segmentio/chamber
 WORKDIR $PROJECT_DIR
 
 COPY . .
+RUN go get
 
 # ensure linux binaries are compatible
 RUN CGO_ENABLED=0 make build

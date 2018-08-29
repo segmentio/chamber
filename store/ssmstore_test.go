@@ -715,6 +715,83 @@ func TestDelete(t *testing.T) {
 	})
 }
 
+func TestValidations(t *testing.T) {
+	mock := &mockSSMClient{parameters: map[string]mockParameter{}}
+	pathStore := NewTestSSMStore(mock)
+	pathStore.usePaths = true
+
+	validPathFormat := []string{
+		"/foo",
+		"/foo.",
+		"/.foo",
+		"/foo.bar",
+		"/foo-bar",
+		"/foo/bar",
+		"/foo.bar/foo",
+		"/foo-bar/foo",
+		"/foo-bar/foo-bar",
+		"/foo/bar/foo",
+		"/foo/bar/foo-bar",
+	}
+
+	for _, k := range validPathFormat {
+		t.Run("Path Validation should return true", func(t *testing.T) {
+			result := pathStore.validateName(k)
+			assert.True(t, result)
+		})
+	}
+
+	invalidPathFormat := []string{
+		"/foo//bar",
+		"foo//bar",
+		"foo/bar",
+		"foo/b",
+		"foo",
+	}
+
+	for _, k := range invalidPathFormat {
+		t.Run("Path Validation should return false", func(t *testing.T) {
+			result := pathStore.validateName(k)
+			assert.False(t, result)
+		})
+	}
+
+	noPathStore := NewTestSSMStore(mock)
+	noPathStore.usePaths = false
+
+	validNoPathFormat := []string{
+		"foo",
+		"foo.",
+		".foo",
+		"foo.bar",
+		"foo-bar",
+		"foo-bar.foo",
+		"foo-bar.foo-bar",
+		"foo.bar.foo",
+		"foo.bar.foo-bar",
+	}
+
+	for _, k := range validNoPathFormat {
+		t.Run("Validation should return true", func(t *testing.T) {
+			result := noPathStore.validateName(k)
+			assert.True(t, result)
+		})
+	}
+
+	invalidNoPathFormat := []string{
+		"/foo",
+		"foo/bar",
+		"foo//bar",
+	}
+
+	for _, k := range invalidNoPathFormat {
+		t.Run("Validation should return false", func(t *testing.T) {
+			result := noPathStore.validateName(k)
+			assert.False(t, result)
+		})
+	}
+}
+
 type ByKey []Secret
 
 func (a ByKey) Len() int           { return len(a) }

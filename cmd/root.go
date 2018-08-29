@@ -11,8 +11,9 @@ import (
 
 // Regex's used to validate service and key names
 var (
-	validKeyFormat     = regexp.MustCompile(`^[A-Za-z0-9-_]+$`)
-	validServiceFormat = regexp.MustCompile(`^[A-Za-z0-9-_\/.]+$`)
+	validKeyFormat         = regexp.MustCompile(`^[\w\-\.]+$`)
+	validServiceFormat     = regexp.MustCompile(`^[\w\-\.]+$`)
+	validServicePathFormat = regexp.MustCompile(`^[\w\-\.]+(\/[\w\-\.]+)*$`)
 
 	numRetries     int
 	chamberVersion string
@@ -50,15 +51,23 @@ func Execute(vers string) {
 }
 
 func validateService(service string) error {
-	if !validServiceFormat.MatchString(service) {
-		return fmt.Errorf("Failed to validate service name '%s'.  Only alphanumeric, dashes, forwardslases, fullstops and underscores are allowed for service names", service)
+	_, noPaths := os.LookupEnv("CHAMBER_NO_PATHS")
+	if noPaths {
+		if !validServiceFormat.MatchString(service) {
+			return fmt.Errorf("Failed to validate service name '%s'.  Only alphanumeric, dashes, fullstops and underscores are allowed for service names", service)
+		}
+	} else {
+		if !validServicePathFormat.MatchString(service) {
+			return fmt.Errorf("Failed to validate service name '%s'.  Only alphanumeric, dashes, forwardslashes, fullstops and underscores are allowed for service names", service)
+		}
 	}
+
 	return nil
 }
 
 func validateKey(key string) error {
 	if !validKeyFormat.MatchString(key) {
-		return fmt.Errorf("Failed to validate key name '%s'.  Only alphanumeric, dashes, and underscores are allowed for key names", key)
+		return fmt.Errorf("Failed to validate key name '%s'.  Only alphanumeric, dashes, fullstops and underscores are allowed for key names", key)
 	}
 	return nil
 }

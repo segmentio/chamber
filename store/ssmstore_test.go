@@ -173,6 +173,15 @@ func (m *mockSSMClient) GetParametersByPath(i *ssm.GetParametersByPathInput) (*s
 	}, nil
 }
 
+func (m *mockSSMClient) GetParametersByPathPages(i *ssm.GetParametersByPathInput, fn func(*ssm.GetParametersByPathOutput, bool) bool) error {
+	o, err := m.GetParametersByPath(i)
+	if err != nil {
+		return err
+	}
+	fn(o, true)
+	return nil
+}
+
 func (m *mockSSMClient) DescribeParametersPages(i *ssm.DescribeParametersInput, fn func(*ssm.DescribeParametersOutput, bool) bool) error {
 	o, err := m.DescribeParameters(i)
 	if err != nil {

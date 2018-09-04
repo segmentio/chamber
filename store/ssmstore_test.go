@@ -83,7 +83,7 @@ func (m *mockSSMClient) GetParameters(i *ssm.GetParametersInput) (*ssm.GetParame
 	if len(parameters) == 0 {
 		return &ssm.GetParametersOutput{
 			Parameters: parameters,
-		}, errors.New("parameters not found")
+		}, ErrSecretNotFound
 	}
 
 	return &ssm.GetParametersOutput{

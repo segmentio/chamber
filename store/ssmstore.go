@@ -181,7 +181,7 @@ func (s *SSMStore) readLatest(id SecretId) (Secret, error) {
 
 	resp, err := s.svc.GetParameters(getParametersInput)
 	if err != nil {
-		return Secret{}, ErrSecretNotFound
+		return Secret{}, err
 	}
 
 	if len(resp.Parameters) == 0 {

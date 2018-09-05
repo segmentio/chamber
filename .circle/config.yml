@@ -1,0 +1,43 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: circleci/golang:1.10
+    working_directory: /go/src/github.com/segmentio/chamber
+    steps:
+      - checkout
+      - run:
+          name: Build
+          command: |
+            make govendor dist
+      - persist_to_workspace:
+          root: .
+          paths: ['dist/*']
+
+  release:
+    docker:
+      - image: circleci/golang:1.10
+    working_directory: /go/src/github.com/segmentio/chamber
+    steps:
+      - checkout
+      - attach_workspace: { at: . }
+      - run:
+          name: Release
+          command: |
+            make release
+
+workflows:
+  version: 2
+  build-release:
+    jobs:
+      - build
+      - release:
+          requires:
+            - build
+          filters:
+            # release on branch push event
+            branches:
+              ignore: /.*/
+            # release only on tag push events like vX[.Y.Z...]
+            tags:
+              only: /v[0-9]+(\.[0-9]+)*/

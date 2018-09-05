@@ -28,6 +28,7 @@ const (
 )
 
 const (
+	NoneBackend  = "NONE"
 	SSMBackend = "SSM"
 	S3Backend  = "S3"
 
@@ -78,6 +79,8 @@ func getSecretStore() store.Store {
 
 	var s store.Store
 	switch backend {
+	case NoneBackend:
+		s = store.NewNoneStore()
 	case S3Backend:
 		s = store.NewS3Store(numRetries)
 	case SSMBackend:

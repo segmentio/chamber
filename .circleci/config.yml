@@ -1,5 +1,16 @@
 version: 2
 jobs:
+  test:
+    docker:
+      - image: circleci/golang:1.10
+    working_directory: /go/src/github.com/segmentio/chamber
+    steps:
+      - checkout
+      - run:
+          name: Test
+          command: |
+            make test
+
   dist:
     docker:
       - image: circleci/golang:1.10
@@ -32,8 +43,9 @@ jobs:
 
 workflows:
   version: 2
-  dist-publish:
+  test-dist-publish:
     jobs:
+      - test
       - dist:
           # needed to ensure dist happens on tag events
           filters:

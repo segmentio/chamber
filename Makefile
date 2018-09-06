@@ -7,6 +7,10 @@
 VERSION := $(shell git describe --tags --always --dirty="-dev")
 LDFLAGS := -ldflags='-X "main.Version=$(VERSION)"'
 
+test: | govendor
+	govendor sync
+	go test -v ./...
+
 all: dist/chamber-$(VERSION)-darwin-amd64 dist/chamber-$(VERSION)-linux-amd64
 
 clean:

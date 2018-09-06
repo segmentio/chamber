@@ -9,7 +9,7 @@ jobs:
       - run:
           name: Install nfpm, rpmbuild
           command: |
-            sudo make -f Makefile.release nfpm-debian rpmbuild-debian
+            sudo make -f Makefile.tools nfpm-debian rpmbuild-debian
       - run:
           name: Make distributables
           command: |
@@ -34,12 +34,16 @@ workflows:
   version: 2
   dist-publish:
     jobs:
-      - dist
+      - dist:
+          # needed to ensure dist happens on tag events
+          filters:
+            tags:
+              only: /.*/
       - publish:
           requires:
             - dist
           filters:
-            # release on no branch push events
+            # never publish from a branch event
             branches:
               ignore: /.*/
             # release only on tag push events like vX[.Y.Z...][-whatever]

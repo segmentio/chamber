@@ -15,11 +15,11 @@ clean:
 dist/:
 	mkdir -p dist
 
-dist/chamber-$(VERSION)-darwin-amd64: dist/ govendor
+dist/chamber-$(VERSION)-darwin-amd64: | govendor dist/
 	govendor sync
 	GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build $(LDFLAGS) -o $@
 
-dist/chamber-$(VERSION)-linux-amd64: dist/ govendor
+dist/chamber-$(VERSION)-linux-amd64: | govendor dist/
 	govendor sync
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build $(LDFLAGS) -o $@
 

@@ -39,6 +39,7 @@ clean:
 
 dist:
 	mkdir dist
+	govendor sync
 	GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build $(LDFLAGS) -o dist/chamber-$(VERSION)-darwin-amd64
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build $(LDFLAGS) -o dist/chamber-$(VERSION)-linux-amd64
 	@which sha256sum 2>&1 > /dev/null || ( \

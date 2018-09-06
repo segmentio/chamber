@@ -1,20 +1,24 @@
 version: 2
 jobs:
-  build:
+  dist:
     docker:
       - image: circleci/golang:1.10
     working_directory: /go/src/github.com/segmentio/chamber
     steps:
       - checkout
       - run:
-          name: Build
+          name: Install nfpm, rpmbuild
           command: |
-            make govendor dist
+            sudo make -f Makefile.release nfpm-debian rpmbuild-debian
+      - run:
+          name: Make distributables
+          command: |
+            make -f Makefile.release dist
       - persist_to_workspace:
           root: .
           paths: ['dist/*']
 
-  release:
+  publish:
     docker:
       - image: circleci/golang:1.10
     working_directory: /go/src/github.com/segmentio/chamber
@@ -24,20 +28,20 @@ jobs:
       - run:
           name: Release
           command: |
-            make release
+            make -f Makefile.release publish
 
 workflows:
   version: 2
-  build-release:
+  dist-publish:
     jobs:
-      - build
-      - release:
+      - dist
+      - publish:
           requires:
-            - build
+            - dist
           filters:
-            # release on branch push event
+            # release on no branch push events
             branches:
               ignore: /.*/
-            # release only on tag push events like vX[.Y.Z...]
+            # release only on tag push events like vX[.Y.Z...][-whatever]
             tags:
-              only: /v[0-9]+(\.[0-9]+)*/
+              only: /v[0-9]+(\.[0-9]+)*(-[a-zA-Z0-9-]+)?/

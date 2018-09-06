@@ -1,0 +1,144 @@
+# Goals:
+# - Linux releases can be published to Github automatically by CircleCI
+#
+# This Makefile is meant for machines
+
+include Makefile
+
+# set --pre-release if not tagged or tree is dirty or there's a `-` in the tag
+ifneq (,$(findstring -,$(VERSION)))
+	GITHUB_RELEASE_FLAGS := "--pre-release"
+endif
+
+publish: publish-github
+
+publish-github: publish-github-darwin publish-github-linux publish-github-deb publish-github-rpm
+
+release: gh-release
+	github-release release \
+	--security-token $$GH_LOGIN \
+	--user segmentio \
+	--repo chamber \
+	$(GITHUB_RELEASE_FLAGS) \
+	--tag $(VERSION) \
+	--name $(VERSION)
+
+publish-github-darwin: dist/chamber-$(VERSION)-darwin-amd64 release
+	github-release upload \
+	--security-token $$GH_LOGIN \
+	--user segmentio \
+	--repo chamber \
+	--tag $(VERSION) \
+	--name chamber-$(VERSION)-darwin-amd64 \
+	--file $<
+
+publish-github-linux: dist/chamber-$(VERSION)-linux-amd64 release
+	github-release upload \
+	--security-token $$GH_LOGIN \
+	--user segmentio \
+	--repo chamber \
+	--tag $(VERSION) \
+	--name chamber-$(VERSION)-linux-amd64 \
+	--file $<
+
+publish-github-deb: dist/chamber_$(VERSION)_amd64.deb release
+	github-release upload \
+	--security-token $$GH_LOGIN \
+	--user segmentio \
+	--repo chamber \
+	--tag $(VERSION) \
+	--name chamber_$(VERSION)_amd64.deb \
+	--file $<
+
+publish-github-rpm: dist/chamber_$(VERSION)_amd64.rpm release
+	github-release upload \
+	--security-token $$GH_LOGIN \
+	--user segmentio \
+	--repo chamber \
+	--tag $(VERSION) \
+	--name chamber_$(VERSION)_amd64.rpm \
+	--file $<
+	
+	github-release upload \
+	--security-token $$GH_LOGIN \
+	--user segmentio \
+	--repo chamber \
+	--tag $(VERSION) \
+	--name chamber-$(VERSION).sha256sums \
+	--file dist/chamber-$(VERSION).sha256sums
+
+dist: dist/chamber-$(VERSION)-darwin-amd64 dist/chamber-$(VERSION)-linux-amd64 dist/chamber_$(VERSION)_amd64.deb dist/chamber_$(VERSION)_amd64.rpm dist/chamber-$(VERSION).sha256sums
+
+dist/chamber-$(VERSION).sha256sums: dist/chamber-$(VERSION)-darwin-amd64 dist/chamber-$(VERSION)-linux-amd64 dist/chamber_$(VERSION)_amd64.deb dist/chamber_$(VERSION)_amd64.rpm
+	sha256sum $^ | sed 's|dist/||g' > $@
+
+dist/nfpm-$(VERSION).yaml: dist/
+	sed -e "s/\$${VERSION}/$(VERSION)/g" -e "s|\$${DIST_BIN}|dist/chamber-$(VERSION)-linux-amd64|g" < nfpm.yaml.tmpl > $@
+
+dist/chamber_$(VERSION)_amd64.deb: dist/nfpm-$(VERSION).yaml nfpm
+	nfpm -f $< pkg --target $@
+
+dist/chamber_$(VERSION)_amd64.rpm: dist/nfpm-$(VERSION).yaml nfpm rpmbuild
+	nfpm -f $< pkg --target $@
+
+gh-release:
+	go get -u github.com/aktau/github-release
+
+
+nfpm:
+	@if ! which nfpm 2>&1 >/dev/null ; then \
+		echo 'missing nfpm; see Makefile.release for recipes' && \
+		exit 1; \
+	fi
+
+sha256sum:
+	@if ! which sha256sum 2>&1 >/dev/null ; then \
+		echo 'missing sha256sum; see Makefile.release for recipes' && \
+		exit 1; \
+	fi
+
+rpmbuild:
+	@if ! which rpmbuild 2>&1 >/dev/null ; then \
+		echo 'missing rpmbuild; see Makefile.release for recipes' && \
+		exit 1; \
+	fi
+
+NFPM_VERSION := 0.9.3
+#from https://github.com/goreleaser/nfpm/releases/download/v0.9.3/nfpm_0.9.3_checksums.txt
+NFPM_SHA256 := f875ac060a30ec5c164e5444a7278322b276707493fa0ced6bfdd56640f0a6ea
+
+# Tools installation recipes
+#
+# These are fragile, non-portable, and often require root
+#
+nfpm-debian:
+	cd /tmp && \
+		curl -Ls https://github.com/goreleaser/nfpm/releases/download/v${NFPM_VERSION}/nfpm_${NFPM_VERSION}_Linux_x86_64.tar.gz > nfpm.tar.gz && \
+		echo "${NFPM_SHA256}  nfpm.tar.gz" | \
+		sha256sum -c && \
+		tar xzvf nfpm.tar.gz && \
+		mv nfpm /usr/local/bin
+
+rpmbuild-debian:
+	apt update -q && apt install rpm -yq
+
+rpmbuild-darwin:
+	brew install rpm
+
+sha256sum-darwin:
+	brew install coreutils && ln -s $$(which gsha256sum) /usr/local/bin/sha256sum`
+
+.PHONY: \
+	gh-release \
+	publish-github \
+	publish-github-linux \
+	publish-github-rpm \
+	publish-github-deb \
+	publish-github-darwin \
+	release \
+	nfpm \
+	sha256sum \
+	nfpm-debian \
+	rpmbuild-debian \
+	rpmbuild-darwin \
+	sha256sum-darwin

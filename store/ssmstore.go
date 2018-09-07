@@ -221,9 +221,10 @@ func (s *SSMStore) readLatest(id SecretId) (Secret, error) {
 		for _, param := range o.Parameters {
 			if *param.Name == s.idToName(id) {
 				parameter = param
+				return false
 			}
 		}
-		return !lastPage
+		return true
 	}); err != nil {
 		return Secret{}, err
 	}

@@ -1,13 +1,18 @@
 package cmd
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"strings"
+	"text/template"
 
+	"github.com/Masterminds/sprig"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
+
+var format string
 
 // execCmd represents the exec command
 var execCmd = &cobra.Command{
@@ -30,7 +35,16 @@ var execCmd = &cobra.Command{
 }
 
 func init() {
+	execCmd.Flags().StringVarP(&format, "format", "f", "{{. | upper}}", "Environment variable name format")
 	RootCmd.AddCommand(execCmd)
+}
+
+func render(key string, tpl *template.Template) (string, error) {
+	var buffer bytes.Buffer
+	if err := tpl.Execute(&buffer, key); err != nil {
+		return "", err
+	}
+	return buffer.String(), nil
 }
 
 func execRun(cmd *cobra.Command, args []string) error {
@@ -39,6 +53,11 @@ func execRun(cmd *cobra.Command, args []string) error {
 
 	env := environ(os.Environ())
 	secretStore := getSecretStore()
+	tpl, err := template.New("env").Funcs(sprig.TxtFuncMap()).Parse(format)
+	if err != nil {
+		return err
+	}
+
 	for _, service := range services {
 		if err := validateService(service); err != nil {
 			return errors.Wrap(err, "Failed to validate service")
@@ -49,7 +68,10 @@ func execRun(cmd *cobra.Command, args []string) error {
 			return errors.Wrap(err, "Failed to list store contents")
 		}
 		for _, rawSecret := range rawSecrets {
-			envVarKey := strings.ToUpper(key(rawSecret.Key))
+			envVarKey, err := render(key(rawSecret.Key), tpl)
+			if err != nil {
+				return err
+			}
 			envVarKey = strings.Replace(envVarKey, "-", "_", -1)
 
 			if env.IsSet(envVarKey) {

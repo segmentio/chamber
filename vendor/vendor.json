@@ -3,6 +3,24 @@
 	"ignore": "test",
 	"package": [
 		{
+			"checksumSHA1": "TgO9gc7JIrSnT/T/VVzihTVPtvU=",
+			"path": "github.com/Masterminds/semver",
+			"revision": "c84ddcca87bf5a941b138dde832a7e20b0159ad8",
+			"revisionTime": "2018-08-07T14:24:31Z"
+		},
+		{
+			"checksumSHA1": "TUE1bHal3tni6do6Kb6HVN64dPk=",
+			"path": "github.com/Masterminds/sprig",
+			"revision": "77bb58b7f5e10889a1195c21b9e7a96ee166f199",
+			"revisionTime": "2018-07-25T21:21:58Z"
+		},
+		{
+			"checksumSHA1": "X0xGt0e0IkZeviF+pFRlpHP+xkE=",
+			"path": "github.com/aokoli/goutils",
+			"revision": "3391d3790d23d03408670993e957e8f408993c34",
+			"revisionTime": "2017-05-31T11:00:25Z"
+		},
+		{
 			"checksumSHA1": "o4Kd5PNa6bw7/wOWWKVY7BR0gBY=",
 			"path": "github.com/aws/aws-sdk-go",
 			"revision": "ddfc3ca419279cf2f67b12719e51fe8500d0029d",
@@ -239,6 +257,24 @@
 			"revisionTime": "2017-03-23T00:38:48Z"
 		},
 		{
+			"checksumSHA1": "y7VkMyn85Cft0aLB8Rb1+Le1dN0=",
+			"path": "github.com/google/uuid",
+			"revision": "e704694aed0ea004bb7eb1fc2e911d048a54606a",
+			"revisionTime": "2018-08-28T18:15:55Z"
+		},
+		{
+			"checksumSHA1": "GgSlQYD/MBe2lqMqF6BP51d+67o=",
+			"path": "github.com/huandu/xstrings",
+			"revision": "8bbcf2f9ccb55755e748b7644164cd4bdce94c1d",
+			"revisionTime": "2018-09-06T15:17:51Z"
+		},
+		{
+			"checksumSHA1": "3LWNcQT7yTaLpEmjhI/3fi8puv0=",
+			"path": "github.com/imdario/mergo",
+			"revision": "9f23e2d6bd2a77f959b2bf6acdbefd708a83a4a4",
+			"revisionTime": "2018-07-30T21:26:40Z"
+		},
+		{
 			"checksumSHA1": "40vJyUB4ezQSn/NSadsKEOrudMc=",
 			"path": "github.com/inconshreveable/mousetrap",
 			"revision": "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75",
@@ -287,6 +323,18 @@
 			"path": "github.com/stretchr/testify/assert",
 			"revision": "9f9027faeb0dad515336ed2f28317f9f8f527ab4",
 			"revisionTime": "2016-01-29T19:31:06Z"
+		},
+		{
+			"checksumSHA1": "1MGpGDQqnUoRpv7VEcQrXOBydXE=",
+			"path": "golang.org/x/crypto/pbkdf2",
+			"revision": "0709b304e793a5edb4a2c0145f281ecdc20838a4",
+			"revisionTime": "2018-08-31T22:38:59Z"
+		},
+		{
+			"checksumSHA1": "sx1nQShs40UKtcJZNJuvYtGesaI=",
+			"path": "golang.org/x/crypto/scrypt",
+			"revision": "0709b304e793a5edb4a2c0145f281ecdc20838a4",
+			"revisionTime": "2018-08-31T22:38:59Z"
 		}
 	],
 	"rootPath": "github.com/segmentio/chamber"

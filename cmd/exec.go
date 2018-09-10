@@ -39,6 +39,7 @@ func execRun(cmd *cobra.Command, args []string) error {
 
 	env := environ(os.Environ())
 	secretStore := getSecretStore()
+	envVarKeys := make([]string, 0)
 	for _, service := range services {
 		if err := validateService(service); err != nil {
 			return errors.Wrap(err, "Failed to validate service")
@@ -52,11 +53,17 @@ func execRun(cmd *cobra.Command, args []string) error {
 			envVarKey := strings.ToUpper(key(rawSecret.Key))
 			envVarKey = strings.Replace(envVarKey, "-", "_", -1)
 
+			envVarKeys = append(envVarKeys, envVarKey)
+
 			if env.IsSet(envVarKey) {
 				fmt.Fprintf(os.Stderr, "warning: overwriting environment variable %s\n", envVarKey)
 			}
 			env.Set(envVarKey, rawSecret.Value)
 		}
+	}
+
+	if verbose {
+		fmt.Fprintf(os.Stdout, "info: With environment %s\n", strings.Join(envVarKeys, ","))
 	}
 
 	return exec(command, commandArgs, env)

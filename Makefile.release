@@ -8,6 +8,7 @@ include Makefile
 # set --pre-release if not tagged or tree is dirty or there's a `-` in the tag
 ifneq (,$(findstring -,$(VERSION)))
 	GITHUB_RELEASE_FLAGS := "--pre-release"
+	PACKAGECLOUD_NAME_SUFFIX := "-prerelease"
 endif
 
 publish: publish-github publish-packagecloud
@@ -73,14 +74,14 @@ publish-github-sha256sums: dist/chamber-$(VERSION).sha256sums | github-release
 packagecloud.conf.json:
 	@echo "{\"url\":\"https://packagecloud.io\",\"token\":\"$${PACKAGECLOUD_TOKEN}\"}" > $@
 
-publish-packagecloud-deb: dist/chamber_$(VERSION)_amd64.deb
-	@for v in (stretch); do \
-		package_cloud push --config packagecloud.conf.json segment/chamber/debian/$$v $< ; \
+publish-packagecloud-deb: dist/chamber_$(VERSION)_amd64.deb packagecloud.conf.json
+	@for v in debian/stretch; do \
+		package_cloud push --config packagecloud.conf.json segment/chamber$(PACKAGECLOUD_NAME_SUFFIX)/$$v $< ; \
 	done
 
 publish-packagecloud-rpm: dist/chamber_$(VERSION)_amd64.rpm packagecloud.conf.json
-	@for v in `seq 27 29`; do \
-		package_cloud push --config packagecloud.conf.json segment/chamber/fedora/$$v $< ; \
+	@for v in fedora/27 fedora/28; do \
+		package_cloud push --config packagecloud.conf.json segment/chamber$(PACKAGECLOUD_NAME_SUFFIX)/$$v $< ; \
 	done
 
 dist: dist/chamber-$(VERSION)-darwin-amd64 dist/chamber-$(VERSION)-linux-amd64 dist/chamber_$(VERSION)_amd64.deb dist/chamber_$(VERSION)_amd64.rpm dist/chamber-$(VERSION).sha256sums
@@ -91,10 +92,10 @@ dist/chamber-$(VERSION).sha256sums: dist/chamber-$(VERSION)-darwin-amd64 dist/ch
 dist/nfpm-$(VERSION).yaml: | dist/
 	sed -e "s/\$${VERSION}/$(VERSION)/g" -e "s|\$${DIST_BIN}|dist/chamber-$(VERSION)-linux-amd64|g" < nfpm.yaml.tmpl > $@
 
-dist/chamber_$(VERSION)_amd64.deb: dist/nfpm-$(VERSION).yaml
+dist/chamber_$(VERSION)_amd64.deb: dist/nfpm-$(VERSION).yaml dist/chamber-$(VERSION)-linux-amd64
 	nfpm -f $< pkg --target $@
 
-dist/chamber_$(VERSION)_amd64.rpm: dist/nfpm-$(VERSION).yaml
+dist/chamber_$(VERSION)_amd64.rpm: dist/nfpm-$(VERSION).yaml dist/chamber-$(VERSION)-linux-amd64
 	nfpm -f $< pkg --target $@
 
 .PHONY: \

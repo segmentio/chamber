@@ -14,7 +14,7 @@ publish: publish-github
 
 publish-github: publish-github-darwin publish-github-linux publish-github-deb publish-github-rpm publish-github-sha256sums
 
-release: | gh-release
+github-release:
 	github-release release \
 	--security-token $$GH_LOGIN \
 	--user segmentio \
@@ -23,7 +23,7 @@ release: | gh-release
 	--tag $(VERSION) \
 	--name $(VERSION)
 
-publish-github-darwin: dist/chamber-$(VERSION)-darwin-amd64 | release
+publish-github-darwin: dist/chamber-$(VERSION)-darwin-amd64 | github-release
 	github-release upload \
 	--security-token $$GH_LOGIN \
 	--user segmentio \
@@ -32,7 +32,7 @@ publish-github-darwin: dist/chamber-$(VERSION)-darwin-amd64 | release
 	--name chamber-$(VERSION)-darwin-amd64 \
 	--file $<
 
-publish-github-linux: dist/chamber-$(VERSION)-linux-amd64 | release
+publish-github-linux: dist/chamber-$(VERSION)-linux-amd64 | github-release
 	github-release upload \
 	--security-token $$GH_LOGIN \
 	--user segmentio \
@@ -41,7 +41,7 @@ publish-github-linux: dist/chamber-$(VERSION)-linux-amd64 | release
 	--name chamber-$(VERSION)-linux-amd64 \
 	--file $<
 
-publish-github-deb: dist/chamber_$(VERSION)_amd64.deb | release
+publish-github-deb: dist/chamber_$(VERSION)_amd64.deb | github-release
 	github-release upload \
 	--security-token $$GH_LOGIN \
 	--user segmentio \
@@ -50,7 +50,7 @@ publish-github-deb: dist/chamber_$(VERSION)_amd64.deb | release
 	--name chamber_$(VERSION)_amd64.deb \
 	--file $<
 
-publish-github-rpm: dist/chamber_$(VERSION)_amd64.rpm | release
+publish-github-rpm: dist/chamber_$(VERSION)_amd64.rpm | github-release
 	github-release upload \
 	--security-token $$GH_LOGIN \
 	--user segmentio \
@@ -59,7 +59,7 @@ publish-github-rpm: dist/chamber_$(VERSION)_amd64.rpm | release
 	--name chamber_$(VERSION)_amd64.rpm \
 	--file $<
 	
-publish-github-sha256sums: dist/chamber-$(VERSION).sha256sums | release
+publish-github-sha256sums: dist/chamber-$(VERSION).sha256sums | github-release
 	github-release upload \
 	--security-token $$GH_LOGIN \
 	--user segmentio \
@@ -82,14 +82,10 @@ dist/chamber_$(VERSION)_amd64.deb: dist/nfpm-$(VERSION).yaml
 dist/chamber_$(VERSION)_amd64.rpm: dist/nfpm-$(VERSION).yaml
 	nfpm -f $< pkg --target $@
 
-gh-release:
-	go get -u github.com/aktau/github-release
-
 .PHONY: \
-	gh-release \
 	publish-github \
 	publish-github-linux \
 	publish-github-rpm \
 	publish-github-deb \
 	publish-github-darwin \
-	release
+	github-release

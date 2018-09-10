@@ -23,7 +23,11 @@ rpmbuild-darwin:
 sha256sum-darwin:
 	brew install coreutils && ln -s $$(which gsha256sum) /usr/local/bin/sha256sum`
 
+github-release:
+	go get -u github.com/aktau/github-release
+
 .PHONY: nfpm-debian \
 	rpmbuild-debian \
 	rpmbuild-darwin \
-	sha256sum-darwin
+	sha256sum-darwin \
+	github-release

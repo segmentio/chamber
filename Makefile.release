@@ -11,6 +11,13 @@ ifneq (,$(findstring -,$(VERSION)))
 	PACKAGECLOUD_NAME_SUFFIX := "-prerelease"
 endif
 
+PACKAGECLOUD_DEB_DISTROS := \
+	debian/stretch
+
+PACKAGECLOUD_RPM_DISTROS := \
+	fedora/27 \
+	fedora/28
+
 publish: publish-github publish-packagecloud
 
 publish-github: publish-github-darwin publish-github-linux publish-github-deb publish-github-rpm publish-github-sha256sums
@@ -74,14 +81,19 @@ publish-github-sha256sums: dist/chamber-$(VERSION).sha256sums | github-release
 packagecloud.conf.json:
 	@echo "{\"url\":\"https://packagecloud.io\",\"token\":\"$${PACKAGECLOUD_TOKEN}\"}" > $@
 
+# package_cloud prints the last 4 chars of our token :(
+# so we attempt to filter that out
+
 publish-packagecloud-deb: dist/chamber_$(VERSION)_amd64.deb packagecloud.conf.json
-	@for v in debian/stretch; do \
-		package_cloud push --config packagecloud.conf.json segment/chamber$(PACKAGECLOUD_NAME_SUFFIX)/$$v $< ; \
+	@for v in $(PACKAGECLOUD_DEB_DISTROS); do \
+		package_cloud push --config packagecloud.conf.json segment/chamber$(PACKAGECLOUD_NAME_SUFFIX)/$$v $< | \
+			grep -v 'with token:' ; \
 	done
 
 publish-packagecloud-rpm: dist/chamber_$(VERSION)_amd64.rpm packagecloud.conf.json
-	@for v in fedora/27 fedora/28; do \
-		package_cloud push --config packagecloud.conf.json segment/chamber$(PACKAGECLOUD_NAME_SUFFIX)/$$v $< ; \
+	@for v in $(PACKAGECLOUD_RPM_DISTROS); do \
+		package_cloud push --config packagecloud.conf.json segment/chamber$(PACKAGECLOUD_NAME_SUFFIX)/$$v $< | \
+			grep -v 'with token:' ; \
 	done
 
 dist: dist/chamber-$(VERSION)-darwin-amd64 dist/chamber-$(VERSION)-linux-amd64 dist/chamber_$(VERSION)_amd64.deb dist/chamber_$(VERSION)_amd64.rpm dist/chamber-$(VERSION).sha256sums

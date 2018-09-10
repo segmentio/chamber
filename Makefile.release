@@ -10,9 +10,11 @@ ifneq (,$(findstring -,$(VERSION)))
 	GITHUB_RELEASE_FLAGS := "--pre-release"
 endif
 
-publish: publish-github
+publish: publish-github publish-packagecloud
 
 publish-github: publish-github-darwin publish-github-linux publish-github-deb publish-github-rpm publish-github-sha256sums
+
+publish-packagecloud: publish-packagecloud-deb publish-packagecloud-rpm
 
 github-release:
 	github-release release \
@@ -67,6 +69,19 @@ publish-github-sha256sums: dist/chamber-$(VERSION).sha256sums | github-release
 	--tag $(VERSION) \
 	--name chamber-$(VERSION).sha256sums \
 	--file dist/chamber-$(VERSION).sha256sums
+
+packagecloud.conf.json:
+	@echo "{\"url\":\"https://packagecloud.io\",\"token\":\"$${PACKAGECLOUD_TOKEN}\"}" > $@
+
+publish-packagecloud-deb: dist/chamber_$(VERSION)_amd64.deb
+	@for v in (stretch); do \
+		package_cloud push --config packagecloud.conf.json segment/chamber/debian/$$v $< ; \
+	done
+
+publish-packagecloud-rpm: dist/chamber_$(VERSION)_amd64.rpm packagecloud.conf.json
+	@for v in `seq 27 29`; do \
+		package_cloud push --config packagecloud.conf.json segment/chamber/fedora/$$v $< ; \
+	done
 
 dist: dist/chamber-$(VERSION)-darwin-amd64 dist/chamber-$(VERSION)-linux-amd64 dist/chamber_$(VERSION)_amd64.deb dist/chamber_$(VERSION)_amd64.rpm dist/chamber-$(VERSION).sha256sums
 

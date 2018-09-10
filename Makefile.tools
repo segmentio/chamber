@@ -26,8 +26,12 @@ sha256sum-darwin:
 github-release:
 	go get -u github.com/aktau/github-release
 
+package_cloud:
+	gem install package_cloud
+
 .PHONY: nfpm-debian \
 	rpmbuild-debian \
 	rpmbuild-darwin \
 	sha256sum-darwin \
-	github-release
+	github-release \
+	package_cloud

@@ -12,7 +12,10 @@ ifneq (,$(findstring -,$(VERSION)))
 endif
 
 PACKAGECLOUD_DEB_DISTROS := \
-	debian/stretch
+	debian/stretch \
+	ubuntu/trusty \
+	ubuntu/xenial \
+	ubuntu/bionic
 
 PACKAGECLOUD_RPM_DISTROS := \
 	fedora/27 \

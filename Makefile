@@ -1,56 +1,33 @@
+# Goals:
+# - user can build binaries on their system without having to install special tools
+# - user can fork the canonical repo and expect to be able to run CircleCI checks
+#
+# This makefile is meant for humans
+
 VERSION := $(shell git describe --tags --always --dirty="-dev")
 LDFLAGS := -ldflags='-X "main.Version=$(VERSION)"'
 
-release: gh-release clean dist
+test: | govendor
 	govendor sync
-	github-release release \
-	--security-token $$GH_LOGIN \
-	--user segmentio \
-	--repo chamber \
-	--tag $(VERSION) \
-	--name $(VERSION)
+	go test -v ./...
 
-	github-release upload \
-	--security-token $$GH_LOGIN \
-	--user segmentio \
-	--repo chamber \
-	--tag $(VERSION) \
-	--name chamber-$(VERSION)-darwin-amd64 \
-	--file dist/chamber-$(VERSION)-darwin-amd64
-
-	github-release upload \
-	--security-token $$GH_LOGIN \
-	--user segmentio \
-	--repo chamber \
-	--tag $(VERSION) \
-	--name chamber-$(VERSION)-linux-amd64 \
-	--file dist/chamber-$(VERSION)-linux-amd64
-
-	github-release upload \
-	--security-token $$GH_LOGIN \
-	--user segmentio \
-	--repo chamber \
-	--tag $(VERSION) \
-	--name chamber-$(VERSION).sha256sums \
-	--file dist/chamber-$(VERSION).sha256sums
+all: dist/chamber-$(VERSION)-darwin-amd64 dist/chamber-$(VERSION)-linux-amd64
 
 clean:
 	rm -rf ./dist
 
-dist:
-	mkdir dist
-	govendor sync
-	GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build $(LDFLAGS) -o dist/chamber-$(VERSION)-darwin-amd64
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build $(LDFLAGS) -o dist/chamber-$(VERSION)-linux-amd64
-	@which sha256sum 2>&1 > /dev/null || ( \
-		echo 'missing sha256sum; install on MacOS with `brew install coreutils && ln -s $$(which gsha256sum) /usr/local/bin/sha256sum`' ; \
-		exit 1; \
-	)
-	cd dist && \
-		sha256sum chamber-$(VERSION)-* > chamber-$(VERSION).sha256sums
+dist/:
+	mkdir -p dist
 
-gh-release:
-	go get -u github.com/aktau/github-release
+dist/chamber-$(VERSION)-darwin-amd64: | govendor dist/
+	govendor sync
+	GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build $(LDFLAGS) -o $@
+
+dist/chamber-$(VERSION)-linux-amd64: | govendor dist/
+	govendor sync
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build $(LDFLAGS) -o $@
 
 govendor:
 	go get -u github.com/kardianos/govendor
+
+.PHONY: clean all govendor

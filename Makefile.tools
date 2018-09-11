@@ -1,0 +1,37 @@
+# Tools installation recipes
+#
+# These are fragile, non-portable, and often require root
+#
+NFPM_VERSION := 0.9.3
+#from https://github.com/goreleaser/nfpm/releases/download/v0.9.3/nfpm_0.9.3_checksums.txt
+NFPM_SHA256 := f875ac060a30ec5c164e5444a7278322b276707493fa0ced6bfdd56640f0a6ea
+
+nfpm-debian:
+	cd /tmp && \
+		curl -Ls https://github.com/goreleaser/nfpm/releases/download/v${NFPM_VERSION}/nfpm_${NFPM_VERSION}_Linux_x86_64.tar.gz > nfpm.tar.gz && \
+		echo "${NFPM_SHA256}  nfpm.tar.gz" | \
+		sha256sum -c && \
+		tar xzvf nfpm.tar.gz && \
+		mv nfpm /usr/local/bin
+
+rpmbuild-debian:
+	apt update -q && apt install rpm -yq
+
+rpmbuild-darwin:
+	brew install rpm
+
+sha256sum-darwin:
+	brew install coreutils && ln -s $$(which gsha256sum) /usr/local/bin/sha256sum`
+
+github-release:
+	go get -u github.com/aktau/github-release
+
+package_cloud:
+	gem install package_cloud
+
+.PHONY: nfpm-debian \
+	rpmbuild-debian \
+	rpmbuild-darwin \
+	sha256sum-darwin \
+	github-release \
+	package_cloud

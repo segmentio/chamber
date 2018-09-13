@@ -47,7 +47,7 @@ var RootCmd = &cobra.Command{
 
 func init() {
 	RootCmd.PersistentFlags().IntVarP(&numRetries, "retries", "r", DefaultNumRetries, "For SSM, the number of retries we'll make before giving up")
-	RootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Print more information to STDOUT")
+	RootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "", false, "Print more information to STDOUT")
 }
 
 // Execute adds all child commands to the root command sets flags appropriately.

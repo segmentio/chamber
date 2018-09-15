@@ -84,17 +84,18 @@ func validateKey(key string) error {
 	return nil
 }
 
-func getSecretStore() store.Store {
+func getSecretStore() (store.Store, error) {
 	backend := strings.ToUpper(os.Getenv(BackendEnvVar))
 
 	var s store.Store
+	var err error
 	switch backend {
 	case S3Backend:
-		s = store.NewS3Store(numRetries)
+		s, err = store.NewS3Store(numRetries)
 	case SSMBackend:
 		fallthrough
 	default:
-		s = store.NewSSMStore(numRetries)
+		s, err = store.NewSSMStore(numRetries)
 	}
-	return s
+	return s, err
 }

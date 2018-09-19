@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 
+	analytics "github.com/segmentio/analytics-go"
 	"github.com/segmentio/chamber/store"
 	"github.com/spf13/cobra"
 )
@@ -19,6 +20,12 @@ var (
 	verbose        bool
 	numRetries     int
 	chamberVersion string
+	backend        string
+
+	analyticsEnabled  bool
+	analyticsWriteKey string
+	analyticsClient   analytics.Client
+	username          string
 )
 
 const (
@@ -40,9 +47,11 @@ var Backends = []string{SSMBackend, S3Backend}
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
-	Use:          "chamber",
-	Short:        "CLI for storing secrets",
-	SilenceUsage: true,
+	Use:               "chamber",
+	Short:             "CLI for storing secrets",
+	SilenceUsage:      true,
+	PersistentPreRun:  prerun,
+	PersistentPostRun: postrun,
 }
 
 func init() {
@@ -52,8 +61,12 @@ func init() {
 
 // Execute adds all child commands to the root command sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
-func Execute(vers string) {
+func Execute(vers string, writeKey string) {
 	chamberVersion = vers
+
+	analyticsWriteKey = writeKey
+	analyticsEnabled = analyticsWriteKey != ""
+
 	if cmd, err := RootCmd.ExecuteC(); err != nil {
 		if strings.Contains(err.Error(), "arg(s)") || strings.Contains(err.Error(), "usage") {
 			cmd.Usage()
@@ -85,8 +98,6 @@ func validateKey(key string) error {
 }
 
 func getSecretStore() store.Store {
-	backend := strings.ToUpper(os.Getenv(BackendEnvVar))
-
 	var s store.Store
 	switch backend {
 	case S3Backend:
@@ -97,4 +108,28 @@ func getSecretStore() store.Store {
 		s = store.NewSSMStore(numRetries)
 	}
 	return s
+}
+
+func prerun(cmd *cobra.Command, args []string) {
+	backend = strings.ToUpper(os.Getenv(BackendEnvVar))
+
+	if analyticsEnabled {
+		// set up analytics client
+		analyticsClient, _ = analytics.NewWithConfig(analyticsWriteKey, analytics.Config{
+			BatchSize: 1,
+		})
+
+		username = os.Getenv("USER")
+		analyticsClient.Enqueue(analytics.Identify{
+			UserId: username,
+			Traits: analytics.NewTraits().
+				Set("chamber-version", chamberVersion),
+		})
+	}
+}
+
+func postrun(cmd *cobra.Command, args []string) {
+	if analyticsEnabled && analyticsClient != nil {
+		analyticsClient.Close()
+	}
 }

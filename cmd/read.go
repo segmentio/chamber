@@ -53,8 +53,6 @@ func read(cmd *cobra.Command, args []string) error {
 				Set("key", key).
 				Set("backend", backend),
 		})
-	} else {
-		fmt.Println("Not writing!!")
 	}
 
 	secretStore := getSecretStore()

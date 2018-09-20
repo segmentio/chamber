@@ -5,7 +5,8 @@
 # This makefile is meant for humans
 
 VERSION := $(shell git describe --tags --always --dirty="-dev")
-LDFLAGS := -ldflags='-X "main.Version=$(VERSION)"'
+ANALYTICS_WRITE_KEY ?=
+LDFLAGS := -ldflags='-X "main.Version=$(VERSION)" -X "main.AnalyticsWriteKey=$(ANALYTICS_WRITE_KEY)"'
 
 test: | govendor
 	govendor sync

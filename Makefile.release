@@ -1,0 +1,122 @@
+# Goals:
+# - Linux releases can be published to Github automatically by CircleCI
+#
+# This Makefile is meant for machines
+
+include Makefile
+
+# set --pre-release if not tagged or tree is dirty or there's a `-` in the tag
+ifneq (,$(findstring -,$(VERSION)))
+	GITHUB_RELEASE_FLAGS := "--pre-release"
+	PACKAGECLOUD_NAME_SUFFIX := "-prerelease"
+endif
+
+PACKAGECLOUD_DEB_DISTROS := \
+	debian/stretch \
+	ubuntu/trusty \
+	ubuntu/xenial \
+	ubuntu/bionic
+
+PACKAGECLOUD_RPM_DISTROS := \
+	fedora/27 \
+	fedora/28
+
+publish: publish-github publish-packagecloud
+
+publish-github: publish-github-darwin publish-github-linux publish-github-deb publish-github-rpm publish-github-sha256sums
+
+publish-packagecloud: publish-packagecloud-deb publish-packagecloud-rpm
+
+github-release:
+	github-release release \
+	--security-token $$GH_LOGIN \
+	--user segmentio \
+	--repo chamber \
+	$(GITHUB_RELEASE_FLAGS) \
+	--tag $(VERSION) \
+	--name $(VERSION)
+
+publish-github-darwin: dist/chamber-$(VERSION)-darwin-amd64 | github-release
+	github-release upload \
+	--security-token $$GH_LOGIN \
+	--user segmentio \
+	--repo chamber \
+	--tag $(VERSION) \
+	--name chamber-$(VERSION)-darwin-amd64 \
+	--file $<
+
+publish-github-linux: dist/chamber-$(VERSION)-linux-amd64 | github-release
+	github-release upload \
+	--security-token $$GH_LOGIN \
+	--user segmentio \
+	--repo chamber \
+	--tag $(VERSION) \
+	--name chamber-$(VERSION)-linux-amd64 \
+	--file $<
+
+publish-github-deb: dist/chamber_$(VERSION)_amd64.deb | github-release
+	github-release upload \
+	--security-token $$GH_LOGIN \
+	--user segmentio \
+	--repo chamber \
+	--tag $(VERSION) \
+	--name chamber_$(VERSION)_amd64.deb \
+	--file $<
+
+publish-github-rpm: dist/chamber_$(VERSION)_amd64.rpm | github-release
+	github-release upload \
+	--security-token $$GH_LOGIN \
+	--user segmentio \
+	--repo chamber \
+	--tag $(VERSION) \
+	--name chamber_$(VERSION)_amd64.rpm \
+	--file $<
+	
+publish-github-sha256sums: dist/chamber-$(VERSION).sha256sums | github-release
+	github-release upload \
+	--security-token $$GH_LOGIN \
+	--user segmentio \
+	--repo chamber \
+	--tag $(VERSION) \
+	--name chamber-$(VERSION).sha256sums \
+	--file dist/chamber-$(VERSION).sha256sums
+
+packagecloud.conf.json:
+	@echo "{\"url\":\"https://packagecloud.io\",\"token\":\"$${PACKAGECLOUD_TOKEN}\"}" > $@
+
+# package_cloud prints the last 4 chars of our token :(
+# so we attempt to filter that out
+
+publish-packagecloud-deb: dist/chamber_$(VERSION)_amd64.deb packagecloud.conf.json
+	@for v in $(PACKAGECLOUD_DEB_DISTROS); do \
+		package_cloud push --config packagecloud.conf.json segment/chamber$(PACKAGECLOUD_NAME_SUFFIX)/$$v $< | \
+			grep -v 'with token:' ; \
+	done
+
+publish-packagecloud-rpm: dist/chamber_$(VERSION)_amd64.rpm packagecloud.conf.json
+	@for v in $(PACKAGECLOUD_RPM_DISTROS); do \
+		package_cloud push --config packagecloud.conf.json segment/chamber$(PACKAGECLOUD_NAME_SUFFIX)/$$v $< | \
+			grep -v 'with token:' ; \
+	done
+
+dist: dist/chamber-$(VERSION)-darwin-amd64 dist/chamber-$(VERSION)-linux-amd64 dist/chamber_$(VERSION)_amd64.deb dist/chamber_$(VERSION)_amd64.rpm dist/chamber-$(VERSION).sha256sums
+
+dist/chamber-$(VERSION).sha256sums: dist/chamber-$(VERSION)-darwin-amd64 dist/chamber-$(VERSION)-linux-amd64 dist/chamber_$(VERSION)_amd64.deb dist/chamber_$(VERSION)_amd64.rpm
+	sha256sum $^ | sed 's|dist/||g' > $@
+
+dist/nfpm-$(VERSION).yaml: | dist/
+	sed -e "s/\$${VERSION}/$(VERSION)/g" -e "s|\$${DIST_BIN}|dist/chamber-$(VERSION)-linux-amd64|g" < nfpm.yaml.tmpl > $@
+
+dist/chamber_$(VERSION)_amd64.deb: dist/nfpm-$(VERSION).yaml dist/chamber-$(VERSION)-linux-amd64
+	nfpm -f $< pkg --target $@
+
+dist/chamber_$(VERSION)_amd64.rpm: dist/nfpm-$(VERSION).yaml dist/chamber-$(VERSION)-linux-amd64
+	nfpm -f $< pkg --target $@
+
+.PHONY: \
+	publish-github \
+	publish-github-linux \
+	publish-github-rpm \
+	publish-github-deb \
+	publish-github-darwin \
+	github-release

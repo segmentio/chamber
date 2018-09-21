@@ -20,11 +20,11 @@ const (
 
 // validPathKeyFormat is the format that is expected for key names inside parameter store
 // when using paths
-var validPathKeyFormat = regexp.MustCompile(`^\/[A-Za-z0-9-_]+\/[A-Za-z0-9-_]+$`)
+var validPathKeyFormat = regexp.MustCompile(`^(\/[\w\-\.]+)+$`)
 
 // validKeyFormat is the format that is expected for key names inside parameter store when
 // not using paths
-var validKeyFormat = regexp.MustCompile(`^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$`)
+var validKeyFormat = regexp.MustCompile(`^[\w\-\.]+$`)
 
 // ensure SSMStore confirms to Store interface
 var _ Store = &SSMStore{}
@@ -181,7 +181,7 @@ func (s *SSMStore) readLatest(id SecretId) (Secret, error) {
 
 	resp, err := s.svc.GetParameters(getParametersInput)
 	if err != nil {
-		return Secret{}, ErrSecretNotFound
+		return Secret{}, err
 	}
 
 	if len(resp.Parameters) == 0 {
@@ -221,9 +221,10 @@ func (s *SSMStore) readLatest(id SecretId) (Secret, error) {
 		for _, param := range o.Parameters {
 			if *param.Name == s.idToName(id) {
 				parameter = param
+				return false
 			}
 		}
-		return !lastPage
+		return true
 	}); err != nil {
 		return Secret{}, err
 	}
@@ -246,40 +247,30 @@ func (s *SSMStore) readLatest(id SecretId) (Secret, error) {
 func (s *SSMStore) List(service string, includeValues bool) ([]Secret, error) {
 	secrets := map[string]Secret{}
 
-	var nextToken *string
-	for {
-		var describeParametersInput *ssm.DescribeParametersInput
+	var describeParametersInput *ssm.DescribeParametersInput
 
-		if s.usePaths {
-			describeParametersInput = &ssm.DescribeParametersInput{
-				ParameterFilters: []*ssm.ParameterStringFilter{
-					{
-						Key:    aws.String("Path"),
-						Option: aws.String("OneLevel"),
-						Values: []*string{aws.String("/" + service)},
-					},
+	if s.usePaths {
+		describeParametersInput = &ssm.DescribeParametersInput{
+			ParameterFilters: []*ssm.ParameterStringFilter{
+				{
+					Key:    aws.String("Path"),
+					Option: aws.String("OneLevel"),
+					Values: []*string{aws.String("/" + service)},
 				},
-				MaxResults: aws.Int64(50),
-				NextToken:  nextToken,
-			}
-		} else {
-			describeParametersInput = &ssm.DescribeParametersInput{
-				Filters: []*ssm.ParametersFilter{
-					{
-						Key:    aws.String("Name"),
-						Values: []*string{aws.String(service + ".")},
-					},
+			},
+		}
+	} else {
+		describeParametersInput = &ssm.DescribeParametersInput{
+			Filters: []*ssm.ParametersFilter{
+				{
+					Key:    aws.String("Name"),
+					Values: []*string{aws.String(service + ".")},
 				},
-				MaxResults: aws.Int64(50),
-				NextToken:  nextToken,
-			}
+			},
 		}
+	}
 
-		resp, err := s.svc.DescribeParameters(describeParametersInput)
-		if err != nil {
-			return nil, err
-		}
-
+	err := s.svc.DescribeParametersPages(describeParametersInput, func(resp *ssm.DescribeParametersOutput, lastPage bool) bool {
 		for _, meta := range resp.Parameters {
 			if !s.validateName(*meta.Name) {
 				continue
@@ -290,12 +281,10 @@ func (s *SSMStore) List(service string, includeValues bool) ([]Secret, error) {
 				Meta:  secretMeta,
 			}
 		}
-
-		if resp.NextToken == nil {
-			break
-		}
-
-		nextToken = resp.NextToken
+		return true
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	if includeValues {
@@ -324,6 +313,7 @@ func (s *SSMStore) List(service string, includeValues bool) ([]Secret, error) {
 			}
 		}
 	}
+
 	return values(secrets), nil
 }
 
@@ -333,37 +323,12 @@ func (s *SSMStore) List(service string, includeValues bool) ([]Secret, error) {
 func (s *SSMStore) ListRaw(service string) ([]RawSecret, error) {
 	if s.usePaths {
 		secrets := map[string]RawSecret{}
-		var nextToken *string
-		for {
-			getParametersByPathInput := &ssm.GetParametersByPathInput{
-				MaxResults:     aws.Int64(10),
-				NextToken:      nextToken,
-				Path:           aws.String("/" + service + "/"),
-				WithDecryption: aws.Bool(true),
-			}
+		getParametersByPathInput := &ssm.GetParametersByPathInput{
+			Path:           aws.String("/" + service + "/"),
+			WithDecryption: aws.Bool(true),
+		}
 
-			resp, err := s.svc.GetParametersByPath(getParametersByPathInput)
-			if err != nil {
-				// If the error is an access-denied exception
-				awsErr, isAwserr := err.(awserr.Error)
-				if isAwserr {
-					if awsErr.Code() == "AccessDeniedException" && strings.Contains(awsErr.Message(), "is not authorized to perform: ssm:GetParametersByPath on resource") {
-						// Fall-back to using the old list method in case some users haven't updated their IAM permissions yet, but warn about it and
-						// tell them to fix their permissions
-						fmt.Fprintf(
-							os.Stderr,
-							"Warning: %s\nFalling-back to using ssm:DescribeParameters. This may cause delays or failures due to AWS rate-limiting.\n"+
-								"This is behavior deprecated and will be removed in a future version of chamber. Please update your IAM permissions to grant ssm:GetParametersByPath.\n\n",
-							awsErr)
-
-						// Delegate to List
-						return s.listRawViaList(service)
-					}
-				}
-
-				return nil, err
-			}
-
+		err := s.svc.GetParametersByPathPages(getParametersByPathInput, func(resp *ssm.GetParametersByPathOutput, lastPage bool) bool {
 			for _, param := range resp.Parameters {
 				if !s.validateName(*param.Name) {
 					continue
@@ -374,12 +339,28 @@ func (s *SSMStore) ListRaw(service string) ([]RawSecret, error) {
 					Key:   *param.Name,
 				}
 			}
+			return true
+		})
 
-			if resp.NextToken == nil {
-				break
+		if err != nil {
+			// If the error is an access-denied exception
+			awsErr, isAwserr := err.(awserr.Error)
+			if isAwserr {
+				if awsErr.Code() == "AccessDeniedException" && strings.Contains(awsErr.Message(), "is not authorized to perform: ssm:GetParametersByPath on resource") {
+					// Fall-back to using the old list method in case some users haven't updated their IAM permissions yet, but warn about it and
+					// tell them to fix their permissions
+					fmt.Fprintf(
+						os.Stderr,
+						"Warning: %s\nFalling-back to using ssm:DescribeParameters. This may cause delays or failures due to AWS rate-limiting.\n"+
+							"This is behavior deprecated and will be removed in a future version of chamber. Please update your IAM permissions to grant ssm:GetParametersByPath.\n\n",
+						awsErr)
+
+					// Delegate to List
+					return s.listRawViaList(service)
+				}
 			}
 
-			nextToken = resp.NextToken
+			return nil, err
 		}
 
 		rawSecrets := make([]RawSecret, len(secrets))
@@ -389,7 +370,6 @@ func (s *SSMStore) ListRaw(service string) ([]RawSecret, error) {
 			i += 1
 		}
 		return rawSecrets, nil
-
 	}
 
 	// Delete to List (which uses the DescribeParameters API)
@@ -483,7 +463,8 @@ func basePath(key string) string {
 	if len(pathParts) == 1 {
 		return pathParts[0]
 	}
-	return "/" + pathParts[1]
+	end := len(pathParts) - 1
+	return strings.Join(pathParts[0:end], "/")
 }
 
 func parameterMetaToSecretMeta(p *ssm.ParameterMetadata) SecretMetadata {

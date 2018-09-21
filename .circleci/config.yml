@@ -2,7 +2,7 @@ version: 2
 jobs:
   test:
     docker:
-      - image: circleci/golang:1.10
+      - image: circleci/golang:1.11
     working_directory: /go/src/github.com/segmentio/chamber
     steps:
       - checkout
@@ -13,7 +13,7 @@ jobs:
 
   dist:
     docker:
-      - image: circleci/golang:1.10
+      - image: circleci/golang:1.11
     working_directory: /go/src/github.com/segmentio/chamber
     steps:
       - checkout
@@ -31,7 +31,7 @@ jobs:
 
   publish:
     docker:
-      - image: circleci/golang:1.10
+      - image: circleci/golang:1.11
     working_directory: /go/src/github.com/segmentio/chamber
     steps:
       - checkout

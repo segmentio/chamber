@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	analytics "github.com/segmentio/analytics-go"
 	"github.com/spf13/cobra"
+	analytics "gopkg.in/segmentio/analytics-go.v3"
 )
 
 // execCmd represents the exec command

@@ -7,9 +7,9 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	analytics "github.com/segmentio/analytics-go"
 	"github.com/segmentio/chamber/store"
 	"github.com/spf13/cobra"
+	analytics "gopkg.in/segmentio/analytics-go.v3"
 )
 
 var (

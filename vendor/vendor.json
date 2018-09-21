@@ -245,6 +245,12 @@
 			"revisionTime": "2014-10-17T20:07:13Z"
 		},
 		{
+			"checksumSHA1": "WbdgSkC2Tbn1Fs1WAAvXPHBvkEk=",
+			"path": "github.com/jehiah/go-strftime",
+			"revision": "1d33003b386959af197ba96475f198c114627b5e",
+			"revisionTime": "2017-12-01T14:10:54Z"
+		},
+		{
 			"checksumSHA1": "0ZrwvB6KoGPj2PoDNSEJwxQ6Mog=",
 			"origin": "github.com/aws/aws-sdk-go/vendor/github.com/jmespath/go-jmespath",
 			"path": "github.com/jmespath/go-jmespath",
@@ -271,6 +277,20 @@
 			"revisionTime": "2016-01-29T19:31:06Z"
 		},
 		{
+			"checksumSHA1": "8xpFdZVp0QVAhbq20SJEb4qTcEk=",
+			"path": "github.com/segmentio/analytics-go",
+			"revision": "4f08212e9b32c48b4a4d20997d3f90dc0b56eba8",
+			"revisionTime": "2018-03-19T16:54:24Z",
+			"version": "v3.0",
+			"versionExact": "v3.0"
+		},
+		{
+			"checksumSHA1": "jK8cjKr2eA3JiQP+T4HLjQRV5ak=",
+			"path": "github.com/segmentio/backo-go",
+			"revision": "204274ad699c0983a70203a566887f17a717fef4",
+			"revisionTime": "2016-04-24T05:23:52Z"
+		},
+		{
 			"checksumSHA1": "aG5wPXVGAEu90TjPFNZFRtox2Zo=",
 			"path": "github.com/spf13/cobra",
 			"revision": "ccaecb155a2177302cb56cae929251a256d0f646",
@@ -287,6 +307,12 @@
 			"path": "github.com/stretchr/testify/assert",
 			"revision": "9f9027faeb0dad515336ed2f28317f9f8f527ab4",
 			"revisionTime": "2016-01-29T19:31:06Z"
+		},
+		{
+			"checksumSHA1": "LAL/r7KfCdqp4M6MM13+7NWsUNc=",
+			"path": "github.com/xtgo/uuid",
+			"revision": "a0b114877d4caeffbd7f87e3757c17fce570fea7",
+			"revisionTime": "2014-08-04T02:12:11Z"
 		}
 	],
 	"rootPath": "github.com/segmentio/chamber"

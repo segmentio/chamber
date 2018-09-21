@@ -7,6 +7,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/pkg/errors"
+	analytics "github.com/segmentio/analytics-go"
 	"github.com/segmentio/chamber/store"
 	"github.com/spf13/cobra"
 )
@@ -32,6 +33,19 @@ func history(cmd *cobra.Command, args []string) error {
 	key := strings.ToLower(args[1])
 	if err := validateKey(key); err != nil {
 		return errors.Wrap(err, "Failed to validate key")
+	}
+
+	if analyticsEnabled && analyticsClient != nil {
+		analyticsClient.Enqueue(analytics.Track{
+			UserId: username,
+			Event:  "Ran Command",
+			Properties: analytics.NewProperties().
+				Set("command", "history").
+				Set("chamber-version", chamberVersion).
+				Set("service", service).
+				Set("key", key).
+				Set("backend", backend),
+		})
 	}
 
 	secretStore, err := getSecretStore()

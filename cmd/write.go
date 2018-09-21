@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	analytics "github.com/segmentio/analytics-go"
 	"github.com/segmentio/chamber/store"
 	"github.com/spf13/cobra"
 )
@@ -37,6 +38,19 @@ func write(cmd *cobra.Command, args []string) error {
 	key := strings.ToLower(args[1])
 	if err := validateKey(key); err != nil {
 		return errors.Wrap(err, "Failed to validate key")
+	}
+
+	if analyticsEnabled && analyticsClient != nil {
+		analyticsClient.Enqueue(analytics.Track{
+			UserId: username,
+			Event:  "Ran Command",
+			Properties: analytics.NewProperties().
+				Set("command", "write").
+				Set("chamber-version", chamberVersion).
+				Set("service", service).
+				Set("backend", backend).
+				Set("key", key),
+		})
 	}
 
 	value := args[2]

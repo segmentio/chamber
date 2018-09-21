@@ -12,7 +12,6 @@ import (
 
 	"github.com/magiconair/properties"
 	"github.com/pkg/errors"
-	analytics "github.com/segmentio/analytics-go"
 	"github.com/spf13/cobra"
 )
 
@@ -37,18 +36,6 @@ func init() {
 
 func runExport(cmd *cobra.Command, args []string) error {
 	var err error
-
-	if analyticsEnabled && analyticsClient != nil {
-		analyticsClient.Enqueue(analytics.Track{
-			UserId: username,
-			Event:  "Ran Command",
-			Properties: analytics.NewProperties().
-				Set("command", "export").
-				Set("chamber-version", chamberVersion).
-				Set("services", args).
-				Set("backend", backend),
-		})
-	}
 
 	secretStore := getSecretStore()
 	params := make(map[string]string)

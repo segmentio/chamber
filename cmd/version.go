@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	analytics "github.com/segmentio/analytics-go"
 	"github.com/spf13/cobra"
 )
 
@@ -21,15 +20,5 @@ func init() {
 
 func versionRun(cmd *cobra.Command, args []string) error {
 	fmt.Fprintf(os.Stdout, "chamber %s\n", chamberVersion)
-	if analyticsEnabled && analyticsClient != nil {
-		analyticsClient.Enqueue(analytics.Track{
-			UserId: username,
-			Event:  "Ran Command",
-			Properties: analytics.NewProperties().
-				Set("command", "version").
-				Set("chamber-version", chamberVersion).
-				Set("backend", backend),
-		})
-	}
 	return nil
 }

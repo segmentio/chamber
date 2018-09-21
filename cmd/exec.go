@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	analytics "github.com/segmentio/analytics-go"
 	"github.com/spf13/cobra"
 )
 
@@ -37,18 +36,6 @@ func init() {
 func execRun(cmd *cobra.Command, args []string) error {
 	dashIx := cmd.ArgsLenAtDash()
 	services, command, commandArgs := args[:dashIx], args[dashIx], args[dashIx+1:]
-
-	if analyticsEnabled && analyticsClient != nil {
-		analyticsClient.Enqueue(analytics.Track{
-			UserId: username,
-			Event:  "Ran Command",
-			Properties: analytics.NewProperties().
-				Set("command", "exec").
-				Set("chamber-version", chamberVersion).
-				Set("services", services).
-				Set("backend", backend),
-		})
-	}
 
 	env := environ(os.Environ())
 	secretStore := getSecretStore()

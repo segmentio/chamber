@@ -41,7 +41,10 @@ func read(cmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, "Failed to validate key")
 	}
 
-	secretStore := getSecretStore()
+	secretStore, err := getSecretStore()
+	if err != nil {
+		return errors.Wrap(err, "Failed to get secret store")
+	}
 
 	secretId := store.SecretId{
 		Service: service,

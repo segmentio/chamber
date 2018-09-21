@@ -58,7 +58,11 @@ func write(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	secretStore := getSecretStore()
+	secretStore, err := getSecretStore()
+	if err != nil {
+		return errors.Wrap(err, "Failed to get secret store")
+	}
+
 	secretId := store.SecretId{
 		Service: service,
 		Key:     key,

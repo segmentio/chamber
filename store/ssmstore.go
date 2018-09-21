@@ -37,8 +37,11 @@ type SSMStore struct {
 }
 
 // NewSSMStore creates a new SSMStore
-func NewSSMStore(numRetries int) *SSMStore {
-	ssmSession, region := getSession(numRetries)
+func NewSSMStore(numRetries int) (*SSMStore, error) {
+	ssmSession, region, err := getSession(numRetries)
+	if err != nil {
+		return nil, err
+	}
 
 	svc := ssm.New(ssmSession, &aws.Config{
 		MaxRetries: aws.Int(numRetries),
@@ -54,7 +57,7 @@ func NewSSMStore(numRetries int) *SSMStore {
 	return &SSMStore{
 		svc:      svc,
 		usePaths: usePaths,
-	}
+	}, nil
 }
 
 func (s *SSMStore) KMSKey() string {

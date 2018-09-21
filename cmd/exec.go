@@ -38,7 +38,10 @@ func execRun(cmd *cobra.Command, args []string) error {
 	services, command, commandArgs := args[:dashIx], args[dashIx], args[dashIx+1:]
 
 	env := environ(os.Environ())
-	secretStore := getSecretStore()
+	secretStore, err := getSecretStore()
+	if err != nil {
+		return errors.Wrap(err, "Failed to get secret store")
+	}
 	envVarKeys := make([]string, 0)
 	for _, service := range services {
 		if err := validateService(service); err != nil {

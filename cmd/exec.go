@@ -44,11 +44,12 @@ func execRun(cmd *cobra.Command, args []string) error {
 	}
 	envVarKeys := make([]string, 0)
 	for _, service := range services {
+		service = formatService(service)
 		if err := validateService(service); err != nil {
 			return errors.Wrap(err, "Failed to validate service")
 		}
 
-		rawSecrets, err := secretStore.ListRaw(strings.ToLower(service))
+		rawSecrets, err := secretStore.ListRaw(service)
 		if err != nil {
 			return errors.Wrap(err, "Failed to list store contents")
 		}

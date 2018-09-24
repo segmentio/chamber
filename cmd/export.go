@@ -43,6 +43,7 @@ func runExport(cmd *cobra.Command, args []string) error {
 	}
 	params := make(map[string]string)
 	for _, service := range args {
+		service = formatService(service)
 		if err := validateService(service); err != nil {
 			return errors.Wrapf(err, "Failed to validate service %s", service)
 		}

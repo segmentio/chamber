@@ -7,6 +7,19 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestFormatService(t *testing.T) {
+
+	t.Run("it lower cases the service", func(t *testing.T) {
+		servicePrefix = ""
+		assert.Equal(t, "webserver", formatService("WEBSERVER"))
+	})
+
+	t.Run("it prepends service with prefix when present", func(t *testing.T) {
+		servicePrefix = "environment/"
+		assert.Equal(t, "environment/webserver", formatService("WEBSERVER"))
+	})
+}
+
 func TestValidations(t *testing.T) {
 
 	// Test Key formats

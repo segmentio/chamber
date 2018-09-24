@@ -31,7 +31,7 @@ func init() {
 }
 
 func read(cmd *cobra.Command, args []string) error {
-	service := strings.ToLower(args[0])
+	service := formatService(args[0])
 	if err := validateService(service); err != nil {
 		return errors.Wrap(err, "Failed to validate service")
 	}

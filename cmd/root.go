@@ -16,6 +16,8 @@ var (
 	validServiceFormat     = regexp.MustCompile(`^[\w\-\.]+$`)
 	validServicePathFormat = regexp.MustCompile(`^[\w\-\.]+(\/[\w\-\.]+)*$`)
 
+	servicePrefix = os.Getenv("CHAMBER_SERVICE_PREFIX")
+
 	verbose        bool
 	numRetries     int
 	chamberVersion string
@@ -60,6 +62,10 @@ func Execute(vers string) {
 		}
 		os.Exit(1)
 	}
+}
+
+func formatService(service string) string {
+	return servicePrefix + strings.ToLower(service)
 }
 
 func validateService(service string) error {

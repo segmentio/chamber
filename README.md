@@ -206,6 +206,20 @@ for more details.
 
 If you'd like to use a different region for chamber without changing `AWS_REGION`, you can use `CHAMBER_AWS_REGION` to override just for chamber.
 
+### Service Prefix
+
+If `CHAMBER_SERVICE_PREFIX` is set, chamber will prefix all services with its value. This can be useful when you want to namespace your configuration without having to repeat it in each service key.
+
+For example, these are equivalant:
+
+```
+# Store value under 'applications\service\key'
+chamber write applications\service key value
+
+# Also stores value under 'applications\service/key'
+CHAMBER_SERVICE_PREFIX=applications write service key value
+```
+
 ## S3 Backend (experimental)
 
 By default, chamber store secrets in AWS Parameter Store.  We now also provide an experimental S3 backend for storing secrets in S3 instead.

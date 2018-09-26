@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/segmentio/chamber/store"
 	"github.com/spf13/cobra"
+	analytics "gopkg.in/segmentio/analytics-go.v3"
 )
 
 var (
@@ -49,6 +50,18 @@ func importRun(cmd *cobra.Command, args []string) error {
 	decoder := json.NewDecoder(in)
 	if err := decoder.Decode(&toBeImported); err != nil {
 		return errors.Wrap(err, "Failed to decode input as json")
+	}
+
+	if analyticsEnabled && analyticsClient != nil {
+		analyticsClient.Enqueue(analytics.Track{
+			UserId: username,
+			Event:  "Ran Command",
+			Properties: analytics.NewProperties().
+				Set("command", "import").
+				Set("chamber-version", chamberVersion).
+				Set("service", service).
+				Set("backend", backend),
+		})
 	}
 
 	secretStore, err := getSecretStore()

@@ -51,7 +51,10 @@ func importRun(cmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, "Failed to decode input as json")
 	}
 
-	secretStore := getSecretStore()
+	secretStore, err := getSecretStore()
+	if err != nil {
+		return errors.Wrap(err, "Failed to get secret store")
+	}
 
 	for key, value := range toBeImported {
 		secretId := store.SecretId{

@@ -173,6 +173,15 @@ func (m *mockSSMClient) GetParametersByPath(i *ssm.GetParametersByPathInput) (*s
 	}, nil
 }
 
+func (m *mockSSMClient) GetParametersByPathPages(i *ssm.GetParametersByPathInput, fn func(*ssm.GetParametersByPathOutput, bool) bool) error {
+	o, err := m.GetParametersByPath(i)
+	if err != nil {
+		return err
+	}
+	fn(o, true)
+	return nil
+}
+
 func (m *mockSSMClient) DescribeParametersPages(i *ssm.DescribeParametersInput, fn func(*ssm.DescribeParametersOutput, bool) bool) error {
 	o, err := m.DescribeParameters(i)
 	if err != nil {
@@ -288,7 +297,8 @@ func TestNewSSMStore(t *testing.T) {
 		os.Setenv("AWS_REGION", "us-west-1")
 		os.Setenv("AWS_DEFAULT_REGION", "us-west-2")
 
-		s := NewSSMStore(1)
+		s, err := NewSSMStore(1)
+		assert.Nil(t, err)
 		assert.Equal(t, "us-east-1", aws.StringValue(s.svc.(*ssm.SSM).Config.Region))
 		os.Unsetenv("CHAMBER_AWS_REGION")
 		os.Unsetenv("AWS_REGION")
@@ -298,7 +308,8 @@ func TestNewSSMStore(t *testing.T) {
 	t.Run("Should use AWS_REGION if it is set", func(t *testing.T) {
 		os.Setenv("AWS_REGION", "us-west-1")
 
-		s := NewSSMStore(1)
+		s, err := NewSSMStore(1)
+		assert.Nil(t, err)
 		assert.Equal(t, "us-west-1", aws.StringValue(s.svc.(*ssm.SSM).Config.Region))
 
 		os.Unsetenv("AWS_REGION")
@@ -713,6 +724,83 @@ func TestDelete(t *testing.T) {
 		err := store.Delete(SecretId{Service: "test", Key: "nonkey"})
 		assert.Equal(t, ErrSecretNotFound, err)
 	})
+}
+
+func TestValidations(t *testing.T) {
+	mock := &mockSSMClient{parameters: map[string]mockParameter{}}
+	pathStore := NewTestSSMStore(mock)
+	pathStore.usePaths = true
+
+	validPathFormat := []string{
+		"/foo",
+		"/foo.",
+		"/.foo",
+		"/foo.bar",
+		"/foo-bar",
+		"/foo/bar",
+		"/foo.bar/foo",
+		"/foo-bar/foo",
+		"/foo-bar/foo-bar",
+		"/foo/bar/foo",
+		"/foo/bar/foo-bar",
+	}
+
+	for _, k := range validPathFormat {
+		t.Run("Path Validation should return true", func(t *testing.T) {
+			result := pathStore.validateName(k)
+			assert.True(t, result)
+		})
+	}
+
+	invalidPathFormat := []string{
+		"/foo//bar",
+		"foo//bar",
+		"foo/bar",
+		"foo/b",
+		"foo",
+	}
+
+	for _, k := range invalidPathFormat {
+		t.Run("Path Validation should return false", func(t *testing.T) {
+			result := pathStore.validateName(k)
+			assert.False(t, result)
+		})
+	}
+
+	noPathStore := NewTestSSMStore(mock)
+	noPathStore.usePaths = false
+
+	validNoPathFormat := []string{
+		"foo",
+		"foo.",
+		".foo",
+		"foo.bar",
+		"foo-bar",
+		"foo-bar.foo",
+		"foo-bar.foo-bar",
+		"foo.bar.foo",
+		"foo.bar.foo-bar",
+	}
+
+	for _, k := range validNoPathFormat {
+		t.Run("Validation should return true", func(t *testing.T) {
+			result := noPathStore.validateName(k)
+			assert.True(t, result)
+		})
+	}
+
+	invalidNoPathFormat := []string{
+		"/foo",
+		"foo/bar",
+		"foo//bar",
+	}
+
+	for _, k := range invalidNoPathFormat {
+		t.Run("Validation should return false", func(t *testing.T) {
+			result := noPathStore.validateName(k)
+			assert.False(t, result)
+		})
+	}
 }
 
 type ByKey []Secret

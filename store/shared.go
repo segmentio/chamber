@@ -12,13 +12,13 @@ const (
 	RegionEnvVar = "CHAMBER_AWS_REGION"
 )
 
-func getSession(numRetries int) (*session.Session, *string) {
+func getSession(numRetries int) (*session.Session, *string, error) {
 	var region *string
 
 	if regionOverride, ok := os.LookupEnv(RegionEnvVar); ok {
 		region = aws.String(regionOverride)
 	}
-	retSession := session.Must(session.NewSessionWithOptions(
+	retSession, err := session.NewSessionWithOptions(
 		session.Options{
 			Config: aws.Config{
 				Region:     region,
@@ -26,7 +26,10 @@ func getSession(numRetries int) (*session.Session, *string) {
 			},
 			SharedConfigState: session.SharedConfigEnable,
 		},
-	))
+	)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	// If region is still not set, attempt to determine it via ec2 metadata API
 	if aws.StringValue(retSession.Config.Region) == "" {
@@ -37,5 +40,5 @@ func getSession(numRetries int) (*session.Session, *string) {
 		}
 	}
 
-	return retSession, region
+	return retSession, region, nil
 }

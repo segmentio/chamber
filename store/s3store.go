@@ -56,8 +56,11 @@ type S3Store struct {
 	bucket string
 }
 
-func NewS3Store(numRetries int) *S3Store {
-	session, region := getSession(numRetries)
+func NewS3Store(numRetries int) (*S3Store, error) {
+	session, region, err := getSession(numRetries)
+	if err != nil {
+		return nil, err
+	}
 
 	svc := s3.New(session, &aws.Config{
 		MaxRetries: aws.Int(numRetries),
@@ -71,16 +74,14 @@ func NewS3Store(numRetries int) *S3Store {
 
 	bucket, ok := os.LookupEnv(BucketEnvVar)
 	if !ok {
-		fmt.Fprintf(os.Stderr, "Must set %s for s3 backend\n", BucketEnvVar)
-		os.Exit(1)
+		return nil, fmt.Errorf("Must set %s for s3 backend", BucketEnvVar)
 	}
 
 	return &S3Store{
 		svc:    svc,
 		stsSvc: stsSvc,
 		bucket: bucket,
-	}
-
+	}, nil
 }
 
 func (s *S3Store) Write(id SecretId, value string) error {

@@ -17,6 +17,16 @@ To migrate to the new format, you can take advantage of the `export` and `import
 $ CHAMBER_NO_PATHS=1 chamber export foo | chamber import foo -
 ```
 
+## Installing
+
+If you have a functional go environment, you can install with:
+
+```bash
+$ go get github.com/segmentio/chamber
+```
+
+[See the wiki for more installation options like Linux packages and precompiled binaries.](https://github.com/segmentio/chamber/wiki/Installation)
+
 ## Authenticating
 
 Using `chamber` requires you to be running in an environment with an

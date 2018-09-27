@@ -33,7 +33,11 @@ func list(cmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, "Failed to validate service")
 	}
 
-	secretStore := getSecretStore()
+	secretStore, err := getSecretStore()
+	if err != nil {
+		return errors.Wrap(err, "Failed to get secret store")
+	}
+
 	secrets, err := secretStore.List(service, withValues)
 	if err != nil {
 		return errors.Wrap(err, "Failed to list store contents")
@@ -65,13 +69,12 @@ func list(cmd *cobra.Command, args []string) error {
 
 func key(s string) string {
 	_, noPaths := os.LookupEnv("CHAMBER_NO_PATHS")
-	if !noPaths {
-		tokens := strings.Split(s, "/")
-		secretKey := tokens[2]
-		return secretKey
+	sep := "/"
+	if noPaths {
+		sep = "."
 	}
 
-	tokens := strings.Split(s, ".")
-	secretKey := tokens[1]
+	tokens := strings.Split(s, sep)
+	secretKey := tokens[len(tokens)-1]
 	return secretKey
 }

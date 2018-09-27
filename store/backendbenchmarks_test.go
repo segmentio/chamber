@@ -73,7 +73,7 @@ func TestS3StoreConcurrency(t *testing.T) {
 	if !benchmarkEnabled {
 		t.SkipNow()
 	}
-	s := NewS3Store(10)
+	s, _ := NewS3Store(10)
 	benchmarkStore(t, s, []string{"foo"})
 }
 
@@ -81,7 +81,7 @@ func TestSSMConcurrency(t *testing.T) {
 	if !benchmarkEnabled {
 		t.SkipNow()
 	}
-	s := NewSSMStore(10)
+	s, _ := NewSSMStore(10)
 	benchmarkStore(t, s, []string{"foo"})
 }
 

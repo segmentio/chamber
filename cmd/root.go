@@ -30,13 +30,14 @@ const (
 )
 
 const (
+	NullBackend = "NULL"
 	SSMBackend = "SSM"
 	S3Backend  = "S3"
 
 	BackendEnvVar = "CHAMBER_SECRET_BACKEND"
 )
 
-var Backends = []string{SSMBackend, S3Backend}
+var Backends = []string{SSMBackend, S3Backend, NullBackend}
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
@@ -90,6 +91,8 @@ func getSecretStore() (store.Store, error) {
 	var s store.Store
 	var err error
 	switch backend {
+	case NullBackend:
+		s = store.NewNullStore()
 	case S3Backend:
 		s, err = store.NewS3Store(numRetries)
 	case SSMBackend:

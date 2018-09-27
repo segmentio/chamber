@@ -214,6 +214,13 @@ To configure chamber to use the S3 backend, set `CHAMBER_SECRET_BACKEND` to `S3`
 
 This feature is experimental, and not currently meant for production work.
 
+## Null Backend (experimental)
+
+If it's preferred to not use any backend at all, set `CHAMBER_SECRET_BACKEND` to `NULL`. Doing so will forward existing ENV variables as if Chamber is not in between.
+
+This feature is experimental, and not currently meant for production work.
+
+
 ## Releasing
 
 To cut a new release, just push a tag named `v<semver>` where `<semver>` is a

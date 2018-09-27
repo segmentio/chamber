@@ -13,7 +13,6 @@ import (
 	"github.com/magiconair/properties"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	analytics "gopkg.in/segmentio/analytics-go.v3"
 )
 
 // exportCmd represents the export command
@@ -37,18 +36,6 @@ func init() {
 
 func runExport(cmd *cobra.Command, args []string) error {
 	var err error
-
-	if analyticsEnabled && analyticsClient != nil {
-		analyticsClient.Enqueue(analytics.Track{
-			UserId: username,
-			Event:  "Ran Command",
-			Properties: analytics.NewProperties().
-				Set("command", "export").
-				Set("chamber-version", chamberVersion).
-				Set("services", args).
-				Set("backend", backend),
-		})
-	}
 
 	secretStore, err := getSecretStore()
 	if err != nil {

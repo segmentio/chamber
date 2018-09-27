@@ -8,7 +8,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	analytics "gopkg.in/segmentio/analytics-go.v3"
 )
 
 // listCmd represents the list command
@@ -34,22 +33,11 @@ func list(cmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, "Failed to validate service")
 	}
 
-	if analyticsEnabled && analyticsClient != nil {
-		analyticsClient.Enqueue(analytics.Track{
-			UserId: username,
-			Event:  "Ran Command",
-			Properties: analytics.NewProperties().
-				Set("command", "list").
-				Set("chamber-version", chamberVersion).
-				Set("service", service).
-				Set("backend", backend),
-		})
-	}
-
 	secretStore, err := getSecretStore()
 	if err != nil {
 		return errors.Wrap(err, "Failed to get secret store")
 	}
+
 	secrets, err := secretStore.List(service, withValues)
 	if err != nil {
 		return errors.Wrap(err, "Failed to list store contents")

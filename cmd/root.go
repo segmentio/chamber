@@ -8,7 +8,6 @@ import (
 
 	"github.com/segmentio/chamber/store"
 	"github.com/spf13/cobra"
-	analytics "gopkg.in/segmentio/analytics-go.v3"
 )
 
 // Regex's used to validate service and key names
@@ -20,12 +19,6 @@ var (
 	verbose        bool
 	numRetries     int
 	chamberVersion string
-	backend        string
-
-	analyticsEnabled  bool
-	analyticsWriteKey string
-	analyticsClient   analytics.Client
-	username          string
 )
 
 const (
@@ -47,11 +40,9 @@ var Backends = []string{SSMBackend, S3Backend}
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
-	Use:               "chamber",
-	Short:             "CLI for storing secrets",
-	SilenceUsage:      true,
-	PersistentPreRun:  prerun,
-	PersistentPostRun: postrun,
+	Use:          "chamber",
+	Short:        "CLI for storing secrets",
+	SilenceUsage: true,
 }
 
 func init() {
@@ -61,12 +52,8 @@ func init() {
 
 // Execute adds all child commands to the root command sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
-func Execute(vers string, writeKey string) {
+func Execute(vers string) {
 	chamberVersion = vers
-
-	analyticsWriteKey = writeKey
-	analyticsEnabled = analyticsWriteKey != ""
-
 	if cmd, err := RootCmd.ExecuteC(); err != nil {
 		if strings.Contains(err.Error(), "arg(s)") || strings.Contains(err.Error(), "usage") {
 			cmd.Usage()
@@ -111,28 +98,4 @@ func getSecretStore() (store.Store, error) {
 		s, err = store.NewSSMStore(numRetries)
 	}
 	return s, err
-}
-
-func prerun(cmd *cobra.Command, args []string) {
-	backend = strings.ToUpper(os.Getenv(BackendEnvVar))
-
-	if analyticsEnabled {
-		// set up analytics client
-		analyticsClient, _ = analytics.NewWithConfig(analyticsWriteKey, analytics.Config{
-			BatchSize: 1,
-		})
-
-		username = os.Getenv("USER")
-		analyticsClient.Enqueue(analytics.Identify{
-			UserId: username,
-			Traits: analytics.NewTraits().
-				Set("chamber-version", chamberVersion),
-		})
-	}
-}
-
-func postrun(cmd *cobra.Command, args []string) {
-	if analyticsEnabled && analyticsClient != nil {
-		analyticsClient.Close()
-	}
 }

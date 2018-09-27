@@ -5,8 +5,7 @@
 # This makefile is meant for humans
 
 VERSION := $(shell git describe --tags --always --dirty="-dev")
-ANALYTICS_WRITE_KEY ?=
-LDFLAGS := -ldflags='-X "main.Version=$(VERSION)" -X "main.AnalyticsWriteKey=$(ANALYTICS_WRITE_KEY)"'
+LDFLAGS := -ldflags='-X "main.Version=$(VERSION)"'
 
 test:
 	GO111MODULE=on go test -v ./...

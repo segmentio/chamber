@@ -15,6 +15,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const doubleQuoteSpecialChars = "\\\n\r\"!$`"
+
 // exportCmd represents the export command
 var (
 	exportFormat string
@@ -100,7 +102,7 @@ func exportAsEnvFile(params map[string]string, w io.Writer) error {
 	for _, k := range sortedKeys(params) {
 		key := strings.ToUpper(k)
 		key = strings.Replace(key, "-", "_", -1)
-		w.Write([]byte(fmt.Sprintf("%s=%s\n", key, params[k])))
+		w.Write([]byte(fmt.Sprintf(`%s="%s"`+"\n", key, doubleQuoteEscape(params[k]))))
 	}
 	return nil
 }
@@ -163,4 +165,18 @@ func sortedKeys(params map[string]string) []string {
 	}
 	sort.Strings(keys)
 	return keys
+}
+
+func doubleQuoteEscape(line string) string {
+	for _, c := range doubleQuoteSpecialChars {
+		toReplace := "\\" + string(c)
+		if c == '\n' {
+			toReplace = `\n`
+		}
+		if c == '\r' {
+			toReplace = `\r`
+		}
+		line = strings.Replace(line, string(c), toReplace, -1)
+	}
+	return line
 }

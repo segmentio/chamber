@@ -221,6 +221,10 @@ If it's preferred to not use any backend at all, set `CHAMBER_SECRET_BACKEND` to
 This feature is experimental, and not currently meant for production work.
 
 
+## Analytics
+
+`chamber` includes some usage analytics code which Segment uses internally for tracking usage of internal tools.  This analytics code is turned off by default, and can only be enabled via a linker flag at build time, which we do not set for public github releases.
+
 ## Releasing
 
 To cut a new release, just push a tag named `v<semver>` where `<semver>` is a

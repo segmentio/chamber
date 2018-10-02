@@ -271,6 +271,12 @@
 			"revisionTime": "2016-01-29T19:31:06Z"
 		},
 		{
+			"checksumSHA1": "jK8cjKr2eA3JiQP+T4HLjQRV5ak=",
+			"path": "github.com/segmentio/backo-go",
+			"revision": "204274ad699c0983a70203a566887f17a717fef4",
+			"revisionTime": "2016-04-24T05:23:52Z"
+		},
+		{
 			"checksumSHA1": "aG5wPXVGAEu90TjPFNZFRtox2Zo=",
 			"path": "github.com/spf13/cobra",
 			"revision": "ccaecb155a2177302cb56cae929251a256d0f646",
@@ -287,6 +293,18 @@
 			"path": "github.com/stretchr/testify/assert",
 			"revision": "9f9027faeb0dad515336ed2f28317f9f8f527ab4",
 			"revisionTime": "2016-01-29T19:31:06Z"
+		},
+		{
+			"checksumSHA1": "LAL/r7KfCdqp4M6MM13+7NWsUNc=",
+			"path": "github.com/xtgo/uuid",
+			"revision": "a0b114877d4caeffbd7f87e3757c17fce570fea7",
+			"revisionTime": "2014-08-04T02:12:11Z"
+		},
+		{
+			"checksumSHA1": "iHUiOk4poaZqsPTDedI9I9epcVU=",
+			"path": "gopkg.in/segmentio/analytics-go.v3",
+			"revision": "1178b964a36694a8f9c161b19e6fe28cb37e8482",
+			"revisionTime": "2017-12-07T18:07:11Z"
 		}
 	],
 	"rootPath": "github.com/segmentio/chamber"

@@ -70,7 +70,8 @@ resource "aws_kms_alias" "parameter_store_alias" {
 ```
 
 If you'd like to use an alternate KMS key to encrypt your secrets, you can set
-the environment variable `CHAMBER_KMS_KEY_ALIAS`.
+the environment variable `CHAMBER_KMS_KEY_ALIAS`. As an example, the following will use your account's default SSM alias:
+`CHAMBER_KMS_KEY_ALIAS=aws/ssm`
 
 ## Usage
 

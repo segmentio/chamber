@@ -140,27 +140,32 @@ func (s *SSMStore) readVersion(id SecretId, version int) (Secret, error) {
 		WithDecryption: aws.Bool(true),
 	}
 
-	resp, err := s.svc.GetParameterHistory(getParameterHistoryInput)
-	if err != nil {
+	var result Secret
+	if err := s.svc.GetParameterHistoryPages(getParameterHistoryInput, func(o *ssm.GetParameterHistoryOutput, lastPage bool) bool {
+		for _, history := range o.Parameters {
+			thisVersion := 0
+			if history.Description != nil {
+				thisVersion, _ = strconv.Atoi(*history.Description)
+			}
+			if thisVersion == version {
+				result = Secret{
+					Value: history.Value,
+					Meta: SecretMetadata{
+						Created:   *history.LastModifiedDate,
+						CreatedBy: *history.LastModifiedUser,
+						Version:   thisVersion,
+						Key:       *history.Name,
+					},
+				}
+				return false
+			}
+		}
+		return true
+	}); err != nil {
 		return Secret{}, ErrSecretNotFound
 	}
-
-	for _, history := range resp.Parameters {
-		thisVersion := 0
-		if history.Description != nil {
-			thisVersion, _ = strconv.Atoi(*history.Description)
-		}
-		if thisVersion == version {
-			return Secret{
-				Value: history.Value,
-				Meta: SecretMetadata{
-					Created:   *history.LastModifiedDate,
-					CreatedBy: *history.LastModifiedUser,
-					Version:   thisVersion,
-					Key:       *history.Name,
-				},
-			}, nil
-		}
+	if result.Value != nil {
+		return result, nil
 	}
 
 	// If we havent found it yet, check the latest version (which
@@ -389,24 +394,24 @@ func (s *SSMStore) History(id SecretId) ([]ChangeEvent, error) {
 		WithDecryption: aws.Bool(false),
 	}
 
-	resp, err := s.svc.GetParameterHistory(getParameterHistoryInput)
-	if err != nil {
-		return events, ErrSecretNotFound
-	}
-
-	for _, history := range resp.Parameters {
-		// Disregard error here, if Atoi fails (secret created outside of
-		// Chamber), then we use version 0
-		version := 0
-		if history.Description != nil {
-			version, _ = strconv.Atoi(*history.Description)
+	if err := s.svc.GetParameterHistoryPages(getParameterHistoryInput, func(o *ssm.GetParameterHistoryOutput, lastPage bool) bool {
+		for _, history := range o.Parameters {
+			// Disregard error here, if Atoi fails (secret created outside of
+			// Chamber), then we use version 0
+			version := 0
+			if history.Description != nil {
+				version, _ = strconv.Atoi(*history.Description)
+			}
+			events = append(events, ChangeEvent{
+				Type:    getChangeType(version),
+				Time:    *history.LastModifiedDate,
+				User:    *history.LastModifiedUser,
+				Version: version,
+			})
 		}
-		events = append(events, ChangeEvent{
-			Type:    getChangeType(version),
-			Time:    *history.LastModifiedDate,
-			User:    *history.LastModifiedUser,
-			Version: version,
-		})
+		return true
+	}); err != nil {
+		return events, ErrSecretNotFound
 	}
 
 	// The current version is not included in the GetParameterHistory response

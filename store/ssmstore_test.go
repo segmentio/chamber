@@ -191,6 +191,15 @@ func (m *mockSSMClient) DescribeParametersPages(i *ssm.DescribeParametersInput, 
 	return nil
 }
 
+func (m *mockSSMClient) GetParameterHistoryPages(i *ssm.GetParameterHistoryInput, fn func(*ssm.GetParameterHistoryOutput, bool) bool) error {
+	o, err := m.GetParameterHistory(i)
+	if err != nil {
+		return err
+	}
+	fn(o, true)
+	return nil
+}
+
 func (m *mockSSMClient) DeleteParameter(i *ssm.DeleteParameterInput) (*ssm.DeleteParameterOutput, error) {
 	_, ok := m.parameters[*i.Name]
 	if !ok {

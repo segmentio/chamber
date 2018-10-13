@@ -33,19 +33,6 @@ func (m *mockSSMClient) PutParameter(i *ssm.PutParameterInput) (*ssm.PutParamete
 		}
 	}
 
-	if current.currentParam != nil {
-		history := &ssm.ParameterHistory{
-			Description:      current.meta.Description,
-			KeyId:            current.meta.KeyId,
-			LastModifiedDate: current.meta.LastModifiedDate,
-			LastModifiedUser: current.meta.LastModifiedUser,
-			Name:             current.meta.Name,
-			Type:             current.meta.Type,
-			Value:            current.currentParam.Value,
-		}
-		current.history = append(current.history, history)
-	}
-
 	current.currentParam = &ssm.Parameter{
 		Name:  i.Name,
 		Type:  i.Type,
@@ -59,6 +46,17 @@ func (m *mockSSMClient) PutParameter(i *ssm.PutParameterInput) (*ssm.PutParamete
 		Name:             i.Name,
 		Type:             i.Type,
 	}
+	history := &ssm.ParameterHistory{
+		Description:      current.meta.Description,
+		KeyId:            current.meta.KeyId,
+		LastModifiedDate: current.meta.LastModifiedDate,
+		LastModifiedUser: current.meta.LastModifiedUser,
+		Name:             current.meta.Name,
+		Type:             current.meta.Type,
+		Value:            current.currentParam.Value,
+	}
+	current.history = append(current.history, history)
+
 	m.parameters[*i.Name] = current
 
 	return &ssm.PutParameterOutput{}, nil
@@ -328,6 +326,7 @@ func TestWrite(t *testing.T) {
 		assert.Contains(t, mock.parameters, store.idToName(secretId))
 		assert.Equal(t, "value", *mock.parameters[store.idToName(secretId)].currentParam.Value)
 		assert.Equal(t, "1", *mock.parameters[store.idToName(secretId)].meta.Description)
+		assert.Equal(t, 1, len(mock.parameters[store.idToName(secretId)].history))
 	})
 
 	t.Run("Setting a key twice should create a new version", func(t *testing.T) {
@@ -340,7 +339,7 @@ func TestWrite(t *testing.T) {
 		assert.Contains(t, mock.parameters, store.idToName(secretId))
 		assert.Equal(t, "newvalue", *mock.parameters[store.idToName(secretId)].currentParam.Value)
 		assert.Equal(t, "2", *mock.parameters[store.idToName(secretId)].meta.Description)
-		assert.Equal(t, 1, len(mock.parameters[store.idToName(secretId)].history))
+		assert.Equal(t, 2, len(mock.parameters[store.idToName(secretId)].history))
 	})
 }
 
@@ -564,6 +563,7 @@ func TestWritePaths(t *testing.T) {
 		assert.Contains(t, mock.parameters, store.idToName(secretId))
 		assert.Equal(t, "value", *mock.parameters[store.idToName(secretId)].currentParam.Value)
 		assert.Equal(t, "1", *mock.parameters[store.idToName(secretId)].meta.Description)
+		assert.Equal(t, 1, len(mock.parameters[store.idToName(secretId)].history))
 	})
 
 	t.Run("Setting a key twice should create a new version", func(t *testing.T) {
@@ -576,7 +576,7 @@ func TestWritePaths(t *testing.T) {
 		assert.Contains(t, mock.parameters, store.idToName(secretId))
 		assert.Equal(t, "newvalue", *mock.parameters[store.idToName(secretId)].currentParam.Value)
 		assert.Equal(t, "2", *mock.parameters[store.idToName(secretId)].meta.Description)
-		assert.Equal(t, 1, len(mock.parameters[store.idToName(secretId)].history))
+		assert.Equal(t, 2, len(mock.parameters[store.idToName(secretId)].history))
 	})
 }
 

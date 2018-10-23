@@ -379,7 +379,7 @@ func (s *SSMStore) ListRaw(service string) ([]RawSecret, error) {
 	return s.listRawViaList(service)
 }
 
-// History returns a list of events that have occured regarding the given
+// History returns a list of events that have occurred regarding the given
 // secret.
 func (s *SSMStore) History(id SecretId) ([]ChangeEvent, error) {
 	events := []ChangeEvent{}

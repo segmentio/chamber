@@ -69,7 +69,7 @@ func runExport(cmd *cobra.Command, args []string) error {
 		for _, rawSecret := range rawSecrets {
 			k := key(rawSecret.Key)
 			if _, ok := params[k]; ok {
-				fmt.Fprintf(os.Stderr, "warning: parameter %s specified more than once (overriden by service %s)\n", k, service)
+				fmt.Fprintf(os.Stderr, "warning: parameter %s specified more than once (overridden by service %s)\n", k, service)
 			}
 			params[k] = rawSecret.Value
 		}

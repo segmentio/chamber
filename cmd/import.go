@@ -23,11 +23,15 @@ var (
 )
 
 func init() {
+	importCmd.Flags().BoolVarP(&caseSensitive, "case-sensitive", "", false, "Enable case sensitive service names and keys. Defaults to lowercase keys and services")
 	RootCmd.AddCommand(importCmd)
 }
 
 func importRun(cmd *cobra.Command, args []string) error {
 	service := strings.ToLower(args[0])
+	if caseSensitive {
+		service = args[0]
+	}
 	if err := validateService(service); err != nil {
 		return errors.Wrap(err, "Failed to validate service")
 	}
@@ -69,7 +73,27 @@ func importRun(cmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, "Failed to get secret store")
 	}
 
+	// Check for duplicate secrets based on lowercased key names
+	toBeImportedLowercase := make(map[string]string)
+
+	for k, v := range toBeImported {
+		toBeImportedLowercase[strings.ToLower(k)] = v
+	}
+
+	secretsProvided := len(toBeImported)
+	secretsProvidedUnique := len(toBeImportedLowercase)
+
+	if secretsProvided != secretsProvidedUnique {
+		if !caseSensitive {
+			err := fmt.Errorf("Refusing to import %d of %d provided secrets due to mixed case keys", secretsProvidedUnique, secretsProvided)
+			return err
+		}
+	}
+
 	for key, value := range toBeImported {
+		if !caseSensitive {
+			key = strings.ToLower(key)
+		}
 		secretId := store.SecretId{
 			Service: service,
 			Key:     key,

@@ -28,16 +28,23 @@ var (
 func init() {
 	readCmd.Flags().IntVarP(&version, "version", "v", -1, "The version number of the secret. Defaults to latest.")
 	readCmd.Flags().BoolVarP(&quiet, "quiet", "q", false, "Only print the secret")
+	readCmd.Flags().BoolVarP(&caseSensitive, "case-sensitive", "", false, "Enable case sensitive service names and keys. Defaults to lowercase keys and services")
 	RootCmd.AddCommand(readCmd)
 }
 
 func read(cmd *cobra.Command, args []string) error {
 	service := strings.ToLower(args[0])
+	if caseSensitive {
+		service = args[0]
+	}
 	if err := validateService(service); err != nil {
 		return errors.Wrap(err, "Failed to validate service")
 	}
 
 	key := strings.ToLower(args[1])
+	if caseSensitive {
+		key = args[1]
+	}
 	if err := validateKey(key); err != nil {
 		return errors.Wrap(err, "Failed to validate key")
 	}

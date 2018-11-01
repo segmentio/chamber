@@ -11,8 +11,11 @@ import (
 	analytics "gopkg.in/segmentio/analytics-go.v3"
 )
 
-// Regex's used to validate service and key names
 var (
+	// Boolean used to interact with case sensitive services and keys
+	caseSensitive bool
+
+	// Regex's used to validate service and key names
 	validKeyFormat         = regexp.MustCompile(`^[\w\-\.]+$`)
 	validServiceFormat     = regexp.MustCompile(`^[\w\-\.]+$`)
 	validServicePathFormat = regexp.MustCompile(`^[\w\-\.]+(\/[\w\-\.]+)*$`)

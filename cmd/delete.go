@@ -18,16 +18,23 @@ var deleteCmd = &cobra.Command{
 }
 
 func init() {
+	deleteCmd.Flags().BoolVarP(&caseSensitive, "case-sensitive", "", false, "Enable case sensitive service names and keys. Defaults to lowercase keys and services")
 	RootCmd.AddCommand(deleteCmd)
 }
 
 func delete(cmd *cobra.Command, args []string) error {
 	service := strings.ToLower(args[0])
+	if caseSensitive {
+		service = args[0]
+	}
 	if err := validateService(service); err != nil {
 		return errors.Wrap(err, "Failed to validate service")
 	}
 
 	key := strings.ToLower(args[1])
+	if caseSensitive {
+		key = args[1]
+	}
 	if err := validateKey(key); err != nil {
 		return errors.Wrap(err, "Failed to validate key")
 	}

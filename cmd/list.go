@@ -8,6 +8,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/pkg/errors"
+	"github.com/segmentio/chamber/store"
 	"github.com/spf13/cobra"
 	analytics "gopkg.in/segmentio/analytics-go.v3"
 )
@@ -21,9 +22,9 @@ var listCmd = &cobra.Command{
 }
 
 var (
-	withValues bool
-	sortByTime bool
-	sortByUser bool
+	withValues    bool
+	sortByTime    bool
+	sortByUser    bool
 	sortByVersion bool
 )
 
@@ -110,21 +111,25 @@ func key(s string) string {
 }
 
 type ByName []store.Secret
-func (a ByName) Len() int { return len(a)}
-func (a ByName) Swap(i, j int) { a[i], a[j] = a[j], a[i]}
+
+func (a ByName) Len() int           { return len(a) }
+func (a ByName) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a ByName) Less(i, j int) bool { return a[i].Meta.Key < a[j].Meta.Key }
 
 type ByTime []store.Secret
-func (a ByTime) Len() int { return len(a)}
-func (a ByTime) Swap(i, j int) { a[i], a[j] = a[j], a[i]}
+
+func (a ByTime) Len() int           { return len(a) }
+func (a ByTime) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a ByTime) Less(i, j int) bool { return a[i].Meta.Created.Before(a[j].Meta.Created) }
 
 type ByUser []store.Secret
-func (a ByUser) Len() int { return len(a)}
-func (a ByUser) Swap(i, j int) { a[i], a[j] = a[j], a[i]}
+
+func (a ByUser) Len() int           { return len(a) }
+func (a ByUser) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a ByUser) Less(i, j int) bool { return a[i].Meta.CreatedBy < a[j].Meta.CreatedBy }
 
 type ByVersion []store.Secret
-func (a ByVersion) Len() int { return len(a)}
-func (a ByVersion) Swap(i, j int) { a[i], a[j] = a[j], a[i]}
+
+func (a ByVersion) Len() int           { return len(a) }
+func (a ByVersion) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a ByVersion) Less(i, j int) bool { return a[i].Meta.Version < a[j].Meta.Version }

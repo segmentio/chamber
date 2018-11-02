@@ -153,7 +153,7 @@ version (-1) is the latest secret.
 ### Exporting
 ```bash
 $ chamber export [--format <format>] [--output-file <file>]  <service...>
-{"key","secret"}
+{"key":"secret"}
 ```
 
 `export` provides ability to export secrets in various file formats. The following

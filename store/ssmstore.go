@@ -168,16 +168,6 @@ func (s *SSMStore) readVersion(id SecretId, version int) (Secret, error) {
 		return result, nil
 	}
 
-	// If we havent found it yet, check the latest version (which
-	// doesnt get returned from GetParameterHistory)
-	current, err := s.readLatest(id)
-	if err != nil {
-		return Secret{}, err
-	}
-	if current.Meta.Version == version {
-		return current, nil
-	}
-
 	return Secret{}, ErrSecretNotFound
 }
 
@@ -414,18 +404,6 @@ func (s *SSMStore) History(id SecretId) ([]ChangeEvent, error) {
 		return events, ErrSecretNotFound
 	}
 
-	// The current version is not included in the GetParameterHistory response
-	current, err := s.Read(id, -1)
-	if err != nil {
-		return events, err
-	}
-
-	events = append(events, ChangeEvent{
-		Type:    getChangeType(current.Meta.Version),
-		Time:    current.Meta.Created,
-		User:    current.Meta.CreatedBy,
-		Version: current.Meta.Version,
-	})
 	return events, nil
 }
 

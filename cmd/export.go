@@ -21,6 +21,7 @@ const doubleQuoteSpecialChars = "\\\n\r\"!$`"
 // exportCmd represents the export command
 var (
 	exportFormat string
+	labelFilter  string
 	exportOutput string
 
 	exportCmd = &cobra.Command{
@@ -33,6 +34,7 @@ var (
 
 func init() {
 	exportCmd.Flags().StringVarP(&exportFormat, "format", "f", "json", "Output format (json, java-properties, csv, tsv, dotenv)")
+	exportCmd.Flags().StringVarP(&labelFilter, "label", "l", "", "Output format (json, java-properties, csv, tsv, dotenv)")
 	exportCmd.Flags().StringVarP(&exportOutput, "output-file", "o", "", "Output file (default is standard output)")
 	RootCmd.AddCommand(exportCmd)
 }
@@ -62,7 +64,7 @@ func runExport(cmd *cobra.Command, args []string) error {
 			return errors.Wrapf(err, "Failed to validate service %s", service)
 		}
 
-		rawSecrets, err := secretStore.ListRaw(strings.ToLower(service))
+		rawSecrets, err := secretStore.ListRaw(strings.ToLower(service), labelFilter)
 		if err != nil {
 			return errors.Wrapf(err, "Failed to list store contents for service %s", service)
 		}

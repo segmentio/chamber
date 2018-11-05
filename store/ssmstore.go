@@ -318,12 +318,21 @@ func (s *SSMStore) List(service string, includeValues bool) ([]Secret, error) {
 // ListRaw lists all secrets keys and values for a given service. Does not include any
 // other meta-data. Uses faster AWS APIs with much higher rate-limits. Suitable for
 // use in production environments.
-func (s *SSMStore) ListRaw(service string) ([]RawSecret, error) {
+func (s *SSMStore) ListRaw(service string, label string) ([]RawSecret, error) {
 	if s.usePaths {
 		secrets := map[string]RawSecret{}
 		getParametersByPathInput := &ssm.GetParametersByPathInput{
 			Path:           aws.String("/" + service + "/"),
 			WithDecryption: aws.Bool(true),
+		}
+		if label != "" {
+			getParametersByPathInput.ParameterFilters = []*ssm.ParameterStringFilter{
+				{
+					Key:    aws.String("Label"),
+					Option: aws.String("Equals"),
+					Values: []*string{aws.String(label)},
+				},
+			}
 		}
 
 		err := s.svc.GetParametersByPathPages(getParametersByPathInput, func(resp *ssm.GetParametersByPathOutput, lastPage bool) bool {

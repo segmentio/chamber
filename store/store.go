@@ -62,7 +62,7 @@ type Store interface {
 	Write(id SecretId, value string) error
 	Read(id SecretId, version int) (Secret, error)
 	List(service string, includeValues bool) ([]Secret, error)
-	ListRaw(service string) ([]RawSecret, error)
+	ListRaw(service string, label string) ([]RawSecret, error)
 	History(id SecretId) ([]ChangeEvent, error)
 	Delete(id SecretId) error
 }

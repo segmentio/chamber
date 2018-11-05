@@ -24,7 +24,7 @@ func (s *NullStore) List(service string, includeValues bool) ([]Secret, error) {
 	return []Secret{}, nil
 }
 
-func (s *NullStore) ListRaw(service string) ([]RawSecret, error) {
+func (s *NullStore) ListRaw(service string, label string) ([]RawSecret, error) {
 	return []RawSecret{}, nil
 }
 

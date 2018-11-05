@@ -213,7 +213,7 @@ func (s *S3Store) List(service string, includeValues bool) ([]Secret, error) {
 	return secrets, nil
 }
 
-func (s *S3Store) ListRaw(service string) ([]RawSecret, error) {
+func (s *S3Store) ListRaw(service string, label string) ([]RawSecret, error) {
 	index, err := s.readLatest(service)
 	if err != nil {
 		return []RawSecret{}, err

@@ -1,3 +1,32 @@
+# v2.3.1 vs v2.2.0
+
+## Features
+
+- [[d2451a0](https://github.com/segmentio/chamber/commit//d2451a028bc4d76e94838790e638c957cfc6ffc3)] Addition of a NULL Backend to provide a simple way of disabling backend lookups (maartenvanderhoef)
+- [[9c97bdf](https://github.com/segmentio/chamber/commit//9c97bdf94803016ad723a3874638108461952f39)] Add go modules (#144) (Nick Irvine)
+
+## Analytics
+
+- [[23f8ddb](https://github.com/segmentio/chamber/commit//23f8ddb37a10705d1b05f479399451b09b251695)] update depdencies to use working version of analytics-go (Rob McQueen)
+- [[9d49cf8](https://github.com/segmentio/chamber/commit//9d49cf8221f971bd30a27f12111eb95f941f322d)] Reinstate analytics (#139) (Nick Irvine)
+- [[1e7134a](https://github.com/segmentio/chamber/commit//1e7134a08e64076c4b1dcb375befc0344bf69772)] Revert "Reinstate analytics (#139)" (Rob McQueen)
+- [[4b62d9e](https://github.com/segmentio/chamber/commit//4b62d9ec9fb662943194dd2022c0d69d87ce483c)] Reinstate analytics (#139) (Nick Irvine)
+- [[964b9d3](https://github.com/segmentio/chamber/commit//964b9d3ca1ad63fcd925c9703e831ed35a9f6b61)] Revert "Merge pull request #136 from segmentio/systmeizer/add-analytics" (Nick Irvine)
+- [[1365e40](https://github.com/segmentio/chamber/commit//1365e40e2df84362b931336ea498fc84785d70f5)] Merge pull request #136 from segmentio/systmeizer/add-analytics (Rob McQueen)
+- [[47c82aa](https://github.com/segmentio/chamber/commit//47c82aa3794e8f0597efee6fce3ff5c60bacbdc6)] Adding analytics for usage metrics (Rob McQueen)
+
+# Fixes
+
+- [[0317aaf](https://github.com/segmentio/chamber/commit//0317aafa99c746b7948478c0148b483b9970163c)] Remove extra history entry for the current parameter version (#157) (Michael F Booth)
+- [[cf28a31](https://github.com/segmentio/chamber/commit//cf28a318d02cca923e447ea19dd8ed4a3b06de1c)] Fix missing history and failed reads beyond secret version 50 (#158) (Michael F Booth)
+- [[304fdba](https://github.com/segmentio/chamber/commit//304fdbaf0ed11f09b3bc8ad433fddaed7b3be757)] hotfix for broken build introduced by #95 also gofmt (Nick Irvine)
+- [[c82e7fc](https://github.com/segmentio/chamber/commit//c82e7fc69d30f34077beec08ced54bed42840a6a)] added list sorting options (#95) (Bryce Hendrix)
+- [[4fb5cd8](https://github.com/segmentio/chamber/commit//4fb5cd8d9ab160edb667148c837adcdb7c681812)] Fix 2 typos (Joseph Herlant)
+- [[28b12a8](https://github.com/segmentio/chamber/commit//28b12a81659689a16a38ba0f70647e1cdd0fd9f1)] Quote environment variables. (#150) (Joshua Carp)
+- [[2fd07a7](https://github.com/segmentio/chamber/commit//2fd07a7bbe7f316eada8e6bfa3a8212b3202343e)] Handle errors in secret store constructors. (#135) (Joshua Carp)
+- [[7b5f2b8](https://github.com/segmentio/chamber/commit//7b5f2b859f2953302bff2ffcd9e9366946b298f4)] Use built-in pagination instead of loops. (#121) (Joshua Carp)
+- [[7f09043](https://github.com/segmentio/chamber/commit//7f09043d32dc2b5faf01883ebc0784894900da83)] remove debug line (Rob McQueen)
+
 # v2.2.0 vs v2.1.1
 
 ## deb/rpm packaging, circle 2.0

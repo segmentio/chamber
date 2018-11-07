@@ -18,7 +18,8 @@ import (
 
 const (
 	MaximumVersions = 100
-	BucketEnvVar    = "CHAMBER_S3_BUCKET"
+	// deprecated
+	BucketEnvVar = "CHAMBER_S3_BUCKET"
 
 	latestObjectName = "__latest.json"
 )
@@ -56,7 +57,17 @@ type S3Store struct {
 	bucket string
 }
 
+// Deprecated; use NewS3StoreWithBucket instead
 func NewS3Store(numRetries int) (*S3Store, error) {
+	bucket, ok := os.LookupEnv(BucketEnvVar)
+	if !ok {
+		return nil, fmt.Errorf("Must set %s for s3 backend", BucketEnvVar)
+	}
+
+	return NewS3StoreWithBucket(numRetries, bucket)
+}
+
+func NewS3StoreWithBucket(numRetries int, bucket string) (*S3Store, error) {
 	session, region, err := getSession(numRetries)
 	if err != nil {
 		return nil, err
@@ -71,11 +82,6 @@ func NewS3Store(numRetries int) (*S3Store, error) {
 		MaxRetries: aws.Int(numRetries),
 		Region:     region,
 	})
-
-	bucket, ok := os.LookupEnv(BucketEnvVar)
-	if !ok {
-		return nil, fmt.Errorf("Must set %s for s3 backend", BucketEnvVar)
-	}
 
 	return &S3Store{
 		svc:    svc,

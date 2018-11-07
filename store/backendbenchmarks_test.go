@@ -73,7 +73,7 @@ func TestS3StoreConcurrency(t *testing.T) {
 	if !benchmarkEnabled {
 		t.SkipNow()
 	}
-	s, _ := NewS3Store(10)
+	s, _ := NewS3StoreWithBucket(10, "chamber-test")
 	benchmarkStore(t, s, []string{"foo"})
 }
 

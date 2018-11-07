@@ -38,10 +38,11 @@ const (
 
 const (
 	NullBackend = "NULL"
-	SSMBackend = "SSM"
-	S3Backend  = "S3"
+	SSMBackend  = "SSM"
+	S3Backend   = "S3"
 
 	BackendEnvVar = "CHAMBER_SECRET_BACKEND"
+	BucketEnvVar  = "CHAMBER_S3_BUCKET"
 )
 
 var Backends = []string{SSMBackend, S3Backend, NullBackend}
@@ -107,7 +108,11 @@ func getSecretStore() (store.Store, error) {
 	case NullBackend:
 		s = store.NewNullStore()
 	case S3Backend:
-		s, err = store.NewS3Store(numRetries)
+		bucket, ok := os.LookupEnv(BucketEnvVar)
+		if !ok {
+			return nil, fmt.Errorf("Must set %s for s3 backend", BucketEnvVar)
+		}
+		s, err = store.NewS3StoreWithBucket(numRetries, bucket)
 	case SSMBackend:
 		fallthrough
 	default:

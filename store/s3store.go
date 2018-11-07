@@ -57,7 +57,7 @@ type S3Store struct {
 	bucket string
 }
 
-// Deprecated
+// Deprecated; use NewS3StoreWithBucket instead
 func NewS3Store(numRetries int) (*S3Store, error) {
 	bucket, ok := os.LookupEnv(BucketEnvVar)
 	if !ok {

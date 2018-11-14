@@ -1,4 +1,4 @@
-# v2.3.2 vs v2.3.2
+# v2.3.2 vs v2.3.1
 
 - [[1561472](https://github.com/segmentio/chamber/commit//1561472b407bdf4bb02520b05c777e4219855053)] export environ as its own lib (#169) (Nick Irvine)
 - [[a94b7aa](https://github.com/segmentio/chamber/commit//a94b7aa7e9a0796a88d2665bc74a10b1ab94ca35)] add NewS3StoreWithBucket constructor (#167) (Nick Irvine)

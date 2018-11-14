@@ -3,7 +3,6 @@ package environ
 import (
 	"strings"
 
-	"github.com/pkg/errors"
 	"github.com/segmentio/chamber/store"
 )
 
@@ -54,7 +53,7 @@ func key(s string, noPaths bool) string {
 func (e *Environ) load(s store.Store, service string, collisions *[]string, noPaths bool) error {
 	rawSecrets, err := s.ListRaw(strings.ToLower(service))
 	if err != nil {
-		return errors.Wrap(err, "Failed to list store contents")
+		return err
 	}
 	envVarKeys := make([]string, 0)
 	for _, rawSecret := range rawSecrets {

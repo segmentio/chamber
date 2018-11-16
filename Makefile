@@ -11,7 +11,7 @@ LDFLAGS := -ldflags='-X "main.Version=$(VERSION)" -X "main.AnalyticsWriteKey=$(A
 test:
 	GO111MODULE=on go test -v ./...
 
-all: dist/chamber-$(VERSION)-darwin-amd64 dist/chamber-$(VERSION)-linux-amd64
+all: dist/chamber-$(VERSION)-darwin-amd64 dist/chamber-$(VERSION)-linux-amd64 dist/chamber-$(VERSION)-windows-amd64.exe
 
 clean:
 	rm -rf ./dist
@@ -24,5 +24,8 @@ dist/chamber-$(VERSION)-darwin-amd64: | dist/
 
 dist/chamber-$(VERSION)-linux-amd64: | dist/
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 GO111MODULE=on go build $(LDFLAGS) -o $@
+
+dist/chamber-$(VERSION)-windows-amd64.exe: | dist/
+	GOOS=windows GOARCH=amd64 CGO_ENABLED=0 GO111MODULE=on go build $(LDFLAGS) -o $@
 
 .PHONY: clean all

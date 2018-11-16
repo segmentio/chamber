@@ -23,7 +23,7 @@ PACKAGECLOUD_RPM_DISTROS := \
 
 publish: publish-github publish-packagecloud
 
-publish-github: publish-github-darwin publish-github-linux publish-github-deb publish-github-rpm publish-github-sha256sums
+publish-github: publish-github-darwin publish-github-linux publish-github-windows publish-github-deb publish-github-rpm publish-github-sha256sums
 
 publish-packagecloud: publish-packagecloud-deb publish-packagecloud-rpm
 
@@ -54,6 +54,15 @@ publish-github-linux: dist/chamber-$(VERSION)-linux-amd64 | github-release
 	--name chamber-$(VERSION)-linux-amd64 \
 	--file $<
 
+publish-github-windows: dist/chamber-$(VERSION)-windows-amd64.exe | github-release
+	github-release upload \
+	--security-token $$GH_LOGIN \
+	--user segmentio \
+	--repo chamber \
+	--tag $(VERSION) \
+	--name chamber-$(VERSION)-windows-amd64.exe \
+	--file $<
+
 publish-github-deb: dist/chamber_$(VERSION)_amd64.deb | github-release
 	github-release upload \
 	--security-token $$GH_LOGIN \
@@ -71,7 +80,7 @@ publish-github-rpm: dist/chamber_$(VERSION)_amd64.rpm | github-release
 	--tag $(VERSION) \
 	--name chamber_$(VERSION)_amd64.rpm \
 	--file $<
-	
+
 publish-github-sha256sums: dist/chamber-$(VERSION).sha256sums | github-release
 	github-release upload \
 	--security-token $$GH_LOGIN \
@@ -99,9 +108,9 @@ publish-packagecloud-rpm: dist/chamber_$(VERSION)_amd64.rpm packagecloud.conf.js
 			grep -v 'with token:' ; \
 	done
 
-dist: dist/chamber-$(VERSION)-darwin-amd64 dist/chamber-$(VERSION)-linux-amd64 dist/chamber_$(VERSION)_amd64.deb dist/chamber_$(VERSION)_amd64.rpm dist/chamber-$(VERSION).sha256sums
+dist: dist/chamber-$(VERSION)-darwin-amd64 dist/chamber-$(VERSION)-linux-amd64 dist/chamber-$(VERSION)-windows-amd64.exe dist/chamber_$(VERSION)_amd64.deb dist/chamber_$(VERSION)_amd64.rpm dist/chamber-$(VERSION).sha256sums
 
-dist/chamber-$(VERSION).sha256sums: dist/chamber-$(VERSION)-darwin-amd64 dist/chamber-$(VERSION)-linux-amd64 dist/chamber_$(VERSION)_amd64.deb dist/chamber_$(VERSION)_amd64.rpm
+dist/chamber-$(VERSION).sha256sums: dist/chamber-$(VERSION)-darwin-amd64 dist/chamber-$(VERSION)-linux-amd64 dist/chamber-$(VERSION)-windows-amd64.exe dist/chamber_$(VERSION)_amd64.deb dist/chamber_$(VERSION)_amd64.rpm
 	sha256sum $^ | sed 's|dist/||g' > $@
 
 dist/nfpm-$(VERSION).yaml: | dist/
@@ -116,6 +125,7 @@ dist/chamber_$(VERSION)_amd64.rpm: dist/nfpm-$(VERSION).yaml dist/chamber-$(VERS
 .PHONY: \
 	publish-github \
 	publish-github-linux \
+	publish-github-windows \
 	publish-github-rpm \
 	publish-github-deb \
 	publish-github-darwin \

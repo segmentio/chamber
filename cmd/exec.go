@@ -11,6 +11,9 @@ import (
 	analytics "gopkg.in/segmentio/analytics-go.v3"
 )
 
+// When true, only use variables retrieved from the backend, do not inherit existing environment variables
+var pristine bool
+
 // execCmd represents the exec command
 var execCmd = &cobra.Command{
 	Use:   "exec <service...> -- <command> [<arg...>]",
@@ -32,6 +35,7 @@ var execCmd = &cobra.Command{
 }
 
 func init() {
+	execCmd.Flags().BoolVar(&pristine, "pristine", false, "only use variables retrieved from the backend, do not inherit existing environment variables")
 	RootCmd.AddCommand(execCmd)
 }
 
@@ -51,7 +55,11 @@ func execRun(cmd *cobra.Command, args []string) error {
 		})
 	}
 
-	env := environ.Environ(os.Environ())
+	env := environ.Environ{}
+	if !pristine {
+		env = environ.Environ(os.Environ())
+	}
+
 	secretStore, err := getSecretStore()
 	if err != nil {
 		return errors.Wrap(err, "Failed to get secret store")

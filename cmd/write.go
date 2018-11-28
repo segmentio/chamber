@@ -13,7 +13,8 @@ import (
 )
 
 var (
-	singleline bool
+	singleline    bool
+	skipUnchanged bool
 
 	// writeCmd represents the write command
 	writeCmd = &cobra.Command{
@@ -26,6 +27,7 @@ var (
 
 func init() {
 	writeCmd.Flags().BoolVarP(&singleline, "singleline", "s", false, "Insert single line parameter (end with \\n)")
+	writeCmd.Flags().BoolVarP(&skipUnchanged, "skip-unchanged", "", false, "Skip writing secret if value is unchanged")
 	RootCmd.AddCommand(writeCmd)
 }
 
@@ -80,6 +82,13 @@ func write(cmd *cobra.Command, args []string) error {
 	secretId := store.SecretId{
 		Service: service,
 		Key:     key,
+	}
+
+	if skipUnchanged {
+		currentSecret, err := secretStore.Read(secretId, -1)
+		if err == nil && value == *currentSecret.Value {
+			return nil
+		}
 	}
 
 	return secretStore.Write(secretId, value)

@@ -1,8 +1,10 @@
 module github.com/segmentio/chamber
 
 require (
-	github.com/aws/aws-sdk-go v1.15.46
+	github.com/aws/aws-sdk-go v1.15.90
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/go-ini/ini v1.25.4 // indirect
+	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/magiconair/properties v1.8.0
 	github.com/pkg/errors v0.8.0
 	github.com/pmezard/go-difflib v1.0.0 // indirect

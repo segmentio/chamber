@@ -1,34 +1,23 @@
 package store
 
 import (
-	"os"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 )
 
-const (
-	RegionEnvVar = "CHAMBER_AWS_REGION"
-)
-
-func getSession(numRetries int) (*session.Session, *string, error) {
-	var region *string
-
-	if regionOverride, ok := os.LookupEnv(RegionEnvVar); ok {
-		region = aws.String(regionOverride)
-	}
+func getSession(numRetries int, region string) (*session.Session, string, error) {
 	retSession, err := session.NewSessionWithOptions(
 		session.Options{
 			Config: aws.Config{
-				Region:     region,
+				Region:     aws.String(region),
 				MaxRetries: aws.Int(numRetries),
 			},
 			SharedConfigState: session.SharedConfigEnable,
 		},
 	)
 	if err != nil {
-		return nil, nil, err
+		return nil, "", err
 	}
 
 	// If region is still not set, attempt to determine it via ec2 metadata API
@@ -36,7 +25,7 @@ func getSession(numRetries int) (*session.Session, *string, error) {
 		session := session.New()
 		ec2metadataSvc := ec2metadata.New(session)
 		if regionOverride, err := ec2metadataSvc.Region(); err == nil {
-			region = aws.String(regionOverride)
+			region = regionOverride
 		}
 	}
 

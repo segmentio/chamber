@@ -16,6 +16,15 @@ import (
 const (
 	// DefaultKeyID is the default alias for the KMS key used to encrypt/decrypt secrets
 	DefaultKeyID = "alias/parameter_store_key"
+
+	// deprecated
+	regionEnvVar = "CHAMBER_AWS_REGION"
+
+	// deprecated
+	kmsKeyAliasEnvVar = "CHAMBER_KMS_KEY_ALIAS"
+
+	// deprecated
+	noPathsEnvVar = "CHAMBER_NO_PATHS"
 )
 
 // validPathKeyFormat is the format that is expected for key names inside parameter store
@@ -32,44 +41,72 @@ var _ Store = &SSMStore{}
 // SSMStore implements the Store interface for storing secrets in SSM Parameter
 // Store
 type SSMStore struct {
-	svc      ssmiface.SSMAPI
-	usePaths bool
+	svc         ssmiface.SSMAPI
+	usePaths    bool
+	kmsKeyAlias string
 }
 
 // NewSSMStore creates a new SSMStore
+// uses env vars, which have generally been moved to cmd/root.go
+// - CHAMBER_AWS_REGION
+// - CHAMBER_KMS_KEY_ALIAS
+// - CHAMBER_NO_PATHS
+//
+// Deprecated due to the use of env vars; use NewSSMStoreWithConfig instead
 func NewSSMStore(numRetries int) (*SSMStore, error) {
-	ssmSession, region, err := getSession(numRetries)
+	usePaths := true
+	_, ok := os.LookupEnv(noPathsEnvVar)
+	if ok {
+		usePaths = false
+	}
+
+	return NewSSMStoreFromConfig(SSMConfig{
+		Retries:     numRetries,
+		Region:      os.Getenv(regionEnvVar),
+		AvoidPaths:  !usePaths,
+		KMSKeyAlias: os.Getenv(kmsKeyAliasEnvVar),
+	})
+}
+
+type SSMConfig struct {
+	// number of retries
+	Retries int
+	// AWS region; use "" to discover from metadata server
+	Region string
+	// if true, use old dot-separated paths, instead of new slash-separated
+	AvoidPaths bool
+	// Key to use; will be automatically prefixed with `alias/`
+	KMSKeyAlias string
+}
+
+func NewSSMStoreFromConfig(config SSMConfig) (*SSMStore, error) {
+	ssmSession, region, err := getSession(config.Retries, config.Region)
 	if err != nil {
 		return nil, err
 	}
 
 	svc := ssm.New(ssmSession, &aws.Config{
-		MaxRetries: aws.Int(numRetries),
-		Region:     region,
+		MaxRetries: aws.Int(config.Retries),
+		Region:     aws.String(region),
 	})
 
-	usePaths := true
-	_, ok := os.LookupEnv("CHAMBER_NO_PATHS")
-	if ok {
-		usePaths = false
+	s := SSMStore{
+		svc:         svc,
+		usePaths:    !config.AvoidPaths,
+		kmsKeyAlias: config.KMSKeyAlias,
+	}
+	if s.kmsKeyAlias == "" {
+		s.kmsKeyAlias = DefaultKeyID
+	}
+	if !strings.HasPrefix(s.kmsKeyAlias, "alias/") {
+		s.kmsKeyAlias = "alias/%s" + s.kmsKeyAlias
 	}
 
-	return &SSMStore{
-		svc:      svc,
-		usePaths: usePaths,
-	}, nil
+	return &s, nil
 }
 
 func (s *SSMStore) KMSKey() string {
-	fromEnv, ok := os.LookupEnv("CHAMBER_KMS_KEY_ALIAS")
-	if !ok {
-		return DefaultKeyID
-	}
-	if !strings.HasPrefix(fromEnv, "alias/") {
-		return fmt.Sprintf("alias/%s", fromEnv)
-	}
-
-	return fromEnv
+	return s.kmsKeyAlias
 }
 
 // Write writes a given value to a secret identified by id.  If the secret

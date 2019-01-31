@@ -57,7 +57,7 @@ type S3Store struct {
 	bucket string
 }
 
-// Deprecated; use NewS3StoreWithBucket instead
+// Deprecated; use NewS3StoreFromConfig instead
 func NewS3Store(numRetries int) (*S3Store, error) {
 	bucket, ok := os.LookupEnv(BucketEnvVar)
 	if !ok {
@@ -67,26 +67,45 @@ func NewS3Store(numRetries int) (*S3Store, error) {
 	return NewS3StoreWithBucket(numRetries, bucket)
 }
 
+// Deprecated; use NewS3StoreFromConfig instead
 func NewS3StoreWithBucket(numRetries int, bucket string) (*S3Store, error) {
-	session, region, err := getSession(numRetries)
+	return NewS3StoreFromConfig(S3Config{
+		Retries: numRetries,
+		Bucket:  bucket,
+		Region:  "",
+	})
+}
+
+type S3Config struct {
+	// number of retries
+	Retries int
+	// AWS region; use "" to discover from metadata server
+	Region string
+
+	// S3 bucket
+	Bucket string
+}
+
+func NewS3StoreFromConfig(config S3Config) (*S3Store, error) {
+	session, region, err := getSession(config.Retries, config.Region)
 	if err != nil {
 		return nil, err
 	}
 
 	svc := s3.New(session, &aws.Config{
-		MaxRetries: aws.Int(numRetries),
-		Region:     region,
+		MaxRetries: aws.Int(config.Retries),
+		Region:     aws.String(region),
 	})
 
 	stsSvc := sts.New(session, &aws.Config{
-		MaxRetries: aws.Int(numRetries),
-		Region:     region,
+		MaxRetries: aws.Int(config.Retries),
+		Region:     aws.String(region),
 	})
 
 	return &S3Store{
 		svc:    svc,
 		stsSvc: stsSvc,
-		bucket: bucket,
+		bucket: config.Bucket,
 	}, nil
 }
 

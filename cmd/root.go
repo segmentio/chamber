@@ -48,6 +48,10 @@ const (
 	BackendEnvVar = "CHAMBER_SECRET_BACKEND"
 	// deprecated
 	BucketEnvVar = "CHAMBER_S3_BUCKET"
+
+	RegionEnvVar = "CHAMBER_AWS_REGION"
+
+	KMSKeyAliasEnvVar = "CHAMBER_KMS_KEY_ALIAS"
 )
 
 var Backends = []string{SSMBackend, S3Backend, NullBackend}
@@ -142,9 +146,19 @@ func getSecretStore() (store.Store, error) {
 		if bucket == "" {
 			return nil, errors.New("Must set bucket for s3 backend")
 		}
-		s, err = store.NewS3StoreWithBucket(numRetries, bucket)
+		s, err = store.NewS3StoreFromConfig(store.S3Config{
+			Retries: numRetries,
+			Region:  os.Getenv(RegionEnvVar),
+			Bucket:  bucket,
+		})
 	case SSMBackend:
-		s, err = store.NewSSMStore(numRetries)
+		s, err = store.NewSSMStoreFromConfig(
+			store.SSMConfig{
+				Retries:     numRetries,
+				Region:      os.Getenv(RegionEnvVar),
+				KMSKeyAlias: os.Getenv(KMSKeyAliasEnvVar),
+			},
+		)
 	default:
 		return nil, fmt.Errorf("invalid backend `%s`", backendURLParsed.Scheme)
 	}

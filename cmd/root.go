@@ -2,10 +2,12 @@ package cmd
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"regexp"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/segmentio/chamber/store"
 	"github.com/spf13/cobra"
 	analytics "gopkg.in/segmentio/analytics-go.v3"
@@ -20,7 +22,9 @@ var (
 	verbose        bool
 	numRetries     int
 	chamberVersion string
-	backend        string
+	// one of *Backend consts
+	backend     string
+	backendFlag string
 
 	analyticsEnabled  bool
 	analyticsWriteKey string
@@ -42,7 +46,8 @@ const (
 	S3Backend   = "S3"
 
 	BackendEnvVar = "CHAMBER_SECRET_BACKEND"
-	BucketEnvVar  = "CHAMBER_S3_BUCKET"
+	// deprecated
+	BucketEnvVar = "CHAMBER_S3_BUCKET"
 )
 
 var Backends = []string{SSMBackend, S3Backend, NullBackend}
@@ -59,6 +64,12 @@ var RootCmd = &cobra.Command{
 func init() {
 	RootCmd.PersistentFlags().IntVarP(&numRetries, "retries", "r", DefaultNumRetries, "For SSM, the number of retries we'll make before giving up")
 	RootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "", false, "Print more information to STDOUT")
+	RootCmd.PersistentFlags().StringVarP(&backendFlag, "backend", "b", "ssm",
+		`Backend to use; AKA $CHAMBER_SECRET_BACKEND
+	null: no-op
+	ssm: SSM Parameter Store
+	s3://<bucket>: S3, using <bucket>`,
+	)
 }
 
 // Execute adds all child commands to the root command sets flags appropriately.
@@ -100,30 +111,47 @@ func validateKey(key string) error {
 }
 
 func getSecretStore() (store.Store, error) {
-	backend := strings.ToUpper(os.Getenv(BackendEnvVar))
+	var backendURL string
+	if backendEnvVarValue := os.Getenv(BackendEnvVar); backendEnvVarValue != "" {
+		backendURL = backendEnvVarValue
+	} else {
+		backendURL = backendFlag
+	}
+
+	// normalize to URL
+	// null -> null://
+	if !strings.Contains(backendURL, "://") {
+		backendURL += "://"
+	}
+	backendURLParsed, err := url.Parse(backendURL)
+	if err != nil {
+		return nil, fmt.Errorf("Couldn't parse backend %s as url: %s", backendURL, err.Error())
+	}
 
 	var s store.Store
-	var err error
+	// set global for analytics
+	backend = strings.ToUpper(backendURLParsed.Scheme)
 	switch backend {
 	case NullBackend:
 		s = store.NewNullStore()
 	case S3Backend:
-		bucket, ok := os.LookupEnv(BucketEnvVar)
-		if !ok {
-			return nil, fmt.Errorf("Must set %s for s3 backend", BucketEnvVar)
+		bucket := os.Getenv(BucketEnvVar)
+		if bucket == "" {
+			bucket = backendURLParsed.Host
+		}
+		if bucket == "" {
+			return nil, errors.New("Must set bucket for s3 backend")
 		}
 		s, err = store.NewS3StoreWithBucket(numRetries, bucket)
 	case SSMBackend:
-		fallthrough
-	default:
 		s, err = store.NewSSMStore(numRetries)
+	default:
+		return nil, fmt.Errorf("invalid backend `%s`", backendURLParsed.Scheme)
 	}
 	return s, err
 }
 
 func prerun(cmd *cobra.Command, args []string) {
-	backend = strings.ToUpper(os.Getenv(BackendEnvVar))
-
 	if analyticsEnabled {
 		// set up analytics client
 		analyticsClient, _ = analytics.NewWithConfig(analyticsWriteKey, analytics.Config{

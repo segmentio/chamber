@@ -22,10 +22,13 @@ dist/:
 dist/chamber-$(VERSION)-darwin-amd64: | dist/
 	GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 GO111MODULE=on go build $(LDFLAGS) -o $@
 
+linux: dist/chamber-$(VERSION)-linux-amd64
+	cp $^ chamber
+
 dist/chamber-$(VERSION)-linux-amd64: | dist/
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 GO111MODULE=on go build $(LDFLAGS) -o $@
 
 dist/chamber-$(VERSION)-windows-amd64.exe: | dist/
 	GOOS=windows GOARCH=amd64 CGO_ENABLED=0 GO111MODULE=on go build $(LDFLAGS) -o $@
 
-.PHONY: clean all
+.PHONY: clean all linux

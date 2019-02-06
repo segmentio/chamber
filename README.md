@@ -207,6 +207,10 @@ for more details.
 
 If you'd like to use a different region for chamber without changing `AWS_REGION`, you can use `CHAMBER_AWS_REGION` to override just for chamber.
 
+### Custom SSM Endpoint
+
+If you'd like to use a custom SSM endpoint for chamber, you can use `CHAMBER_AWS_SSM_ENDPOINT` to override AWS default URL.
+
 ## S3 Backend (experimental)
 
 By default, chamber store secrets in AWS Parameter Store.  We now also provide an experimental S3 backend for storing secrets in S3 instead.

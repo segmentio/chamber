@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
 	"github.com/stretchr/testify/assert"
@@ -320,6 +321,26 @@ func TestNewSSMStore(t *testing.T) {
 		assert.Equal(t, "us-west-1", aws.StringValue(s.svc.(*ssm.SSM).Config.Region))
 
 		os.Unsetenv("AWS_REGION")
+	})
+
+	t.Run("Should use CHAMBER_AWS_SSM_ENDPOINT if set", func(t *testing.T) {
+		os.Setenv("CHAMBER_AWS_SSM_ENDPOINT", "mycustomendpoint")
+
+		s, err := NewSSMStore(1)
+		assert.Nil(t, err)
+		endpoint, err := s.svc.(*ssm.SSM).Config.EndpointResolver.EndpointFor(endpoints.SsmServiceID, endpoints.UsWest2RegionID)
+		assert.Nil(t, err)
+		assert.Equal(t, "mycustomendpoint", endpoint.URL)
+
+		os.Unsetenv("CHAMBER_AWS_SSM_ENDPOINT")
+	})
+
+	t.Run("Should use default AWS SSM endpoint if CHAMBER_AWS_SSM_ENDPOINT not set", func(t *testing.T) {
+		s, err := NewSSMStore(1)
+		assert.Nil(t, err)
+		endpoint, err := s.svc.(*ssm.SSM).Config.EndpointResolver.EndpointFor(endpoints.SsmServiceID, endpoints.UsWest2RegionID)
+		assert.Nil(t, err)
+		assert.Equal(t, "https://ssm.us-west-2.amazonaws.com", endpoint.URL)
 	})
 
 }

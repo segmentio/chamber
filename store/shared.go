@@ -5,15 +5,28 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/session"
 )
 
 const (
-	RegionEnvVar = "CHAMBER_AWS_REGION"
+	RegionEnvVar            = "CHAMBER_AWS_REGION"
+	CustomSSMEndpointEnvVar = "CHAMBER_AWS_SSM_ENDPOINT"
 )
 
 func getSession(numRetries int) (*session.Session, *string, error) {
 	var region *string
+
+	endpointResolver := func(service, region string, optFns ...func(*endpoints.Options)) (endpoints.ResolvedEndpoint, error) {
+		customSsmEndpoint, ok := os.LookupEnv(CustomSSMEndpointEnvVar)
+		if ok {
+			return endpoints.ResolvedEndpoint{
+				URL: customSsmEndpoint,
+			}, nil
+		}
+
+		return endpoints.DefaultResolver().EndpointFor(service, region, optFns...)
+	}
 
 	if regionOverride, ok := os.LookupEnv(RegionEnvVar); ok {
 		region = aws.String(regionOverride)
@@ -21,8 +34,9 @@ func getSession(numRetries int) (*session.Session, *string, error) {
 	retSession, err := session.NewSessionWithOptions(
 		session.Options{
 			Config: aws.Config{
-				Region:     region,
-				MaxRetries: aws.Int(numRetries),
+				Region:           region,
+				MaxRetries:       aws.Int(numRetries),
+				EndpointResolver: endpoints.ResolverFunc(endpointResolver),
 			},
 			SharedConfigState: session.SharedConfigEnable,
 		},

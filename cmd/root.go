@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"net/url"
 	"os"
 	"regexp"
 	"strings"
@@ -23,8 +22,9 @@ var (
 	numRetries     int
 	chamberVersion string
 	// one of *Backend consts
-	backend     string
-	backendFlag string
+	backend             string
+	backendFlag         string
+	backendS3BucketFlag string
 
 	analyticsEnabled  bool
 	analyticsWriteKey string
@@ -46,8 +46,7 @@ const (
 	S3Backend   = "S3"
 
 	BackendEnvVar = "CHAMBER_SECRET_BACKEND"
-	// deprecated
-	BucketEnvVar = "CHAMBER_S3_BUCKET"
+	BucketEnvVar  = "CHAMBER_S3_BUCKET"
 )
 
 var Backends = []string{SSMBackend, S3Backend, NullBackend}
@@ -68,8 +67,9 @@ func init() {
 		`Backend to use; AKA $CHAMBER_SECRET_BACKEND
 	null: no-op
 	ssm: SSM Parameter Store
-	s3://<bucket>: S3, using <bucket>`,
+	s3: S3; requires --backend-s3-bucket`,
 	)
+	RootCmd.PersistentFlags().StringVarP(&backendS3BucketFlag, "backend-s3-bucket", "", "", "bucket for S3 backend; AKA $CHAMBER_S3_BUCKET")
 }
 
 // Execute adds all child commands to the root command sets flags appropriately.
@@ -111,33 +111,26 @@ func validateKey(key string) error {
 }
 
 func getSecretStore() (store.Store, error) {
-	var backendURL string
+	// env var > flag > flag default
 	if backendEnvVarValue := os.Getenv(BackendEnvVar); backendEnvVarValue != "" {
-		backendURL = backendEnvVarValue
+		backend = backendEnvVarValue
 	} else {
-		backendURL = backendFlag
+		backend = backendFlag
 	}
-
-	// normalize to URL
-	// null -> null://
-	if !strings.Contains(backendURL, "://") {
-		backendURL += "://"
-	}
-	backendURLParsed, err := url.Parse(backendURL)
-	if err != nil {
-		return nil, fmt.Errorf("Couldn't parse backend %s as url: %s", backendURL, err.Error())
-	}
+	backend = strings.ToUpper(backend)
 
 	var s store.Store
-	// set global for analytics
-	backend = strings.ToUpper(backendURLParsed.Scheme)
+	var err error
+
 	switch backend {
 	case NullBackend:
 		s = store.NewNullStore()
 	case S3Backend:
-		bucket := os.Getenv(BucketEnvVar)
-		if bucket == "" {
-			bucket = backendURLParsed.Host
+		var bucket string
+		if bucketEnvVarValue := os.Getenv(BucketEnvVar); bucketEnvVarValue != "" {
+			bucket = bucketEnvVarValue
+		} else {
+			bucket = backendS3BucketFlag
 		}
 		if bucket == "" {
 			return nil, errors.New("Must set bucket for s3 backend")
@@ -146,7 +139,7 @@ func getSecretStore() (store.Store, error) {
 	case SSMBackend:
 		s, err = store.NewSSMStore(numRetries)
 	default:
-		return nil, fmt.Errorf("invalid backend `%s`", backendURLParsed.Scheme)
+		return nil, fmt.Errorf("invalid backend `%s`", backend)
 	}
 	return s, err
 }

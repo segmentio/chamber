@@ -32,7 +32,7 @@ var (
 )
 
 func init() {
-	exportCmd.Flags().StringVarP(&exportFormat, "format", "f", "json", "Output format (json, java-properties, csv, tsv, dotenv)")
+	exportCmd.Flags().StringVarP(&exportFormat, "format", "f", "json", "Output format (json, java-properties, csv, tsv, dotenv, tfvars)")
 	exportCmd.Flags().StringVarP(&exportOutput, "output-file", "o", "", "Output file (default is standard output)")
 	RootCmd.AddCommand(exportCmd)
 }
@@ -97,6 +97,8 @@ func runExport(cmd *cobra.Command, args []string) error {
 		err = exportAsTsv(params, w)
 	case "dotenv":
 		err = exportAsEnvFile(params, w)
+	case "tfvars":
+		err = exportAsTfvars(params, w)
 	default:
 		err = errors.Errorf("Unsupported export format: %s", exportFormat)
 	}
@@ -116,6 +118,15 @@ func exportAsEnvFile(params map[string]string, w io.Writer) error {
 		key := strings.ToUpper(k)
 		key = strings.Replace(key, "-", "_", -1)
 		w.Write([]byte(fmt.Sprintf(`%s="%s"`+"\n", key, doubleQuoteEscape(params[k]))))
+	}
+	return nil
+}
+
+func exportAsTfvars(params map[string]string, w io.Writer) error {
+	// Terraform Variables is like dotenv, but removes the TF_VAR and keeps lowercase
+	for _, k := range sortedKeys(params) {
+		key := strings.TrimPrefix(k, "tf_var_")
+		w.Write([]byte(fmt.Sprintf(`%s = "%s"`+"\n", key, doubleQuoteEscape(params[k]))))
 	}
 	return nil
 }

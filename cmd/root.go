@@ -111,8 +111,8 @@ func validateKey(key string) error {
 }
 
 func getSecretStore() (store.Store, error) {
-	// env var > flag > flag default
-	if backendEnvVarValue := os.Getenv(BackendEnvVar); backendEnvVarValue != "" {
+	rootPflags := RootCmd.PersistentFlags()
+	if backendEnvVarValue := os.Getenv(BackendEnvVar); !rootPflags.Changed("backend") && backendEnvVarValue != "" {
 		backend = backendEnvVarValue
 	} else {
 		backend = backendFlag
@@ -127,7 +127,7 @@ func getSecretStore() (store.Store, error) {
 		s = store.NewNullStore()
 	case S3Backend:
 		var bucket string
-		if bucketEnvVarValue := os.Getenv(BucketEnvVar); bucketEnvVarValue != "" {
+		if bucketEnvVarValue := os.Getenv(BucketEnvVar); !rootPflags.Changed("backend-s3-bucket") && bucketEnvVarValue != "" {
 			bucket = bucketEnvVarValue
 		} else {
 			bucket = backendS3BucketFlag

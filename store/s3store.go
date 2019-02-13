@@ -178,6 +178,10 @@ func (s *S3Store) Read(id SecretId, version int) (Secret, error) {
 	}, nil
 }
 
+func (s *S3Store) ListServices(service string, includeSecretName bool) ([]string, error) {
+	return nil, fmt.Errorf("S3 Backend is experimental and does not implement this command")
+}
+
 func (s *S3Store) List(service string, includeValues bool) ([]Secret, error) {
 	index, err := s.readLatest(service)
 	if err != nil {

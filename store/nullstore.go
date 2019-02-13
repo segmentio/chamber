@@ -20,6 +20,10 @@ func (s *NullStore) Read(id SecretId, version int) (Secret, error) {
 	return Secret{}, errors.New("Not implemented for Null Store")
 }
 
+func (s *NullStore) ListServices(service string, includeSecretNames bool) ([]string, error) {
+	return nil, nil
+}
+
 func (s *NullStore) List(service string, includeValues bool) ([]Secret, error) {
 	return []Secret{}, nil
 }

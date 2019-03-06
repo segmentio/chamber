@@ -215,13 +215,13 @@ If you'd like to use a custom SSM endpoint for chamber, you can use `CHAMBER_AWS
 
 By default, chamber store secrets in AWS Parameter Store.  We now also provide an experimental S3 backend for storing secrets in S3 instead.
 
-To configure chamber to use the S3 backend, set `CHAMBER_SECRET_BACKEND` to `S3`, and `CHAMBER_S3_BUCKET` to an existing S3 bucket.  Preferably, this bucket should reject uploads that do not set the server side encryption header ([see this doc for details how](https://aws.amazon.com/blogs/security/how-to-prevent-uploads-of-unencrypted-objects-to-amazon-s3/))
+To configure chamber to use the S3 backend, use `chamber -b s3 --backend-s3-bucket=mybucket`.  Preferably, this bucket should reject uploads that do not set the server side encryption header ([see this doc for details how](https://aws.amazon.com/blogs/security/how-to-prevent-uploads-of-unencrypted-objects-to-amazon-s3/))
 
 This feature is experimental, and not currently meant for production work.
 
 ## Null Backend (experimental)
 
-If it's preferred to not use any backend at all, set `CHAMBER_SECRET_BACKEND` to `NULL`. Doing so will forward existing ENV variables as if Chamber is not in between.
+If it's preferred to not use any backend at all, use `chamber -b null`. Doing so will forward existing ENV variables as if Chamber is not in between.
 
 This feature is experimental, and not currently meant for production work.
 

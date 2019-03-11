@@ -44,6 +44,10 @@ Stale issues get the `stale` label.
 - `repro hard` (issue): difficult to repro without specific setup. often of third party software. We'll make an effort to help narrow in on the problem, but probably can't guarantee we'll be able to make a definitive judgment on whether it's a real bug.
 - `question`: we'll make an effort to answer your question, but won't guarantee we can solve it.
 
+# Commit messages
+
+We use [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0-beta.3/) to help generate changelogs and do semver releases. We usually do Squash and Merge to PRs, so PR authors are recommended to use the Conventional Commits format in their PR title.
+
 # Anti-contribution
 
 - Obviously, anything that violates our [Code of Conduct](CODE_OF_CONDUCT.md)

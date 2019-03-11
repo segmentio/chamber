@@ -8,6 +8,7 @@ import (
 	"os"
 	"sort"
 	"time"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -65,6 +66,18 @@ func NewS3Store(numRetries int) (*S3Store, error) {
 	}
 
 	return NewS3StoreWithBucket(numRetries, bucket)
+}
+
+func(s *S3Store) KMSKey() string {
+	fromEnv, ok := os.LookupEnv("CHAMBER_KMS_KEY_ALIAS")
+	if !ok {
+		return DefaultKeyID
+	}
+	if !strings.HasPrefix(fromEnv, "alias/") {
+		return fmt.Sprintf("alias/%s", fromEnv)
+	}
+
+	return fromEnv
 }
 
 func NewS3StoreWithBucket(numRetries int, bucket string) (*S3Store, error) {
@@ -134,7 +147,8 @@ func (s *S3Store) Write(id SecretId, value string) error {
 
 	putObjectInput := &s3.PutObjectInput{
 		Bucket:               aws.String(s.bucket),
-		ServerSideEncryption: aws.String(s3.ServerSideEncryptionAes256),
+		ServerSideEncryption: aws.String(s3.ServerSideEncryptionAwsKms),
+		SSEKMSKeyId: 		  aws.String(s.KMSKey()),
 		Key:                  aws.String(objPath),
 		Body:                 bytes.NewReader(contents),
 	}
@@ -355,7 +369,8 @@ func (s *S3Store) readObjectById(id SecretId) (secretObject, bool, error) {
 func (s *S3Store) puts3raw(path string, contents []byte) error {
 	putObjectInput := &s3.PutObjectInput{
 		Bucket:               aws.String(s.bucket),
-		ServerSideEncryption: aws.String(s3.ServerSideEncryptionAes256),
+		ServerSideEncryption: aws.String(s3.ServerSideEncryptionAwsKms),
+		SSEKMSKeyId: 		  aws.String(s.KMSKey()),
 		Key:                  aws.String(path),
 		Body:                 bytes.NewReader(contents),
 	}

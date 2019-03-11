@@ -21,8 +21,6 @@ const (
 	MaximumVersions = 100
 	// deprecated
 	BucketEnvVar = "CHAMBER_S3_BUCKET"
-
-	latestObjectName = "__latest.json"
 )
 
 // secretObject is the serialized format for storing secrets
@@ -380,7 +378,7 @@ func (s *S3Store) puts3raw(path string, contents []byte) error {
 }
 
 func (s *S3Store) readLatest(service string) (latest, error) {
-	path := fmt.Sprintf("%s/%s", service, latestObjectName)
+	path := fmt.Sprintf("%s/%s_latest.json", service, s.latestFileKeyNameByKMSKey())
 
 	getObjectInput := &s3.GetObjectInput{
 		Bucket: aws.String(s.bucket),
@@ -411,8 +409,12 @@ func (s *S3Store) readLatest(service string) (latest, error) {
 	return index, nil
 }
 
+func (s *S3Store) latestFileKeyNameByKMSKey() string {
+	return strings.Replace(s.KMSKey(), "/", "_", -1)
+}
+
 func (s *S3Store) writeLatest(service string, index latest) error {
-	path := fmt.Sprintf("%s/%s", service, latestObjectName)
+	path := fmt.Sprintf("%s/%s_latest.json", service, s.latestFileKeyNameByKMSKey())
 
 	raw, err := json.Marshal(index)
 	if err != nil {

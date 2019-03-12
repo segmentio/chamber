@@ -22,7 +22,7 @@ Issues should be triaged within 1 week, where triaging generally means figuring 
 
 Pull requests (that have had design approval in an issue) should expect responses within 3 days.
 
-If you're finding we aren't abiding by these timelines, feel free to @-mention someone in [CODEOWNERS](.github/CODEOWNERS) to get our attention. If you're the shy type, don't worry that you're bothering us; you're helping us stick the commitments we've made :)
+If you're finding we aren't abiding by these timelines, feel free to @-mention someone in [CODEOWNERS](.github/CODEOWNERS) to get our attention. If you're the shy type, don't worry that you're bothering us; you're helping us stick to the commitments we've made :)
 
 # Staleness
 

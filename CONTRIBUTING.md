@@ -51,5 +51,6 @@ We use [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0-beta
 # Anti-contribution
 
 - Obviously, anything that violates our [Code of Conduct](CODE_OF_CONDUCT.md)
-- Noisy comments: "me too!" (:thumbsup: instead) or non-constructive complaining
+- Noisy comments: "me too!", or "here's my setup" when the bug's already been located. Use a :thumbsup: emoji on the issue/PR instead, since we can count these.
+- Non-constructive complaining.
 - Feature PRs without a discussion issue: it's important we agree the feature is in-scope before anyone wastes time writing code or reviewing

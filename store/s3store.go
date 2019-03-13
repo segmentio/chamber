@@ -15,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -111,6 +112,12 @@ func (s *S3Store) Write(id SecretId, value string) error {
 	index, err := s.readLatest(id.Service)
 	if err != nil {
 		return err
+	}
+
+	if val, ok := index.Latest[id.Key]; ok {
+		if val.KMSAlias != s.KMSKey() {
+			return errors.New("You're attempting to write a Chamber key with a different KMS Key to the one it currently uses. Instead delete the existing chamber key using the old KMS key and write a the secret using the new KMS Key.")
+		}
 	}
 
 	objPath := getObjectPath(id)
@@ -292,6 +299,12 @@ func (s *S3Store) Delete(id SecretId) error {
 	index, err := s.readLatest(id.Service)
 	if err != nil {
 		return err
+	}
+
+	if val, ok := index.Latest[id.Key]; ok {
+		if val.KMSAlias != s.KMSKey() {
+			return errors.New("You're attempting to delete a Chamber key with a different KMS Key to the one it currently uses. Please use the current KMS Key.")
+		}
 	}
 
 	if _, ok := index.Latest[id.Key]; ok {

@@ -45,7 +45,13 @@ type secretVersion struct {
 // in a single s3 object allows us to use a single s3 GetObject
 // for ListRaw (and thus chamber exec).
 type latest struct {
-	Latest map[string]string `json:"latest"`
+	Latest map[string]LatestValue `json:"latest"`
+}
+
+type LatestValue struct {
+	Version   int       `json:"version"`
+	Value     string    `json:"value"`
+	KMSAlias  string    `json:"KMSAlias"`
 }
 
 var _ Store = &S3Store{}
@@ -146,7 +152,7 @@ func (s *S3Store) Write(id SecretId, value string) error {
 	putObjectInput := &s3.PutObjectInput{
 		Bucket:               aws.String(s.bucket),
 		ServerSideEncryption: aws.String(s3.ServerSideEncryptionAwsKms),
-		SSEKMSKeyId: 		  aws.String(s.KMSKey()),
+		SSEKMSKeyId:          aws.String(s.KMSKey()),
 		Key:                  aws.String(objPath),
 		Body:                 bytes.NewReader(contents),
 	}
@@ -157,7 +163,11 @@ func (s *S3Store) Write(id SecretId, value string) error {
 		return err
 	}
 
-	index.Latest[id.Key] = value
+	index.Latest[id.Key] = LatestValue {
+		Version: thisVersion,
+		Value: value,
+		KMSAlias: s.KMSKey(),
+	}
 	return s.writeLatest(id.Service, index)
 }
 
@@ -241,7 +251,7 @@ func (s *S3Store) ListRaw(service string) ([]RawSecret, error) {
 	for key, value := range index.Latest {
 		s := RawSecret{
 			Key:   fmt.Sprintf("/%s/%s", service, key),
-			Value: value,
+			Value: value.Value,
 		}
 		secrets = append(secrets, s)
 
@@ -368,7 +378,7 @@ func (s *S3Store) puts3raw(path string, contents []byte) error {
 	putObjectInput := &s3.PutObjectInput{
 		Bucket:               aws.String(s.bucket),
 		ServerSideEncryption: aws.String(s3.ServerSideEncryptionAwsKms),
-		SSEKMSKeyId: 		  aws.String(s.KMSKey()),
+		SSEKMSKeyId:          aws.String(s.KMSKey()),
 		Key:                  aws.String(path),
 		Body:                 bytes.NewReader(contents),
 	}
@@ -377,20 +387,19 @@ func (s *S3Store) puts3raw(path string, contents []byte) error {
 	return err
 }
 
-func (s *S3Store) readLatest(service string) (latest, error) {
-	path := fmt.Sprintf("%s/%s_latest.json", service, s.latestFileKeyNameByKMSKey())
-
+func (s *S3Store) readLatestFile(path string) (latest, error) {
 	getObjectInput := &s3.GetObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(path),
 	}
 
 	resp, err := s.svc.GetObject(getObjectInput)
+
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			if aerr.Code() == s3.ErrCodeNoSuchKey {
 				// Index doesn't exist yet, return an empty index
-				return latest{Latest: map[string]string{}}, nil
+				return latest{Latest: map[string]LatestValue{}}, nil
 			}
 		}
 		return latest{}, err
@@ -409,12 +418,56 @@ func (s *S3Store) readLatest(service string) (latest, error) {
 	return index, nil
 }
 
+func (s *S3Store) readLatest(service string) (latest, error) {
+	// Create an empty latest, this will be used to merge together the various KMS Latest Files
+	latestResult := latest{Latest: map[string]LatestValue{}}
+
+	// List all the files that are prefixed with kms and use them as latest.json files for that KMS Key.
+	params := &s3.ListObjectsInput{
+		Bucket:     aws.String(s.bucket),
+		Prefix:     aws.String(fmt.Sprintf("%s/kms", service)),
+	}
+
+	err := s.svc.ListObjectsPages(params, func(page *s3.ListObjectsOutput, lastPage bool) bool {
+		for index := range page.Contents {
+			result, _ := s.readLatestFile(*page.Contents[index].Key)
+
+			// Check if the chamber key already exists in the index.Latest map.
+			// Prefer the most recent version.
+			for k, v := range result.Latest {
+				if val, ok := latestResult.Latest[k]; ok {
+					if(val.Version > v.Version) {
+						latestResult.Latest[k] = val
+					} else {
+						latestResult.Latest[k] = v
+					}
+				} else {
+					latestResult.Latest[k] = v
+				}
+			}
+		}
+
+		return !lastPage
+	})
+
+	if err != nil {
+		return latestResult, err
+	}
+
+	return latestResult, nil
+}
+
 func (s *S3Store) latestFileKeyNameByKMSKey() string {
-	return strings.Replace(s.KMSKey(), "/", "_", -1)
+	return fmt.Sprintf("kms_%s__latest.json", strings.Replace(s.KMSKey(), "/", "_", -1))
 }
 
 func (s *S3Store) writeLatest(service string, index latest) error {
-	path := fmt.Sprintf("%s/%s_latest.json", service, s.latestFileKeyNameByKMSKey())
+	path := fmt.Sprintf("%s/%s", service, s.latestFileKeyNameByKMSKey())
+	for k,v := range index.Latest {
+		if v.KMSAlias != s.KMSKey() {
+			delete(index.Latest, k)
+		}
+	}
 
 	raw, err := json.Marshal(index)
 	if err != nil {

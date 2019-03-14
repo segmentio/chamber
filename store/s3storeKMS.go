@@ -424,14 +424,18 @@ func (s *S3KMSStore) readLatest(service string) (LatestIndexFile, error) {
 		Prefix: aws.String(fmt.Sprintf("%s/kms", service)),
 	}
 
+	var paginationError error
+
 	err := s.svc.ListObjectsPages(params, func(page *s3.ListObjectsOutput, lastPage bool) bool {
 		for index := range page.Contents {
 			key_name := *page.Contents[index].Key
 			result, err := s.readLatestFile(key_name)
+
 			if err != nil {
-				// Panic if we encounter an error reading the index (keeping in mind it handles AccessDenied).
-				panic(fmt.Sprintf("Error reading latest index for KMS Key (%s): %s", key_name, err))
+				paginationError = errors.New(fmt.Sprintf("Error reading latest index for KMS Key (%s): %s", key_name, err))
+				return false;
 			}
+
 			// Check if the chamber key already exists in the index.Latest map.
 			// Prefer the most recent version.
 			for k, v := range result.Latest {
@@ -449,6 +453,10 @@ func (s *S3KMSStore) readLatest(service string) (LatestIndexFile, error) {
 
 		return !lastPage
 	})
+
+	if paginationError != nil {
+		return latestResult, paginationError
+	}
 
 	if err != nil {
 		return latestResult, err

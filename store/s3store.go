@@ -410,6 +410,12 @@ func (s *S3Store) readLatestFile(path string) (latest, error) {
 
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
+			if aerr.Code() == "AccessDenied" {
+				// If we're not able to read the latest index for a KMS Key then proceed like it doesn't exist.
+				// We do this because in a chamber secret folder there might be other secrets written with a KMS Key that you don't have access to.
+				return latest{Latest: map[string]LatestValue{}}, nil
+			}
+
 			if aerr.Code() == s3.ErrCodeNoSuchKey {
 				// Index doesn't exist yet, return an empty index
 				return latest{Latest: map[string]LatestValue{}}, nil
@@ -443,8 +449,12 @@ func (s *S3Store) readLatest(service string) (latest, error) {
 
 	err := s.svc.ListObjectsPages(params, func(page *s3.ListObjectsOutput, lastPage bool) bool {
 		for index := range page.Contents {
-			result, _ := s.readLatestFile(*page.Contents[index].Key)
-
+			key_name := *page.Contents[index].Key
+			result, err := s.readLatestFile(key_name)
+			if err != nil {
+				// Panic if we encounter an error reading the index (keeping in mind it handles AccessDenied).
+				panic(fmt.Sprintf("Error reading latest index for KMS Key (%s): %s", key_name, err))
+			}
 			// Check if the chamber key already exists in the index.Latest map.
 			// Prefer the most recent version.
 			for k, v := range result.Latest {

@@ -219,6 +219,29 @@ To configure chamber to use the S3 backend, use `chamber -b s3 --backend-s3-buck
 
 This feature is experimental, and not currently meant for production work.
 
+### S3 Backend using KMS Key Encryption (Experimental)
+
+This backend is similar to the S3 Backend but uses KMS Key Encryption to encrypt your documents at rest, similar to the SSM Backend which encrypts your secrets at rest. You can read how S3 Encrypts documents with KMS [here](https://docs.aws.amazon.com/kms/latest/developerguide/services-s3.html).
+
+The highlights of SSE-KMS are:
+- You can choose to create and manage encryption keys yourself, or you can choose to use your default service key uniquely generated on a customer by service by region level.
+- The ETag in the response is not the MD5 of the object data.
+- The data keys used to encrypt your data are also encrypted and stored alongside the data they protect.
+- Auditable master keys can be created, rotated, and disabled from the AWS KMS console.
+- The security controls in AWS KMS can help you meet encryption-related compliance requirements.
+Source https://docs.aws.amazon.com/AmazonS3/latest/dev/UsingKMSEncryption.html
+
+To configure chamber to use the S3 backend, use `chamber -b s3-kms --backend-s3-bucket=mybucket`.  You must also supply an environment variable of the KMS Key Alias to use CHAMBER_KMS_KEY_ALIAS, by default "alias/parameter_store_key" will be used.
+
+Preferably, this bucket should reject uploads that do not set the server side encryption header ([see this doc for details how](https://aws.amazon.com/blogs/security/how-to-prevent-uploads-of-unencrypted-objects-to-amazon-s3/))
+
+
+When changing secrets between KMS Keys, you must first delete the Chamber secret with the existing KMS Key, then write it again with new KMS Key.
+
+If services contain multiple KMS Keys, `chamber list` and `chamber exec` will only show Chamber secrets encrypted with KMS Keys you have access to.
+
+This feature is experimental, and not currently meant for production work.
+
 ## Null Backend (experimental)
 
 If it's preferred to not use any backend at all, use `chamber -b null`. Doing so will forward existing ENV variables as if Chamber is not in between.

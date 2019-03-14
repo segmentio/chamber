@@ -116,7 +116,7 @@ func (s *S3Store) Write(id SecretId, value string) error {
 
 	if val, ok := index.Latest[id.Key]; ok {
 		if val.KMSAlias != s.KMSKey() {
-			return errors.New("You're attempting to write a Chamber key with a different KMS Key to the one it currently uses. Instead delete the existing chamber key using the old KMS key and write a the secret using the new KMS Key.")
+			return errors.New(fmt.Sprintf("You're attempting to write a Chamber key with a different KMS Key to the one it currently uses. Instead delete the existing chamber key using the current KMS key (%s) and write a the secret using the new KMS Key.", val.KMSAlias))
 		}
 	}
 
@@ -303,7 +303,7 @@ func (s *S3Store) Delete(id SecretId) error {
 
 	if val, ok := index.Latest[id.Key]; ok {
 		if val.KMSAlias != s.KMSKey() {
-			return errors.New("You're attempting to delete a Chamber key with a different KMS Key to the one it currently uses. Please use the current KMS Key.")
+			return errors.New(fmt.Sprintf("You're attempting to delete a Chamber key with a different KMS Key to the one it currently uses. Please use the current KMS Key (%s).", val.KMSAlias))
 		}
 	}
 

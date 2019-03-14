@@ -421,7 +421,7 @@ func (s *S3KMSStore) readLatest(service string) (LatestIndexFile, error) {
 	// List all the files that are prefixed with kms and use them as latest.json files for that KMS Key.
 	params := &s3.ListObjectsInput{
 		Bucket: aws.String(s.bucket),
-		Prefix: aws.String(fmt.Sprintf("%s/kms", service)),
+		Prefix: aws.String(fmt.Sprintf("%s/__kms", service)),
 	}
 
 	var paginationError error
@@ -466,7 +466,7 @@ func (s *S3KMSStore) readLatest(service string) (LatestIndexFile, error) {
 }
 
 func (s *S3KMSStore) latestFileKeyNameByKMSKey() string {
-	return fmt.Sprintf("kms_%s__latest.json", strings.Replace(s.KMSKey(), "/", "_", -1))
+	return fmt.Sprintf("__kms_%s__latest.json", strings.Replace(s.KMSKey(), "/", "_", -1))
 }
 
 func (s *S3KMSStore) writeLatest(service string, index LatestIndexFile) error {

@@ -44,12 +44,13 @@ const (
 	NullBackend = "NULL"
 	SSMBackend  = "SSM"
 	S3Backend   = "S3"
+	S3KMSBackend   = "S3-KMS"
 
 	BackendEnvVar = "CHAMBER_SECRET_BACKEND"
 	BucketEnvVar  = "CHAMBER_S3_BUCKET"
 )
 
-var Backends = []string{SSMBackend, S3Backend, NullBackend}
+var Backends = []string{SSMBackend, S3Backend, NullBackend, S3KMSBackend}
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
@@ -67,7 +68,8 @@ func init() {
 		`Backend to use; AKA $CHAMBER_SECRET_BACKEND
 	null: no-op
 	ssm: SSM Parameter Store
-	s3: S3; requires --backend-s3-bucket`,
+	s3: S3; requires --backend-s3-bucket
+	s3-kms: S3 using AWS-KMS encryption; requires --backend-s3-bucket and CHAMBER_KMS_KEY_ALIAS set (if you want to write or delete keys).`,
 	)
 	RootCmd.PersistentFlags().StringVarP(&backendS3BucketFlag, "backend-s3-bucket", "", "", "bucket for S3 backend; AKA $CHAMBER_S3_BUCKET")
 }
@@ -136,6 +138,17 @@ func getSecretStore() (store.Store, error) {
 			return nil, errors.New("Must set bucket for s3 backend")
 		}
 		s, err = store.NewS3StoreWithBucket(numRetries, bucket)
+	case S3KMSBackend:
+		var bucket string
+		if bucketEnvVarValue := os.Getenv(BucketEnvVar); !rootPflags.Changed("backend-s3-bucket") && bucketEnvVarValue != "" {
+			bucket = bucketEnvVarValue
+		} else {
+			bucket = backendS3BucketFlag
+		}
+		if bucket == "" {
+			return nil, errors.New("Must set bucket for s3 backend")
+		}
+		s, err = store.NewS3KMSStoreWithBucket(numRetries, bucket)
 	case SSMBackend:
 		s, err = store.NewSSMStore(numRetries)
 	default:

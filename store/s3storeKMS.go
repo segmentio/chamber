@@ -7,8 +7,8 @@ import (
 	"io/ioutil"
 	"os"
 	"sort"
-	"time"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -27,9 +27,9 @@ type LatestIndexFile struct {
 }
 
 type LatestValue struct {
-	Version   int       `json:"version"`
-	Value     string    `json:"value"`
-	KMSAlias  string    `json:"KMSAlias"`
+	Version  int    `json:"version"`
+	Value    string `json:"value"`
+	KMSAlias string `json:"KMSAlias"`
 }
 
 var _ Store = &S3KMSStore{}
@@ -50,7 +50,7 @@ func NewS3KMSStore(numRetries int) (*S3KMSStore, error) {
 	return NewS3KMSStoreWithBucket(numRetries, bucket)
 }
 
-func(s *S3KMSStore) KMSKey() string {
+func (s *S3KMSStore) KMSKey() string {
 	fromEnv, ok := os.LookupEnv("CHAMBER_KMS_KEY_ALIAS")
 	if !ok {
 		return DefaultKeyID
@@ -147,9 +147,9 @@ func (s *S3KMSStore) Write(id SecretId, value string) error {
 		return err
 	}
 
-	index.Latest[id.Key] = LatestValue {
-		Version: thisVersion,
-		Value: value,
+	index.Latest[id.Key] = LatestValue{
+		Version:  thisVersion,
+		Value:    value,
 		KMSAlias: s.KMSKey(),
 	}
 	return s.writeLatest(id.Service, index)
@@ -420,8 +420,8 @@ func (s *S3KMSStore) readLatest(service string) (LatestIndexFile, error) {
 
 	// List all the files that are prefixed with kms and use them as latest.json files for that KMS Key.
 	params := &s3.ListObjectsInput{
-		Bucket:     aws.String(s.bucket),
-		Prefix:     aws.String(fmt.Sprintf("%s/kms", service)),
+		Bucket: aws.String(s.bucket),
+		Prefix: aws.String(fmt.Sprintf("%s/kms", service)),
 	}
 
 	err := s.svc.ListObjectsPages(params, func(page *s3.ListObjectsOutput, lastPage bool) bool {
@@ -436,7 +436,7 @@ func (s *S3KMSStore) readLatest(service string) (LatestIndexFile, error) {
 			// Prefer the most recent version.
 			for k, v := range result.Latest {
 				if val, ok := latestResult.Latest[k]; ok {
-					if(val.Version > v.Version) {
+					if val.Version > v.Version {
 						latestResult.Latest[k] = val
 					} else {
 						latestResult.Latest[k] = v
@@ -463,7 +463,7 @@ func (s *S3KMSStore) latestFileKeyNameByKMSKey() string {
 
 func (s *S3KMSStore) writeLatest(service string, index LatestIndexFile) error {
 	path := fmt.Sprintf("%s/%s", service, s.latestFileKeyNameByKMSKey())
-	for k,v := range index.Latest {
+	for k, v := range index.Latest {
 		if v.KMSAlias != s.KMSKey() {
 			delete(index.Latest, k)
 		}

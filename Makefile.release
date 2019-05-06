@@ -15,7 +15,9 @@ PACKAGECLOUD_DEB_DISTROS := \
 	debian/stretch \
 	ubuntu/trusty \
 	ubuntu/xenial \
-	ubuntu/bionic
+	ubuntu/bionic \
+	ubuntu/cosmic \
+	ubuntu/disco
 
 PACKAGECLOUD_RPM_DISTROS := \
 	fedora/27 \

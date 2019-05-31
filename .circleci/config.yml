@@ -63,7 +63,28 @@ jobs:
           root: .
           paths: ['dist/*']
 
-  publish:
+  publish-packagecloud:
+    docker:
+      - image: circleci/golang:1.11
+    working_directory: /go/src/github.com/segmentio/chamber
+    steps:
+      - checkout
+      - attach_workspace: { at: . }
+      - run:
+          name: Install tools
+          command: |
+            # this is all for package_cloud :/
+            sudo apt update -q 
+            sudo apt install -yq ruby ruby-dev build-essential
+            # fixes https://askubuntu.com/questions/872399/error-failed-to-build-gem-native-extension-when-trying-to-download-rubocop
+            sudo gem install rake
+            sudo make -f Makefile.tools package_cloud
+      - run:
+          name: Release
+          command: |
+            make -f Makefile.release publish-packagecloud
+
+  publish-github:
     docker:
       - image: circleci/golang:1.11
     working_directory: /go/src/github.com/segmentio/chamber
@@ -74,16 +95,10 @@ jobs:
           name: Install tools
           command: |
             make -f Makefile.tools github-release
-            # this is all for package_cloud :/
-            sudo apt update -q 
-            sudo apt install -yq ruby ruby-dev build-essential
-            # fixes https://askubuntu.com/questions/872399/error-failed-to-build-gem-native-extension-when-trying-to-download-rubocop
-            sudo gem install rake
-            sudo make -f Makefile.tools package_cloud
       - run:
           name: Release
           command: |
-            make -f Makefile.release publish
+            make -f Makefile.release publish-github
 
 workflows:
   version: 2
@@ -98,7 +113,19 @@ workflows:
           filters:
             tags:
               only: /.*/
-      - publish:
+      - publish-packagecloud:
+          context: packagecloud
+          requires:
+            - dist
+          filters:
+            # never publish from a branch event
+            branches:
+              ignore: /.*/
+            # release only on tag push events like vX[.Y.Z...][-whatever]
+            tags:
+              only: /v[0-9]+(\.[0-9]+)*(-[a-zA-Z0-9-]+)?/
+      - publish-github:
+          context: github-segmentcircle-oss-release
           requires:
             - dist
           filters:

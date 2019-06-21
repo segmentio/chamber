@@ -35,19 +35,10 @@ type LatestValue struct {
 var _ Store = &S3KMSStore{}
 
 type S3KMSStore struct {
+	S3Store
 	svc    s3iface.S3API
 	stsSvc *sts.STS
 	bucket string
-}
-
-// Deprecated; use NewS3KMSStoreWithBucket instead
-func NewS3KMSStore(numRetries int) (*S3KMSStore, error) {
-	bucket, ok := os.LookupEnv(BucketEnvVar)
-	if !ok {
-		return nil, fmt.Errorf("Must set %s for s3 backend", BucketEnvVar)
-	}
-
-	return NewS3KMSStoreWithBucket(numRetries, bucket)
 }
 
 func (s *S3KMSStore) KMSKey() string {

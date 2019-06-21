@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"sort"
 	"strings"
 	"time"
@@ -39,21 +38,10 @@ type S3KMSStore struct {
 	svc    s3iface.S3API
 	stsSvc *sts.STS
 	bucket string
+	kmsKeyAlias string
 }
 
-func (s *S3KMSStore) KMSKey() string {
-	fromEnv, ok := os.LookupEnv("CHAMBER_KMS_KEY_ALIAS")
-	if !ok {
-		return DefaultKeyID
-	}
-	if !strings.HasPrefix(fromEnv, "alias/") {
-		return fmt.Sprintf("alias/%s", fromEnv)
-	}
-
-	return fromEnv
-}
-
-func NewS3KMSStoreWithBucket(numRetries int, bucket string) (*S3KMSStore, error) {
+func NewS3KMSStore(numRetries int, bucket string, kmsKeyAlias string) (*S3KMSStore, error) {
 	session, region, err := getSession(numRetries)
 	if err != nil {
 		return nil, err
@@ -69,10 +57,15 @@ func NewS3KMSStoreWithBucket(numRetries int, bucket string) (*S3KMSStore, error)
 		Region:     region,
 	})
 
+	if kmsKeyAlias == "" {
+		kmsKeyAlias = DefaultKeyID
+	}
+
 	return &S3KMSStore{
 		svc:    svc,
 		stsSvc: stsSvc,
 		bucket: bucket,
+		kmsKeyAlias: kmsKeyAlias,
 	}, nil
 }
 
@@ -83,7 +76,7 @@ func (s *S3KMSStore) Write(id SecretId, value string) error {
 	}
 
 	if val, ok := index.Latest[id.Key]; ok {
-		if val.KMSAlias != s.KMSKey() {
+		if val.KMSAlias != s.kmsKeyAlias {
 			return errors.New(fmt.Sprintf("You're attempting to write a Chamber key with a different KMS Key to the one it currently uses. Instead delete the existing chamber key using the current KMS key (%s) and then write the secret using the new KMS Key.", val.KMSAlias))
 		}
 	}
@@ -127,7 +120,7 @@ func (s *S3KMSStore) Write(id SecretId, value string) error {
 	putObjectInput := &s3.PutObjectInput{
 		Bucket:               aws.String(s.bucket),
 		ServerSideEncryption: aws.String(s3.ServerSideEncryptionAwsKms),
-		SSEKMSKeyId:          aws.String(s.KMSKey()),
+		SSEKMSKeyId:          aws.String(s.kmsKeyAlias),
 		Key:                  aws.String(objPath),
 		Body:                 bytes.NewReader(contents),
 	}
@@ -141,7 +134,7 @@ func (s *S3KMSStore) Write(id SecretId, value string) error {
 	index.Latest[id.Key] = LatestValue{
 		Version:  thisVersion,
 		Value:    value,
-		KMSAlias: s.KMSKey(),
+		KMSAlias: s.kmsKeyAlias,
 	}
 	return s.writeLatest(id.Service, index)
 }
@@ -181,7 +174,7 @@ func (s *S3KMSStore) Delete(id SecretId) error {
 	}
 
 	if val, ok := index.Latest[id.Key]; ok {
-		if val.KMSAlias != s.KMSKey() {
+		if val.KMSAlias != s.kmsKeyAlias {
 			return errors.New(fmt.Sprintf("You're attempting to delete a Chamber key with a different KMS Key to the one it currently uses. Please use the current KMS Key (%s).", val.KMSAlias))
 		}
 	}
@@ -213,7 +206,7 @@ func (s *S3KMSStore) puts3raw(path string, contents []byte) error {
 	putObjectInput := &s3.PutObjectInput{
 		Bucket:               aws.String(s.bucket),
 		ServerSideEncryption: aws.String(s3.ServerSideEncryptionAwsKms),
-		SSEKMSKeyId:          aws.String(s.KMSKey()),
+		SSEKMSKeyId:          aws.String(s.kmsKeyAlias),
 		Key:                  aws.String(path),
 		Body:                 bytes.NewReader(contents),
 	}
@@ -311,13 +304,13 @@ func (s *S3KMSStore) readLatest(service string) (LatestIndexFile, error) {
 }
 
 func (s *S3KMSStore) latestFileKeyNameByKMSKey() string {
-	return fmt.Sprintf("__kms_%s__latest.json", strings.Replace(s.KMSKey(), "/", "_", -1))
+	return fmt.Sprintf("__kms_%s__latest.json", strings.Replace(s.kmsKeyAlias, "/", "_", -1))
 }
 
 func (s *S3KMSStore) writeLatest(service string, index LatestIndexFile) error {
 	path := fmt.Sprintf("%s/%s", service, s.latestFileKeyNameByKMSKey())
 	for k, v := range index.Latest {
-		if v.KMSAlias != s.KMSKey() {
+		if v.KMSAlias != s.kmsKeyAlias {
 			delete(index.Latest, k)
 		}
 	}

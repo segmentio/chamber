@@ -139,6 +139,95 @@ func (s *S3KMSStore) Write(id SecretId, value string) error {
 	return s.writeLatest(id.Service, index)
 }
 
+func (s *S3KMSStore) Read(id SecretId, version int) (Secret, error) {
+	obj, ok, err := s.readObjectById(id)
+	if err != nil {
+		return Secret{}, err
+	}
+
+	if !ok {
+		return Secret{}, ErrSecretNotFound
+	}
+
+	if version == -1 {
+		version = getLatestVersion(obj.Values)
+	}
+	val, ok := obj.Values[version]
+	if !ok {
+		return Secret{}, ErrSecretNotFound
+	}
+
+	return Secret{
+		Value: aws.String(val.Value),
+		Meta: SecretMetadata{
+			Created:   val.Created,
+			CreatedBy: val.CreatedBy,
+			Version:   val.Version,
+			Key:       obj.Key,
+		},
+	}, nil
+}
+
+func (s *S3KMSStore) List(service string, includeValues bool) ([]Secret, error) {
+	index, err := s.readLatest(service)
+	if err != nil {
+		return []Secret{}, err
+	}
+
+	secrets := []Secret{}
+	for key := range index.Latest {
+		obj, ok, err := s.readObjectById(SecretId{Service: service, Key: key})
+		if err != nil {
+			return []Secret{}, err
+		}
+		if !ok {
+			return []Secret{}, ErrSecretNotFound
+		}
+		version := getLatestVersion(obj.Values)
+
+		val, ok := obj.Values[version]
+		if !ok {
+			return []Secret{}, ErrSecretNotFound
+		}
+
+		s := Secret{
+			Meta: SecretMetadata{
+				Created:   val.Created,
+				CreatedBy: val.CreatedBy,
+				Version:   val.Version,
+				Key:       obj.Key,
+			},
+		}
+
+		if includeValues {
+			s.Value = &val.Value
+		}
+		secrets = append(secrets, s)
+
+	}
+
+	return secrets, nil
+}
+
+func (s *S3KMSStore) ListRaw(service string) ([]RawSecret, error) {
+	index, err := s.readLatest(service)
+	if err != nil {
+		return []RawSecret{}, err
+	}
+
+	secrets := []RawSecret{}
+	for key, value := range index.Latest {
+		s := RawSecret{
+			Key:   fmt.Sprintf("/%s/%s", service, key),
+			Value: value.Value,
+		}
+		secrets = append(secrets, s)
+
+	}
+
+	return secrets, nil
+}
+
 func (s *S3KMSStore) History(id SecretId) ([]ChangeEvent, error) {
 	obj, ok, err := s.readObjectById(id)
 	if err != nil {
@@ -200,6 +289,63 @@ func (s *S3KMSStore) getCurrentUser() (string, error) {
 	}
 
 	return *resp.Arn, nil
+}
+
+func (s *S3KMSStore) deleteObjectById(id SecretId) error {
+	path := getObjectPath(id)
+	return s.deleteObject(path)
+}
+
+func (s *S3KMSStore) deleteObject(path string) error {
+	deleteObjectInput := &s3.DeleteObjectInput{
+		Bucket: aws.String(s.bucket),
+		Key:    aws.String(path),
+	}
+
+	_, err := s.svc.DeleteObject(deleteObjectInput)
+	return err
+}
+
+func (s *S3KMSStore) readObject(path string) (secretObject, bool, error) {
+	getObjectInput := &s3.GetObjectInput{
+		Bucket: aws.String(s.bucket),
+		Key:    aws.String(path),
+	}
+
+	resp, err := s.svc.GetObject(getObjectInput)
+	if err != nil {
+		// handle aws errors
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case s3.ErrCodeNoSuchBucket:
+				return secretObject{}, false, err
+			case s3.ErrCodeNoSuchKey:
+				return secretObject{}, false, nil
+			default:
+				return secretObject{}, false, err
+			}
+		}
+		// generic errors
+		return secretObject{}, false, err
+	}
+
+	raw, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return secretObject{}, false, err
+	}
+
+	var obj secretObject
+	if err := json.Unmarshal(raw, &obj); err != nil {
+		return secretObject{}, false, err
+	}
+
+	return obj, true, nil
+
+}
+
+func (s *S3KMSStore) readObjectById(id SecretId) (secretObject, bool, error) {
+	path := getObjectPath(id)
+	return s.readObject(path)
 }
 
 func (s *S3KMSStore) puts3raw(path string, contents []byte) error {

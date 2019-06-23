@@ -228,34 +228,6 @@ func (s *S3KMSStore) ListRaw(service string) ([]RawSecret, error) {
 	return secrets, nil
 }
 
-func (s *S3KMSStore) History(id SecretId) ([]ChangeEvent, error) {
-	obj, ok, err := s.readObjectById(id)
-	if err != nil {
-		return []ChangeEvent{}, err
-	}
-
-	if !ok {
-		return []ChangeEvent{}, ErrSecretNotFound
-	}
-
-	events := []ChangeEvent{}
-
-	for ix, secretVersion := range obj.Values {
-		events = append(events, ChangeEvent{
-			Type:    getChangeType(ix),
-			Time:    secretVersion.Created,
-			User:    secretVersion.CreatedBy,
-			Version: secretVersion.Version,
-		})
-	}
-
-	// Sort events by version
-	sort.Slice(events, func(i, j int) bool {
-		return events[i].Version < events[j].Version
-	})
-	return events, nil
-}
-
 func (s *S3KMSStore) Delete(id SecretId) error {
 	index, err := s.readLatest(id.Service)
 	if err != nil {
@@ -294,16 +266,6 @@ func (s *S3KMSStore) getCurrentUser() (string, error) {
 func (s *S3KMSStore) deleteObjectById(id SecretId) error {
 	path := getObjectPath(id)
 	return s.deleteObject(path)
-}
-
-func (s *S3KMSStore) deleteObject(path string) error {
-	deleteObjectInput := &s3.DeleteObjectInput{
-		Bucket: aws.String(s.bucket),
-		Key:    aws.String(path),
-	}
-
-	_, err := s.svc.DeleteObject(deleteObjectInput)
-	return err
 }
 
 func (s *S3KMSStore) readObject(path string) (secretObject, bool, error) {

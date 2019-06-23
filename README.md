@@ -231,7 +231,7 @@ The highlights of SSE-KMS are:
 - The security controls in AWS KMS can help you meet encryption-related compliance requirements.
 Source https://docs.aws.amazon.com/AmazonS3/latest/dev/UsingKMSEncryption.html
 
-To configure chamber to use the S3 backend, use `chamber -b s3-kms --backend-s3-bucket=mybucket`.  You must also supply an environment variable of the KMS Key Alias to use CHAMBER_KMS_KEY_ALIAS, by default "alias/parameter_store_key" will be used.
+To configure chamber to use the S3 KMS backend, use `chamber -b s3-kms --backend-s3-bucket=mybucket --kms-key-alias=alias/keyname`.  You must also supply an environment variable of the KMS Key Alias to use CHAMBER_KMS_KEY_ALIAS, by default "alias/parameter_store_key" will be used.
 
 Preferably, this bucket should reject uploads that do not set the server side encryption header ([see this doc for details how](https://aws.amazon.com/blogs/security/how-to-prevent-uploads-of-unencrypted-objects-to-amazon-s3/))
 

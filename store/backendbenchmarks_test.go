@@ -81,7 +81,7 @@ func TestSSMConcurrency(t *testing.T) {
 	if !benchmarkEnabled {
 		t.SkipNow()
 	}
-	s, _ := NewSSMStore(10)
+	s, _ := NewSSMStore(10, "test-key")
 	benchmarkStore(t, s, []string{"foo"})
 }
 

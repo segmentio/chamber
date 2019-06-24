@@ -32,12 +32,13 @@ var _ Store = &SSMStore{}
 // SSMStore implements the Store interface for storing secrets in SSM Parameter
 // Store
 type SSMStore struct {
-	svc      ssmiface.SSMAPI
-	usePaths bool
+	svc         ssmiface.SSMAPI
+	usePaths    bool
+	kmsKeyAlias string
 }
 
 // NewSSMStore creates a new SSMStore
-func NewSSMStore(numRetries int) (*SSMStore, error) {
+func NewSSMStore(numRetries int, kmsKeyAlias string) (*SSMStore, error) {
 	ssmSession, region, err := getSession(numRetries)
 	if err != nil {
 		return nil, err
@@ -55,21 +56,10 @@ func NewSSMStore(numRetries int) (*SSMStore, error) {
 	}
 
 	return &SSMStore{
-		svc:      svc,
-		usePaths: usePaths,
+		svc:         svc,
+		usePaths:    usePaths,
+		kmsKeyAlias: kmsKeyAlias,
 	}, nil
-}
-
-func (s *SSMStore) KMSKey() string {
-	fromEnv, ok := os.LookupEnv("CHAMBER_KMS_KEY_ALIAS")
-	if !ok {
-		return DefaultKeyID
-	}
-	if !strings.HasPrefix(fromEnv, "alias/") {
-		return fmt.Sprintf("alias/%s", fromEnv)
-	}
-
-	return fromEnv
 }
 
 // Write writes a given value to a secret identified by id.  If the secret
@@ -86,7 +76,7 @@ func (s *SSMStore) Write(id SecretId, value string) error {
 	}
 
 	putParameterInput := &ssm.PutParameterInput{
-		KeyId:       aws.String(s.KMSKey()),
+		KeyId:       aws.String(s.kmsKeyAlias),
 		Name:        aws.String(s.idToName(id)),
 		Type:        aws.String("SecureString"),
 		Value:       aws.String(value),

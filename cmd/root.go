@@ -159,6 +159,10 @@ func getSecretStore() (store.Store, error) {
 			kmsKeyAlias = kmsKeyAliasFlag
 		}
 
+		if !strings.HasPrefix(kmsKeyAlias, "alias/") {
+			kmsKeyAlias = fmt.Sprintf("alias/%s", kmsKeyAlias)
+		}
+
 		if kmsKeyAlias == "" {
 			return nil, errors.New("Must set kmsKeyAlias for S3 KMS backend")
 		}

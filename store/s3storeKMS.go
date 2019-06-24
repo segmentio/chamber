@@ -184,25 +184,6 @@ func (s *S3KMSStore) List(service string, includeValues bool) ([]Secret, error) 
 	return secrets, nil
 }
 
-func (s *S3KMSStore) ListRaw(service string) ([]RawSecret, error) {
-	index, err := s.readLatest(service)
-	if err != nil {
-		return []RawSecret{}, err
-	}
-
-	secrets := []RawSecret{}
-	for key, value := range index.Latest {
-		s := RawSecret{
-			Key:   fmt.Sprintf("/%s/%s", service, key),
-			Value: value.Value,
-		}
-		secrets = append(secrets, s)
-
-	}
-
-	return secrets, nil
-}
-
 func (s *S3KMSStore) Delete(id SecretId) error {
 	index, err := s.readLatest(id.Service)
 	if err != nil {
@@ -259,11 +240,6 @@ func (s *S3KMSStore) readObject(path string) (secretObject, bool, error) {
 
 	return obj, true, nil
 
-}
-
-func (s *S3KMSStore) readObjectById(id SecretId) (secretObject, bool, error) {
-	path := getObjectPath(id)
-	return s.readObject(path)
 }
 
 func (s *S3KMSStore) puts3raw(path string, contents []byte) error {

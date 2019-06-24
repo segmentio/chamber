@@ -55,10 +55,6 @@ func NewSSMStore(numRetries int, kmsKeyAlias string) (*SSMStore, error) {
 		usePaths = false
 	}
 
-	if kmsKeyAlias == "" {
-		kmsKeyAlias = DefaultKeyID
-	}
-
 	return &SSMStore{
 		svc:         svc,
 		usePaths:    usePaths,

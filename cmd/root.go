@@ -134,7 +134,7 @@ func getSecretStore() (store.Store, error) {
 		kmsKeyAlias = kmsKeyAliasFlag
 	}
 
-	if kmsKeyAlias != "" && !strings.HasPrefix(kmsKeyAlias, "alias/") {
+	if !strings.HasPrefix(kmsKeyAlias, "alias/") {
 		kmsKeyAlias = fmt.Sprintf("alias/%s", kmsKeyAlias)
 	}
 

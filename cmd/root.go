@@ -42,10 +42,10 @@ const (
 )
 
 const (
-	NullBackend = "NULL"
-	SSMBackend  = "SSM"
-	S3Backend   = "S3"
-	S3KMSBackend   = "S3-KMS"
+	NullBackend  = "NULL"
+	SSMBackend   = "SSM"
+	S3Backend    = "S3"
+	S3KMSBackend = "S3-KMS"
 
 	BackendEnvVar = "CHAMBER_SECRET_BACKEND"
 	BucketEnvVar  = "CHAMBER_S3_BUCKET"

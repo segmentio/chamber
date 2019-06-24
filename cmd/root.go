@@ -71,10 +71,10 @@ func init() {
 	null: no-op
 	ssm: SSM Parameter Store
 	s3: S3; requires --backend-s3-bucket
-	s3-kms: S3 using AWS-KMS encryption; requires --backend-s3-bucket and kms-key-alias set (if you want to write or delete keys).`,
+	s3-kms: S3 using AWS-KMS encryption; requires --backend-s3-bucket and --kms-key-alias set (if you want to write or delete keys).`,
 	)
 	RootCmd.PersistentFlags().StringVarP(&backendS3BucketFlag, "backend-s3-bucket", "", "", "bucket for S3 backend; AKA $CHAMBER_S3_BUCKET")
-	RootCmd.PersistentFlags().StringVarP(&kmsKeyAliasFlag, "kms-key-alias", "", "alias/parameter_store_key", "KMS Key Alias for writing and deleting secrets; AKA $CHAMBER_KMS_KEY_ALIAS")
+	RootCmd.PersistentFlags().StringVarP(&kmsKeyAliasFlag, "kms-key-alias", "", "alias/parameter_store_key", "KMS Key Alias for writing and deleting secrets; AKA $CHAMBER_KMS_KEY_ALIAS. This option is currently only supported for the S3-KMS backend.")
 }
 
 // Execute adds all child commands to the root command sets flags appropriately.

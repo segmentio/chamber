@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"sort"
 	"strings"
 	"time"
 
@@ -35,9 +34,9 @@ var _ Store = &S3KMSStore{}
 
 type S3KMSStore struct {
 	S3Store
-	svc    s3iface.S3API
-	stsSvc *sts.STS
-	bucket string
+	svc         s3iface.S3API
+	stsSvc      *sts.STS
+	bucket      string
 	kmsKeyAlias string
 }
 
@@ -61,10 +60,17 @@ func NewS3KMSStore(numRetries int, bucket string, kmsKeyAlias string) (*S3KMSSto
 		kmsKeyAlias = DefaultKeyID
 	}
 
-	return &S3KMSStore{
+	s3store := &S3Store{
 		svc:    svc,
 		stsSvc: stsSvc,
 		bucket: bucket,
+	}
+
+	return &S3KMSStore{
+		S3Store:     *s3store,
+		svc:         svc,
+		stsSvc:      stsSvc,
+		bucket:      bucket,
 		kmsKeyAlias: kmsKeyAlias,
 	}, nil
 }
@@ -75,10 +81,8 @@ func (s *S3KMSStore) Write(id SecretId, value string) error {
 		return err
 	}
 
-	if val, ok := index.Latest[id.Key]; ok {
-		if val.KMSAlias != s.kmsKeyAlias {
-			return errors.New(fmt.Sprintf("You're attempting to write a Chamber key with a different KMS Key to the one it currently uses. Instead delete the existing chamber key using the current KMS key (%s) and then write the secret using the new KMS Key.", val.KMSAlias))
-		}
+	if val, ok := index.Latest[id.Key]; val.KMSAlias != s.kmsKeyAlias && ok {
+		return fmt.Errorf("Unable to overwrite secret %s using new KMS key %s; mismatch with existing key %s", id.Key, s.kmsKeyAlias, val.KMSAlias)
 	}
 
 	objPath := getObjectPath(id)
@@ -137,35 +141,6 @@ func (s *S3KMSStore) Write(id SecretId, value string) error {
 		KMSAlias: s.kmsKeyAlias,
 	}
 	return s.writeLatest(id.Service, index)
-}
-
-func (s *S3KMSStore) Read(id SecretId, version int) (Secret, error) {
-	obj, ok, err := s.readObjectById(id)
-	if err != nil {
-		return Secret{}, err
-	}
-
-	if !ok {
-		return Secret{}, ErrSecretNotFound
-	}
-
-	if version == -1 {
-		version = getLatestVersion(obj.Values)
-	}
-	val, ok := obj.Values[version]
-	if !ok {
-		return Secret{}, ErrSecretNotFound
-	}
-
-	return Secret{
-		Value: aws.String(val.Value),
-		Meta: SecretMetadata{
-			Created:   val.Created,
-			CreatedBy: val.CreatedBy,
-			Version:   val.Version,
-			Key:       obj.Key,
-		},
-	}, nil
 }
 
 func (s *S3KMSStore) List(service string, includeValues bool) ([]Secret, error) {
@@ -234,10 +209,8 @@ func (s *S3KMSStore) Delete(id SecretId) error {
 		return err
 	}
 
-	if val, ok := index.Latest[id.Key]; ok {
-		if val.KMSAlias != s.kmsKeyAlias {
-			return errors.New(fmt.Sprintf("You're attempting to delete a Chamber key with a different KMS Key to the one it currently uses. Please use the current KMS Key (%s).", val.KMSAlias))
-		}
+	if val, ok := index.Latest[id.Key]; val.KMSAlias != s.kmsKeyAlias && ok {
+		return fmt.Errorf("Unable to overwrite secret %s using new KMS key %s; mismatch with existing key %s", id.Key, s.kmsKeyAlias, val.KMSAlias)
 	}
 
 	if _, ok := index.Latest[id.Key]; ok {
@@ -249,23 +222,6 @@ func (s *S3KMSStore) Delete(id SecretId) error {
 	}
 
 	return s.writeLatest(id.Service, index)
-}
-
-// getCurrentUser uses the STS API to get the current caller identity,
-// so that secret value changes can be correctly attributed to the right
-// aws user/role
-func (s *S3KMSStore) getCurrentUser() (string, error) {
-	resp, err := s.stsSvc.GetCallerIdentity(&sts.GetCallerIdentityInput{})
-	if err != nil {
-		return "", err
-	}
-
-	return *resp.Arn, nil
-}
-
-func (s *S3KMSStore) deleteObjectById(id SecretId) error {
-	path := getObjectPath(id)
-	return s.deleteObject(path)
 }
 
 func (s *S3KMSStore) readObject(path string) (secretObject, bool, error) {
@@ -379,7 +335,7 @@ func (s *S3KMSStore) readLatest(service string) (LatestIndexFile, error) {
 
 			if err != nil {
 				paginationError = errors.New(fmt.Sprintf("Error reading latest index for KMS Key (%s): %s", key_name, err))
-				return false;
+				return false
 			}
 
 			// Check if the chamber key already exists in the index.Latest map.

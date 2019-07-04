@@ -165,6 +165,7 @@ file formats are supported:
 * csv
 * tsv
 * dotenv
+* tfvars
 
 File is written to standard output by default but you may specify an output
 file.

@@ -305,7 +305,7 @@ func TestNewSSMStore(t *testing.T) {
 		os.Setenv("AWS_REGION", "us-west-1")
 		os.Setenv("AWS_DEFAULT_REGION", "us-west-2")
 
-		s, err := NewSSMStore(1, "test-key")
+		s, err := NewSSMStore(1)
 		assert.Nil(t, err)
 		assert.Equal(t, "us-east-1", aws.StringValue(s.svc.(*ssm.SSM).Config.Region))
 		os.Unsetenv("CHAMBER_AWS_REGION")
@@ -316,7 +316,7 @@ func TestNewSSMStore(t *testing.T) {
 	t.Run("Should use AWS_REGION if it is set", func(t *testing.T) {
 		os.Setenv("AWS_REGION", "us-west-1")
 
-		s, err := NewSSMStore(1, "test-key")
+		s, err := NewSSMStore(1)
 		assert.Nil(t, err)
 		assert.Equal(t, "us-west-1", aws.StringValue(s.svc.(*ssm.SSM).Config.Region))
 
@@ -326,7 +326,7 @@ func TestNewSSMStore(t *testing.T) {
 	t.Run("Should use CHAMBER_AWS_SSM_ENDPOINT if set", func(t *testing.T) {
 		os.Setenv("CHAMBER_AWS_SSM_ENDPOINT", "mycustomendpoint")
 
-		s, err := NewSSMStore(1, "test-key")
+		s, err := NewSSMStore(1)
 		assert.Nil(t, err)
 		endpoint, err := s.svc.(*ssm.SSM).Config.EndpointResolver.EndpointFor(endpoints.SsmServiceID, endpoints.UsWest2RegionID)
 		assert.Nil(t, err)
@@ -336,7 +336,7 @@ func TestNewSSMStore(t *testing.T) {
 	})
 
 	t.Run("Should use default AWS SSM endpoint if CHAMBER_AWS_SSM_ENDPOINT not set", func(t *testing.T) {
-		s, err := NewSSMStore(1, "test-key")
+		s, err := NewSSMStore(1)
 		assert.Nil(t, err)
 		endpoint, err := s.svc.(*ssm.SSM).Config.EndpointResolver.EndpointFor(endpoints.SsmServiceID, endpoints.UsWest2RegionID)
 		assert.Nil(t, err)

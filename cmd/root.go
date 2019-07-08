@@ -50,6 +50,8 @@ const (
 	BackendEnvVar = "CHAMBER_SECRET_BACKEND"
 	BucketEnvVar  = "CHAMBER_S3_BUCKET"
 	KMSKeyEnvVar  = "CHAMBER_KMS_KEY_ALIAS"
+
+	DefaultKMSKey = "alias/parameter_store_key"
 )
 
 var Backends = []string{SSMBackend, S3Backend, NullBackend, S3KMSBackend}
@@ -74,7 +76,7 @@ func init() {
 	s3-kms: S3 using AWS-KMS encryption; requires --backend-s3-bucket and --kms-key-alias set (if you want to write or delete keys).`,
 	)
 	RootCmd.PersistentFlags().StringVarP(&backendS3BucketFlag, "backend-s3-bucket", "", "", "bucket for S3 backend; AKA $CHAMBER_S3_BUCKET")
-	RootCmd.PersistentFlags().StringVarP(&kmsKeyAliasFlag, "kms-key-alias", "", "alias/parameter_store_key", "KMS Key Alias for writing and deleting secrets; AKA $CHAMBER_KMS_KEY_ALIAS. This option is currently only supported for the S3-KMS backend.")
+	RootCmd.PersistentFlags().StringVarP(&kmsKeyAliasFlag, "kms-key-alias", "", DefaultKMSKey, "KMS Key Alias for writing and deleting secrets; AKA $CHAMBER_KMS_KEY_ALIAS. This option is currently only supported for the S3-KMS backend.")
 }
 
 // Execute adds all child commands to the root command sets flags appropriately.
@@ -131,6 +133,10 @@ func getSecretStore() (store.Store, error) {
 	case NullBackend:
 		s = store.NewNullStore()
 	case S3Backend:
+		if kmsKeyAliasFlag != DefaultKMSKey {
+			return nil, errors.New("Unable to use --kms-key-alias with this backend.")
+		}
+
 		var bucket string
 		if bucketEnvVarValue := os.Getenv(BucketEnvVar); !rootPflags.Changed("backend-s3-bucket") && bucketEnvVarValue != "" {
 			bucket = bucketEnvVarValue
@@ -169,6 +175,10 @@ func getSecretStore() (store.Store, error) {
 
 		s, err = store.NewS3KMSStore(numRetries, bucket, kmsKeyAlias)
 	case SSMBackend:
+		if kmsKeyAliasFlag != DefaultKMSKey {
+			return nil, errors.New("Unable to use --kms-key-alias with this backend. Use CHAMBER_KMS_KEY_ALIAS instead.")
+		}
+
 		s, err = store.NewSSMStore(numRetries)
 	default:
 		return nil, fmt.Errorf("invalid backend `%s`", backend)

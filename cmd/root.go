@@ -35,7 +35,7 @@ var (
 
 const (
 	// ShortTimeFormat is a short format for printing timestamps
-	ShortTimeFormat = "01-02 15:04:05"
+	ShortTimeFormat = "2018-01-02 15:04:05"
 
 	// DefaultNumRetries is the default for the number of retries we'll use for our SSM client
 	DefaultNumRetries = 10

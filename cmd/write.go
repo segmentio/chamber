@@ -18,7 +18,7 @@ var (
 
 	// writeCmd represents the write command
 	writeCmd = &cobra.Command{
-		Use:   "write <service> <key> <value|->",
+		Use:   "write <service> <key> [--] <value|->",
 		Short: "write a secret",
 		Args:  cobra.ExactArgs(3),
 		RunE:  write,

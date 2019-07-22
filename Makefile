@@ -12,7 +12,7 @@ ANALYTICS_WRITE_KEY ?=
 LDFLAGS := -ldflags='-X "main.Version=$(VERSION)" -X "main.AnalyticsWriteKey=$(ANALYTICS_WRITE_KEY)"'
 
 test:
-	GO111MODULE=on go test -v ./...
+	GO111MODULE=on go test -mod=vendor -v ./...
 
 all: dist/chamber-$(VERSION)-darwin-amd64 dist/chamber-$(VERSION)-linux-amd64 dist/chamber-$(VERSION)-windows-amd64.exe
 
@@ -23,16 +23,16 @@ dist/:
 	mkdir -p dist
 
 dist/chamber-$(VERSION)-darwin-amd64: | dist/
-	GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 GO111MODULE=on go build $(LDFLAGS) -o $@
+	GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 GO111MODULE=on go build -mod=vendor $(LDFLAGS) -o $@
 
 linux: dist/chamber-$(VERSION)-linux-amd64
 	cp $^ chamber
 
 dist/chamber-$(VERSION)-linux-amd64: | dist/
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 GO111MODULE=on go build $(LDFLAGS) -o $@
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 GO111MODULE=on go build -mod=vendor $(LDFLAGS) -o $@
 
 dist/chamber-$(VERSION)-windows-amd64.exe: | dist/
-	GOOS=windows GOARCH=amd64 CGO_ENABLED=0 GO111MODULE=on go build $(LDFLAGS) -o $@
+	GOOS=windows GOARCH=amd64 CGO_ENABLED=0 GO111MODULE=on go build -mod=vendor $(LDFLAGS) -o $@
 
 docker-image: docker-image-$(VERSION)
 

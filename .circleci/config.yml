@@ -44,6 +44,18 @@ jobs:
           name: Test
           command: |
             make test
+      - run:
+          name: Check modules are tidy and checked in
+          command: |
+            export GO111MODULE=on
+            go mod tidy
+            go mod vendor
+            if [ "$(git status --porcelain)" != "" ]; then
+              echo "git tree is dirty after tidying and vendoring modules"
+              echo "ensure go.mod and go.sum are tidy and vendor is checked in"
+              git status
+              exit 1
+            fi
 
   dist:
     docker:

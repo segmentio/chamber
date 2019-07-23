@@ -56,3 +56,17 @@ func getSession(numRetries int) (*session.Session, *string, error) {
 
 	return retSession, region, nil
 }
+
+func uniqueStringSlice(slice []string) []string {
+	unique := make(map[string]struct{}, len(slice))
+	j := 0
+	for _, value := range slice {
+		if _, ok := unique[value]; ok {
+			continue
+		}
+		unique[value] = struct{}{}
+		slice[j] = value
+		j++
+	}
+	return slice[:j]
+}

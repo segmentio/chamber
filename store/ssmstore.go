@@ -239,6 +239,60 @@ func (s *SSMStore) readLatest(id SecretId) (Secret, error) {
 	}, nil
 }
 
+func (s *SSMStore) ListServices(service string, includeSecretName bool) ([]string, error) {
+	secrets := map[string]Secret{}
+	var describeParametersInput *ssm.DescribeParametersInput
+
+	if s.usePaths {
+		describeParametersInput = &ssm.DescribeParametersInput{
+			ParameterFilters: []*ssm.ParameterStringFilter{
+				{
+					Key:    aws.String("Name"),
+					Option: aws.String("BeginsWith"),
+					Values: []*string{aws.String("/" + service)},
+				},
+			},
+		}
+	} else {
+		describeParametersInput = &ssm.DescribeParametersInput{
+			Filters: []*ssm.ParametersFilter{
+				{
+					Key:    aws.String("Name"),
+					Values: []*string{aws.String(service + ".")},
+				},
+			},
+		}
+	}
+
+	err := s.svc.DescribeParametersPages(describeParametersInput, func(resp *ssm.DescribeParametersOutput, lastPage bool) bool {
+		for _, meta := range resp.Parameters {
+			if !s.validateName(*meta.Name) {
+				continue
+			}
+			secretMeta := parameterMetaToSecretMeta(meta)
+			secrets[secretMeta.Key] = Secret{
+				Value: nil,
+				Meta:  secretMeta,
+			}
+		}
+		return true
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if includeSecretName {
+		return keys(secrets), nil
+	}
+
+	var services []string
+	for key := range secrets {
+		services = append(services, serviceName(key))
+	}
+
+	return uniqueStringSlice(services), nil
+}
+
 // List lists all secrets for a given service.  If includeValues is true,
 // then those secrets are decrypted and returned, otherwise only the metadata
 // about a secret is returned.
@@ -451,6 +505,15 @@ func basePath(key string) string {
 	}
 	end := len(pathParts) - 1
 	return strings.Join(pathParts[0:end], "/")
+}
+
+func serviceName(key string) string {
+	pathParts := strings.Split(key, "/")
+	if len(pathParts) == 1 {
+		return pathParts[0]
+	}
+	end := len(pathParts) - 1
+	return strings.Join(pathParts[1:end], "/")
 }
 
 func parameterMetaToSecretMeta(p *ssm.ParameterMetadata) SecretMetadata {

@@ -189,6 +189,19 @@ $ chamber delete service key
 including the secret's additional metadata. There is no way to recover a
 secret once it has been deleted so care should be taken with this command.
 
+### Finding
+```bash
+$ chamber find key
+```
+
+`find` provides the ability to locate which services use the same key names.
+
+```bash
+$ chamber find value --by-value
+```
+Passing `--by-value` or `-v` will search the values of all secrets and return
+the services and keys which match.
+
 ### AWS Region
 
 Chamber uses [AWS SDK for Go](https://github.com/aws/aws-sdk-go). To use a

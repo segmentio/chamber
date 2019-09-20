@@ -12,7 +12,7 @@ ANALYTICS_WRITE_KEY ?=
 LDFLAGS := -ldflags='-X "main.Version=$(VERSION)" -X "main.AnalyticsWriteKey=$(ANALYTICS_WRITE_KEY)"'
 
 test:
-	GO111MODULE=on go test -mod=vendor -v ./...
+	go test -mod=vendor -v ./...
 
 all: dist/chamber-$(VERSION)-darwin-amd64 dist/chamber-$(VERSION)-linux-amd64 dist/chamber-$(VERSION)-windows-amd64.exe
 
@@ -22,17 +22,22 @@ clean:
 dist/:
 	mkdir -p dist
 
+build: chamber
+
+chamber:
+	CGO_ENABLED=0 go build -trimpath -mod=vendor $(LDFLAGS) -o $@
+
 dist/chamber-$(VERSION)-darwin-amd64: | dist/
-	GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 GO111MODULE=on go build -mod=vendor $(LDFLAGS) -o $@
+	GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -mod=vendor $(LDFLAGS) -o $@
 
 linux: dist/chamber-$(VERSION)-linux-amd64
 	cp $^ chamber
 
 dist/chamber-$(VERSION)-linux-amd64: | dist/
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 GO111MODULE=on go build -mod=vendor $(LDFLAGS) -o $@
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -mod=vendor $(LDFLAGS) -o $@
 
 dist/chamber-$(VERSION)-windows-amd64.exe: | dist/
-	GOOS=windows GOARCH=amd64 CGO_ENABLED=0 GO111MODULE=on go build -mod=vendor $(LDFLAGS) -o $@
+	GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -mod=vendor $(LDFLAGS) -o $@
 
 docker-image: docker-image-$(VERSION)
 
@@ -48,4 +53,4 @@ docker-image-publish: docker-image
 	docker push segment/chamber:$(VERSION_MAJOR_MINOR)
 	docker push segment/chamber:$(VERSION_MAJOR)
 
-.PHONY: clean all linux docker-image docker-image-$(VERSION) docker-image-publish
+.PHONY: clean all linux docker-image docker-image-$(VERSION) docker-image-publish build

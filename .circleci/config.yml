@@ -2,8 +2,7 @@ version: 2
 jobs:
   test-install-golang-prev:
     docker:
-      - image: circleci/golang:1.10
-    working_directory: /go/src/github.com/segmentio/chamber
+      - image: circleci/golang:1.12
     steps:
       - checkout
       - run:
@@ -13,8 +12,7 @@ jobs:
 
   test-install-golang-current:
     docker:
-      - image: circleci/golang:1.11
-    working_directory: /go/src/github.com/segmentio/chamber
+      - image: circleci/golang:1.13
     steps:
       - checkout
       - run:
@@ -22,21 +20,9 @@ jobs:
           command: |
             go get -v . && chamber version
 
-  # only need this job until 1.13 is released
-  test-install-golang-1.11-GOMODULE-on:
-    docker:
-      - image: circleci/golang:1.11
-    working_directory: /go/src/github.com/segmentio/chamber
-    steps:
-      - checkout
-      - run:
-          name: 'Test go get install on golang 1.11 GO111MODULE=on'
-          command: |
-            GO111MODULE=on go get -v . && chamber version
-
   test:
     docker:
-      - image: circleci/golang:1.11
+      - image: circleci/golang:1.13
     working_directory: /go/src/github.com/segmentio/chamber
     steps:
       - checkout
@@ -59,8 +45,7 @@ jobs:
 
   dist:
     docker:
-      - image: circleci/golang:1.11
-    working_directory: /go/src/github.com/segmentio/chamber
+      - image: circleci/golang:1.13
     steps:
       - checkout
       - run:
@@ -77,8 +62,7 @@ jobs:
 
   publish-packagecloud:
     docker:
-      - image: circleci/golang:1.11
-    working_directory: /go/src/github.com/segmentio/chamber
+      - image: circleci/golang:1.13
     steps:
       - checkout
       - attach_workspace: { at: . }
@@ -98,8 +82,7 @@ jobs:
 
   publish-github:
     docker:
-      - image: circleci/golang:1.11
-    working_directory: /go/src/github.com/segmentio/chamber
+      - image: circleci/golang:1.13
     steps:
       - checkout
       - attach_workspace: { at: . }
@@ -119,7 +102,6 @@ workflows:
       - test
       - test-install-golang-prev
       - test-install-golang-current
-      - test-install-golang-1.11-GOMODULE-on
       - dist:
           # needed to ensure dist happens on tag events
           filters:

@@ -14,12 +14,13 @@ import (
 // When true, only use variables retrieved from the backend, do not inherit existing environment variables
 var pristine bool
 
-// When true,
+// When true, enable strict mode, which checks that all secrets replace env vars with a special sentinel value
 var strict bool
 
-// The value to expect in strict mode
+// Value to expect in strict mode
 var strictValue string
 
+// Default value to expect in strict mode
 const strictValueDefault = "chamberme"
 
 // execCmd represents the exec command
@@ -98,7 +99,6 @@ func execRun(cmd *cobra.Command, args []string) error {
 	_, noPaths := os.LookupEnv("CHAMBER_NO_PATHS")
 
 	var env environ.Environ
-	// TODO: combine these into a single LoadAll or something
 	if strict {
 		var err error
 		env = environ.Environ(os.Environ())
@@ -117,6 +117,7 @@ func execRun(cmd *cobra.Command, args []string) error {
 		for _, service := range services {
 			collisions := make([]string, 0)
 			var err error
+			// TODO: these interfaces should look the same as Strict*, so move pristine in there
 			if noPaths {
 				err = env.LoadNoPaths(secretStore, service, &collisions)
 			} else {

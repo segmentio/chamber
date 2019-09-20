@@ -3,7 +3,6 @@ package environ
 import (
 	"testing"
 
-	"github.com/hashicorp/go-multierror"
 	"github.com/segmentio/chamber/store"
 	"github.com/stretchr/testify/assert"
 )
@@ -49,7 +48,7 @@ func TestEnvironStrict(t *testing.T) {
 				"db_username": "root",
 				"db_password": "hunter22",
 			},
-			expectedErr: &multierror.Error{Errors: []error{ErrStoreMissingKey{Key: "EXTRA", ValueExpected: "chamberme"}}},
+			expectedErr: ErrStoreMissingKey{Key: "EXTRA", ValueExpected: "chamberme"},
 		},
 
 		{
@@ -82,7 +81,7 @@ func TestEnvironStrict(t *testing.T) {
 				"db_username": "root",
 				"db_password": "hunter22",
 			},
-			expectedErr: &multierror.Error{Errors: []error{ErrExpectedKeyUnnormalized{Key: "DB_username", ValueExpected: "chamberme"}}},
+			expectedErr: ErrExpectedKeyUnnormalized{Key: "DB_username", ValueExpected: "chamberme"},
 		},
 	}
 

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/go-multierror"
 	"github.com/segmentio/chamber/store"
 )
 
@@ -147,14 +146,12 @@ func (e *Environ) loadStrict(s store.Store, valueExpected string, pristine bool,
 }
 
 func (e *Environ) loadStrictOne(rawSecrets []store.RawSecret, valueExpected string, pristine bool, noPaths bool) error {
-	var merr error
 	parentMap := e.Map()
 	parentExpects := map[string]struct{}{}
 	for k, v := range parentMap {
 		if v == valueExpected {
 			if k != normalizeEnvVarName(k) {
-				merr = multierror.Append(merr, ErrExpectedKeyUnnormalized{Key: k, ValueExpected: valueExpected})
-				continue
+				return ErrExpectedKeyUnnormalized{Key: k, ValueExpected: valueExpected}
 			}
 			// TODO: what if this key isn't chamber-compatible but could collide? MY_cool_var vs my-cool-var
 			parentExpects[k] = struct{}{}
@@ -172,15 +169,13 @@ func (e *Environ) loadStrictOne(rawSecrets []store.RawSecret, valueExpected stri
 		}
 		delete(parentExpects, envVarKey)
 		if parentVal != valueExpected {
-			merr = multierror.Append(merr,
-				ErrStoreUnexpectedValue{Key: envVarKey, ValueExpected: valueExpected, ValueActual: parentVal})
-			continue
+			return ErrStoreUnexpectedValue{Key: envVarKey, ValueExpected: valueExpected, ValueActual: parentVal}
 		}
 		envVarKeysAdded[envVarKey] = struct{}{}
 		e.Set(envVarKey, rawSecret.Value)
 	}
 	for k, _ := range parentExpects {
-		merr = multierror.Append(merr, ErrStoreMissingKey{Key: k, ValueExpected: valueExpected})
+		return ErrStoreMissingKey{Key: k, ValueExpected: valueExpected}
 	}
 
 	if pristine {
@@ -192,7 +187,7 @@ func (e *Environ) loadStrictOne(rawSecrets []store.RawSecret, valueExpected stri
 		}
 	}
 
-	return merr
+	return nil
 }
 
 type ErrStoreUnexpectedValue struct {

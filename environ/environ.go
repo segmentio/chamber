@@ -76,11 +76,11 @@ func key(s string, noPaths bool) string {
 
 // transforms a secret key to an env var name, i.e. upppercase, substitute `-` -> `_`
 func secretKeyToEnvVarName(k string, noPaths bool) string {
-	return strings.Replace(
-		strings.ToUpper(
-			key(k, noPaths),
-		), "-", "_", -1,
-	)
+	return normalizeEnvVarName(key(k, noPaths))
+}
+
+func normalizeEnvVarName(k string) string {
+	return strings.Replace(strings.ToUpper(k), "-", "_", -1)
 }
 
 // load loads environment variables into e from s given a service
@@ -118,19 +118,81 @@ func (e *Environ) LoadNoPaths(s store.Store, service string, collisions *[]strin
 	return e.load(s, service, collisions, true)
 }
 
-type EnvironStrict struct {
-	Environ
-
-	Parent        Environ
-	ValueExpected string
-	Pristine      bool
+// LoadStrict loads all services from s in strict mode: env vars in e with value equal to valueExpected
+// are the only ones substituted. If there are any env vars in s that are also in e, but don't have their value
+// set to valueExpected, this is an error.
+func (e *Environ) LoadStrict(s store.Store, valueExpected string, pristine bool, services ...string) error {
+	return e.loadStrict(s, valueExpected, pristine, false, services...)
 }
 
+// LoadNoPathsStrict is identical to LoadStrict, but uses v1-style "."-separated paths
 //
-type ErrParentMissingKey string
+// Deprecated like all noPaths functionality
+func (e *Environ) LoadStrictNoPaths(s store.Store, valueExpected string, pristine bool, services ...string) error {
+	return e.loadStrict(s, valueExpected, pristine, true, services...)
+}
 
-func (e ErrParentMissingKey) Error() string {
-	return fmt.Sprintf("parent env missing %s", string(e))
+func (e *Environ) loadStrict(s store.Store, valueExpected string, pristine bool, noPaths bool, services ...string) error {
+	for _, service := range services {
+		rawSecrets, err := s.ListRaw(strings.ToLower(service))
+		if err != nil {
+			return err
+		}
+		err = e.loadStrictOne(rawSecrets, valueExpected, pristine, noPaths)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (e *Environ) loadStrictOne(rawSecrets []store.RawSecret, valueExpected string, pristine bool, noPaths bool) error {
+	var merr error
+	parentMap := e.Map()
+	parentExpects := map[string]struct{}{}
+	for k, v := range parentMap {
+		if v == valueExpected {
+			if k != normalizeEnvVarName(k) {
+				merr = multierror.Append(merr, ErrExpectedKeyUnnormalized{Key: k, ValueExpected: valueExpected})
+				continue
+			}
+			// TODO: what if this key isn't chamber-compatible but could collide? MY_cool_var vs my-cool-var
+			parentExpects[k] = struct{}{}
+		}
+	}
+
+	envVarKeysAdded := map[string]struct{}{}
+	for _, rawSecret := range rawSecrets {
+		envVarKey := secretKeyToEnvVarName(rawSecret.Key, noPaths)
+
+		parentVal, parentOk := parentMap[envVarKey]
+		// skip injecting secrets that are not present in the parent
+		if !parentOk {
+			continue
+		}
+		delete(parentExpects, envVarKey)
+		if parentVal != valueExpected {
+			merr = multierror.Append(merr,
+				ErrStoreUnexpectedValue{Key: envVarKey, ValueExpected: valueExpected, ValueActual: parentVal})
+			continue
+		}
+		envVarKeysAdded[envVarKey] = struct{}{}
+		e.Set(envVarKey, rawSecret.Value)
+	}
+	for k, _ := range parentExpects {
+		merr = multierror.Append(merr, ErrStoreMissingKey{Key: k, ValueExpected: valueExpected})
+	}
+
+	if pristine {
+		// unset all envvars that were in the parent env but not in store
+		for k, _ := range parentMap {
+			if _, ok := envVarKeysAdded[k]; !ok {
+				e.Unset(k)
+			}
+		}
+	}
+
+	return merr
 }
 
 type ErrStoreUnexpectedValue struct {
@@ -154,51 +216,12 @@ func (e ErrStoreMissingKey) Error() string {
 	return fmt.Sprintf("parent env was expecting %s=%s, but was not in store", e.Key, e.ValueExpected)
 }
 
-func (e *EnvironStrict) load(rawSecrets []store.RawSecret, noPaths bool) error {
-	parentMap := e.Parent.Map()
-	parentExpects := map[string]struct{}{}
-	for k, v := range parentMap {
-		if v == e.ValueExpected {
-			// TODO: what if this key isn't chamber-compatible but could collide? MY_cool_var vs my-cool-var
-			parentExpects[k] = struct{}{}
-		}
-	}
-
-	var merr error
-	for _, rawSecret := range rawSecrets {
-		envVarKey := secretKeyToEnvVarName(rawSecret.Key, noPaths)
-
-		parentVal, parentOk := parentMap[envVarKey]
-		if !parentOk {
-			merr = multierror.Append(merr, ErrParentMissingKey(envVarKey))
-			continue
-		}
-		delete(parentExpects, envVarKey)
-		if parentVal != e.ValueExpected {
-			merr = multierror.Append(merr,
-				ErrStoreUnexpectedValue{Key: envVarKey, ValueExpected: e.ValueExpected, ValueActual: parentVal})
-			continue
-		}
-		e.Set(envVarKey, rawSecret.Value)
-	}
-	for k, _ := range parentExpects {
-		merr = multierror.Append(merr, ErrStoreMissingKey{Key: k, ValueExpected: e.ValueExpected})
-	}
-
-	if !e.Pristine {
-		// set all values in parent that are not already set in e
-		eMap := e.Map()
-		for k, v := range parentMap {
-			if _, ok := eMap[k]; !ok {
-				e.Set(k, v)
-			}
-		}
-	}
-
-	return merr
+type ErrExpectedKeyUnnormalized struct {
+	Key           string
+	ValueExpected string
 }
 
-// Load loads environment variables into e from rawSecrets
-func (e *EnvironStrict) LoadFromSecrets(rawSecrets []store.RawSecret, noPaths bool) error {
-	return e.load(rawSecrets, noPaths)
+func (e ErrExpectedKeyUnnormalized) Error() string {
+	return fmt.Sprintf("parent env has key `%s` with expected value `%s`, but key is not normalized like `%s`, so would never get substituted",
+		e.Key, e.ValueExpected, normalizeEnvVarName(e.Key))
 }

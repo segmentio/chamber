@@ -10,73 +10,79 @@ import (
 
 func TestEnvironStrict(t *testing.T) {
 	cases := []struct {
-		name           string
-		e              EnvironStrict
+		name string
+		e    Environ
+		// default: "chamberme"
+		strictVal      string
+		pristine       bool
 		secrets        map[string]string
 		expectedEnvMap map[string]string
 		expectedErr    error
 	}{
 		{
 			name: "parent ⊃ secrets (!pristine)",
-			e: EnvironStrict{
-				ValueExpected: "chamberme",
-
-				Parent: fromMap(map[string]string{
-					"HOME":     "/tmp",
-					"USERNAME": "chamberme",
-					"PASSWORD": "chamberme",
-				}),
-			},
+			e: fromMap(map[string]string{
+				"HOME":        "/tmp",
+				"DB_USERNAME": "chamberme",
+				"DB_PASSWORD": "chamberme",
+			}),
 			secrets: map[string]string{
-				"username": "root",
-				"password": "hunter22",
+				"db_username": "root",
+				"db_password": "hunter22",
 			},
 			expectedEnvMap: map[string]string{
-				"HOME":     "/tmp",
-				"USERNAME": "root",
-				"PASSWORD": "hunter22",
+				"HOME":        "/tmp",
+				"DB_USERNAME": "root",
+				"DB_PASSWORD": "hunter22",
 			},
 		},
 
 		{
 			name: "parent ⊃ secrets with unfilled (!pristine)",
-			e: EnvironStrict{
-				ValueExpected: "chamberme",
-
-				Parent: fromMap(map[string]string{
-					"HOME":     "/tmp",
-					"USERNAME": "chamberme",
-					"PASSWORD": "chamberme",
-					"EXTRA":    "chamberme",
-				}),
-			},
+			e: fromMap(map[string]string{
+				"HOME":        "/tmp",
+				"DB_USERNAME": "chamberme",
+				"DB_PASSWORD": "chamberme",
+				"EXTRA":       "chamberme",
+			}),
 			secrets: map[string]string{
-				"username": "root",
-				"password": "hunter22",
+				"db_username": "root",
+				"db_password": "hunter22",
 			},
 			expectedErr: &multierror.Error{Errors: []error{ErrStoreMissingKey{Key: "EXTRA", ValueExpected: "chamberme"}}},
 		},
 
 		{
 			name: "parent ⊃ secrets (pristine)",
-			e: EnvironStrict{
-				ValueExpected: "chamberme",
-				Pristine:      true,
-
-				Parent: fromMap(map[string]string{
-					"HOME":     "/tmp",
-					"USERNAME": "chamberme",
-					"PASSWORD": "chamberme",
-				}),
-			},
+			e: fromMap(map[string]string{
+				"HOME":        "/tmp",
+				"DB_USERNAME": "chamberme",
+				"DB_PASSWORD": "chamberme",
+			}),
+			pristine: true,
 			secrets: map[string]string{
-				"username": "root",
-				"password": "hunter22",
+				"db_username": "root",
+				"db_password": "hunter22",
 			},
 			expectedEnvMap: map[string]string{
-				"USERNAME": "root",
-				"PASSWORD": "hunter22",
+				"DB_USERNAME": "root",
+				"DB_PASSWORD": "hunter22",
 			},
+		},
+
+		{
+			name: "parent with unnormalized key name",
+			e: fromMap(map[string]string{
+				"HOME":        "/tmp",
+				"DB_username": "chamberme",
+				"DB_PASSWORD": "chamberme",
+			}),
+			pristine: true,
+			secrets: map[string]string{
+				"db_username": "root",
+				"db_password": "hunter22",
+			},
+			expectedErr: &multierror.Error{Errors: []error{ErrExpectedKeyUnnormalized{Key: "DB_username", ValueExpected: "chamberme"}}},
 		},
 	}
 
@@ -89,7 +95,11 @@ func TestEnvironStrict(t *testing.T) {
 					Value: v,
 				})
 			}
-			err := tc.e.load(rawSecrets, false)
+			strictVal := tc.strictVal
+			if strictVal == "" {
+				strictVal = "chamberme"
+			}
+			err := tc.e.loadStrictOne(rawSecrets, strictVal, tc.pristine, false)
 			if err != nil {
 				assert.EqualValues(t, tc.expectedErr, err)
 			} else {

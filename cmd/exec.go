@@ -7,7 +7,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/segmentio/chamber/environ"
-	"github.com/segmentio/chamber/store"
 	"github.com/spf13/cobra"
 	analytics "gopkg.in/segmentio/analytics-go.v3"
 )
@@ -42,33 +41,30 @@ var execCmd = &cobra.Command{
 	},
 	RunE: execRun,
 	Example: `
-Given a store like:
+Given a secret store like this:
 
-{"username": "root", "password": "hunter22"}
+	$ echo '{"db_username": "root", "db_password": "hunter22"}' | chamber import - 
 
-$ HOME=/tmp USERNAME=chamberme PASSWORD=chamberme chamber exec --strict service exec -- env
-HOME=/tmp
-USERNAME=root
-PASSWORD=hunter22
+--strict will fail with unfilled env vars
 
-$ HOME=/tmp USERNAME=chamberme PASSWORD=chamberme EXTRA=chamberme chamber exec --strict service exec -- env
-chamber: extra unfilled env var EXTRA
-exit 1
-
-$ HOME=/tmp USERNAME=chamberme EXTRA=chamberme chamber exec --strict service exec -- env
-chamber: missing filled env var PASSWORD
-exit 1
+	$ HOME=/tmp DB_USERNAME=chamberme DB_PASSWORD=chamberme EXTRA=chamberme chamber exec --strict service exec -- env
+	chamber: extra unfilled env var EXTRA
+	exit 1
 
 --pristine takes effect after checking for --strict values
-$ HOME=/tmp USERNAME=chamberme PASSWORD=chamberme chamber exec --strict --pristine service exec -- env
-USERNAME=root
-PASSWORD=hunter22
+
+	$ HOME=/tmp DB_USERNAME=chamberme DB_PASSWORD=chamberme chamber exec --strict --pristine service exec -- env
+	DB_USERNAME=root
+	DB_PASSWORD=hunter22
 `,
 }
 
 func init() {
 	execCmd.Flags().BoolVar(&pristine, "pristine", false, "only use variables retrieved from the backend; do not inherit existing environment variables")
-	execCmd.Flags().BoolVar(&strict, "strict", false, "fail unless for every secret in chamber there is a corresponding env var KEY=<strict-value>, and there are no extra KEY=<strict-value> env vars")
+	execCmd.Flags().BoolVar(&strict, "strict", false, `enable strict mode:
+only inject secrets for which there is a corresponding env var with value
+<strict-value>, and fail if there are any env vars with that value missing
+from secrets`)
 	execCmd.Flags().StringVar(&strictValue, "strict-value", strictValueDefault, "value to expect in --strict mode")
 	RootCmd.AddCommand(execCmd)
 }
@@ -101,43 +97,30 @@ func execRun(cmd *cobra.Command, args []string) error {
 	}
 	_, noPaths := os.LookupEnv("CHAMBER_NO_PATHS")
 
-	var env []string
+	var env environ.Environ
 	// TODO: combine these into a single LoadAll or something
 	if strict {
-		loader := &environ.EnvironStrict{
-			Parent:        environ.Environ(os.Environ()),
-			ValueExpected: strictValue,
-			Pristine:      pristine,
+		var err error
+		env = environ.Environ(os.Environ())
+		if noPaths {
+			err = env.LoadStrictNoPaths(secretStore, strictValue, pristine, services...)
+		} else {
+			err = env.LoadStrict(secretStore, strictValue, pristine, services...)
 		}
-		rawSecrets := []store.RawSecret{}
-		for _, service := range services {
-			rawSecretsNext, err := secretStore.ListRaw(strings.ToLower(service))
-			if err != nil {
-				return errors.Wrap(err, "Failed to list store contents")
-			}
-			rawSecrets = append(rawSecrets, rawSecretsNext...)
-		}
-		err = loader.LoadFromSecrets(rawSecrets, noPaths)
 		if err != nil {
 			return err
 		}
-		env = []string(loader.Environ)
 	} else {
-		loader := environ.Environ{}
 		if !pristine {
-			loader = environ.Environ(os.Environ())
+			env = environ.Environ(os.Environ())
 		}
 		for _, service := range services {
-			if err := validateService(service); err != nil {
-				return errors.Wrap(err, "Failed to validate service")
-			}
-
 			collisions := make([]string, 0)
 			var err error
 			if noPaths {
-				err = loader.LoadNoPaths(secretStore, service, &collisions)
+				err = env.LoadNoPaths(secretStore, service, &collisions)
 			} else {
-				err = loader.Load(secretStore, service, &collisions)
+				err = env.Load(secretStore, service, &collisions)
 			}
 			if err != nil {
 				return errors.Wrap(err, "Failed to list store contents")
@@ -147,7 +130,6 @@ func execRun(cmd *cobra.Command, args []string) error {
 				fmt.Fprintf(os.Stderr, "warning: service %s overwriting environment variable %s\n", service, c)
 			}
 		}
-		env = []string(loader)
 	}
 
 	if verbose {

@@ -98,8 +98,15 @@ func execRun(cmd *cobra.Command, args []string) error {
 	}
 	_, noPaths := os.LookupEnv("CHAMBER_NO_PATHS")
 
+	if pristine && verbose {
+		fmt.Fprintf(os.Stderr, "chamber: pristine mode engaged\n")
+	}
+
 	var env environ.Environ
 	if strict {
+		if verbose {
+			fmt.Fprintf(os.Stderr, "chamber: strict mode engaged\n")
+		}
 		var err error
 		env = environ.Environ(os.Environ())
 		if noPaths {

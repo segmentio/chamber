@@ -107,3 +107,77 @@ func TestEnvironStrict(t *testing.T) {
 		})
 	}
 }
+
+func TestMap(t *testing.T) {
+	cases := []struct {
+		name string
+		in   Environ
+		out  map[string]string
+	}{
+		{
+			"basic",
+			Environ([]string{
+				"k=v",
+			}),
+			map[string]string{
+				"k": "v",
+			},
+		},
+		{
+			"dropping malformed",
+			Environ([]string{
+				"k=v",
+				// should work
+				"k2=",
+			}),
+			map[string]string{
+				"k":  "v",
+				"k2": "",
+			},
+		},
+		{
+			"squash",
+			Environ([]string{
+				"k=v1",
+				"k=v2",
+			}),
+			map[string]string{
+				"k": "v2",
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			m := tc.in.Map()
+			assert.EqualValues(t, m, tc.out)
+		})
+	}
+}
+
+func TestFromMap(t *testing.T) {
+	cases := []struct {
+		name string
+		in   map[string]string
+		out  Environ
+	}{
+		{
+			"basic",
+			map[string]string{
+				"k1": "v1",
+				"k2": "v2",
+			},
+			Environ([]string{
+				"k1=v1",
+				"k2=v2",
+			}),
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			e := fromMap(tc.in)
+			assert.EqualValues(t, e, tc.out)
+		})
+	}
+}

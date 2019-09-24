@@ -95,6 +95,19 @@ jobs:
           command: |
             make -f Makefile.release publish-github
 
+  publish-dockerhub:
+    docker:
+      - image: circleci/golang:1.13
+    steps:
+      - checkout
+      - attach_workspace: { at: . }
+      - setup_remote_docker
+      - run:
+          name: Release
+          command: |
+            docker login -u $DOCKER_USER -p $DOCKER_PASS
+            make -f Makefile.release publish-dockerhub
+
 workflows:
   version: 2
   test-dist-publish:
@@ -120,6 +133,17 @@ workflows:
               only: /v[0-9]+(\.[0-9]+)*(-[a-zA-Z0-9-]+)?/
       - publish-github:
           context: github-segmentcircle-oss-release
+          requires:
+            - dist
+          filters:
+            # never publish from a branch event
+            branches:
+              ignore: /.*/
+            # release only on tag push events like vX[.Y.Z...][-whatever]
+            tags:
+              only: /v[0-9]+(\.[0-9]+)*(-[a-zA-Z0-9-]+)?/
+      - publish-dockerhub:
+          context: docker-publish
           requires:
             - dist
           filters:

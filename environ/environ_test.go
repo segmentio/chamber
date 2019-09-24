@@ -1,6 +1,7 @@
 package environ
 
 import (
+	"sort"
 	"testing"
 
 	"github.com/segmentio/chamber/store"
@@ -177,6 +178,8 @@ func TestFromMap(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			e := fromMap(tc.in)
+			// maps order is non-deterministic
+			sort.Strings(e)
 			assert.EqualValues(t, e, tc.out)
 		})
 	}

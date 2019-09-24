@@ -53,6 +53,7 @@ func (e *Environ) Map() map[string]string {
 	return ret
 }
 
+// fromMap returns an Environ based on m. Order is arbitrary.
 func fromMap(m map[string]string) Environ {
 	e := make([]string, 0, len(m))
 

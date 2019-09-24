@@ -101,6 +101,7 @@ jobs:
     steps:
       - checkout
       - attach_workspace: { at: . }
+      - setup_remote_docker
       - run:
           name: Release
           command: |

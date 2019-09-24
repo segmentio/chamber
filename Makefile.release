@@ -9,6 +9,7 @@ include Makefile
 ifneq (,$(findstring -,$(VERSION)))
 	GITHUB_RELEASE_FLAGS := "--pre-release"
 	PACKAGECLOUD_NAME_SUFFIX := "-prerelease"
+	DOCKERHUB_TAG_PREFIX := "prerelease-"
 endif
 
 PACKAGECLOUD_DEB_DISTROS := \
@@ -110,6 +111,18 @@ publish-packagecloud-rpm: dist/chamber_$(VERSION)_amd64.rpm packagecloud.conf.js
 			grep -v 'with token:' ; \
 	done
 
+publish-dockerhub:
+	docker build \
+		-t segment/chamber:$(DOCKERHUB_TAG_PREFIX)$(VERSION_MAJOR_MINOR_PATCH) \
+		-t segment/chamber:$(DOCKERHUB_TAG_PREFIX)$(VERSION_MAJOR_MINOR) \
+		-t segment/chamber:$(DOCKERHUB_TAG_PREFIX)$(VERSION_MAJOR) \
+		-t segment/chamber:$(DOCKERHUB_TAG_PREFIX)$(VERSION_NO_V) \
+		.
+	docker push segment/chamber:$(DOCKERHUB_TAG_PREFIX)$(VERSION_MAJOR_MINOR_PATCH)
+	docker push segment/chamber:$(DOCKERHUB_TAG_PREFIX)$(VERSION_MAJOR_MINOR)
+	docker push segment/chamber:$(DOCKERHUB_TAG_PREFIX)$(VERSION_MAJOR)
+	docker push segment/chamber:$(DOCKERHUB_TAG_PREFIX)$(VERSION_NO_V)
+
 dist: dist/chamber-$(VERSION)-darwin-amd64 dist/chamber-$(VERSION)-linux-amd64 dist/chamber-$(VERSION)-windows-amd64.exe dist/chamber_$(VERSION)_amd64.deb dist/chamber_$(VERSION)_amd64.rpm dist/chamber-$(VERSION).sha256sums
 
 dist/chamber-$(VERSION).sha256sums: dist/chamber-$(VERSION)-darwin-amd64 dist/chamber-$(VERSION)-linux-amd64 dist/chamber-$(VERSION)-windows-amd64.exe dist/chamber_$(VERSION)_amd64.deb dist/chamber_$(VERSION)_amd64.rpm
@@ -131,4 +144,5 @@ dist/chamber_$(VERSION)_amd64.rpm: dist/nfpm-$(VERSION).yaml dist/chamber-$(VERS
 	publish-github-rpm \
 	publish-github-deb \
 	publish-github-darwin \
+	publish-dockerhub \
 	github-release

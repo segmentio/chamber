@@ -4,7 +4,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/segmentio/chamber/store"
+	"github.com/segmentio/chamber/v2/store"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -1,6 +1,6 @@
 package main
 
-import "github.com/segmentio/chamber/cmd"
+import "github.com/segmentio/chamber/v2/cmd"
 
 var (
 	// This is updated by linker flags during build

@@ -1,4 +1,4 @@
-module github.com/segmentio/chamber
+module github.com/segmentio/chamber/v2
 
 require (
 	github.com/aws/aws-sdk-go v1.16.26

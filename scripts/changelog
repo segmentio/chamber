@@ -2,6 +2,12 @@
 
 # generates a markdown-formatted changelog
 
+# TODO: this really only works well in two scenarios:
+# - the latest semver, GA tag points to HEAD
+# - no tag points to HEAD
+# It is known to fail in these unusual scenarios:
+# - there are later semver, GA tags than the tag on HEAD
+
 set -euo pipefail
 
 commit_url_base='https://github.com/segmentio/chamber/commit'

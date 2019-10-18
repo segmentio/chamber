@@ -188,6 +188,25 @@ func (s *S3KMSStore) List(service string, includeValues bool) ([]Secret, error) 
 	return secrets, nil
 }
 
+func (s *S3KMSStore) ListRaw(service string) ([]RawSecret, error) {
+
+	secretList, err := s.List(service, true)
+	if err != nil {
+		return []RawSecret{}, err
+	}
+
+	secrets := []RawSecret{}
+	for _, secret := range secretList {
+		s := RawSecret{
+			Key:   fmt.Sprintf("/%s/%s", service, secret.Meta.Key),
+			Value: *secret.Value,
+		}
+		secrets = append(secrets, s)
+	}
+
+	return secrets, nil
+}
+
 func (s *S3KMSStore) Delete(id SecretId) error {
 	index, err := s.readLatest(id.Service)
 	if err != nil {

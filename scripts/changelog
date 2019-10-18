@@ -1,0 +1,96 @@
+#!/bin/bash
+
+# generates a markdown-formatted changelog
+
+set -euo pipefail
+
+commit_url_base='https://github.com/segmentio/chamber/commit'
+
+# generates a changelog between the current commit and the previous tag
+changelog() {
+  local repo_url prev current excludes current_sha current_tag
+  
+  # if HEAD is a tag already, prev will the be second (non-prerelease) line
+  if git describe --exact-match --tags > /dev/null 2>&1; then
+    prev="$(git -c versionsort.suffix=- tag -l --sort=-v:refname | awk 'NR > 1 {print}' | grep -v '-' | awk 'NR == 1 {print}')"
+    current_tag="$(git -c versionsort.suffix=- tag -l --sort=-v:refname | awk 'NR == 1 {print}')"
+  else
+    prev="$(git -c versionsort.suffix=- tag -l --sort=-v:refname | grep -v '-' | awk 'NR == 1 {print}')"
+  fi
+  current=HEAD
+
+  # head -1 actually closes the pipe early, causing a SIGPIPE
+  set +o pipefail
+  current_sha="$(git log --pretty=format:%h | head -1)"
+  set -o pipefail
+
+  if [[ -z "${current_tag:-}" ]]; then
+    echo "# ${current_sha} vs ${prev}"
+  else
+    echo "# ${current_tag} vs ${prev}"
+  fi
+
+
+  declare -a feat pipeline fix meta misc lines
+  local lines
+  local lines_s
+  local feat=()
+  local pipeline=()
+  local fix=()
+  local meta=()
+  local misc=()
+  oldifs=$IFS
+  lines_s=$(git log --pretty=format:"* [\`%h\`](${commit_url_base}/%H) %s (%an)"   "${prev}..${current}" -- .  ${excludes})
+  local IFS=$'\n'
+  lines=($lines_s)
+  for line in "${lines[@]:-}"; do
+    if echo $line | grep -E ') feat[^:]*:' > /dev/null 2>&1; then
+      feat+=("$line")
+    elif echo $line | grep -E ') pipeline[^:]*:' > /dev/null 2>&1; then
+      pipeline+=("$line")
+    elif echo $line | grep -E ') fix[^:]*:' > /dev/null 2>&1; then
+      fix+=("$line")
+    elif echo $line | grep -E ') meta[^:]*:' > /dev/null 2>&1; then
+      meta+=("$line")
+    else
+      misc+=("$line")
+    fi
+  done 
+
+  if [[ "${#feat[@]}" -gt 0 ]]; then
+    echo "# Features"
+    for l in "${feat[@]}"; do
+      echo "$l"
+    done
+  fi
+
+  if [[ "${#fix[@]}" -gt 0 ]]; then
+    echo "# Fixes"
+    for l in "${fix[@]}"; do
+      echo "$l"
+    done
+  fi
+
+  if [[ "${#pipeline[@]}" -gt 0 ]]; then
+    echo "# Pipeline"
+    for l in "${pipeline[@]}"; do
+      echo "$l"
+    done
+  fi
+
+  if [[ "${#meta[@]}" -gt 0 ]]; then
+    echo "# Meta"
+    for l in "${meta[@]}"; do
+      echo "$l"
+    done
+  fi
+
+  if [[ "${#misc[@]}" -gt 0 ]]; then
+    echo "# Misc"
+    for l in "${misc[@]}"; do
+      echo "$l"
+    done
+  fi
+}
+
+changelog

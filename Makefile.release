@@ -31,13 +31,19 @@ publish-github: publish-github-darwin publish-github-linux publish-github-window
 publish-packagecloud: publish-packagecloud-deb publish-packagecloud-rpm
 
 github-release:
-	github-release release \
+	scripts/changelog | github-release release \
 	--security-token $$GH_LOGIN \
 	--user segmentio \
 	--repo chamber \
 	$(GITHUB_RELEASE_FLAGS) \
 	--tag $(VERSION) \
-	--name $(VERSION)
+	--description - \
+	--name $(VERSION) || \
+	github-release info \
+	--security-token $$GH_LOGIN \
+	--user segmentio \
+	--repo chamber \
+	--tag $(VERSION)
 
 publish-github-darwin: dist/chamber-$(VERSION)-darwin-amd64 | github-release
 	github-release upload \

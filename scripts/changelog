@@ -8,7 +8,7 @@ commit_url_base='https://github.com/segmentio/chamber/commit'
 
 # generates a changelog between the current commit and the previous tag
 changelog() {
-  local repo_url prev current excludes current_sha current_tag
+  local repo_url prev current current_sha current_tag
   
   # if HEAD is a tag already, prev will the be second (non-prerelease) line
   if git describe --exact-match --tags > /dev/null 2>&1; then
@@ -40,7 +40,7 @@ changelog() {
   local meta=()
   local misc=()
   oldifs=$IFS
-  lines_s=$(git log --pretty=format:"* [\`%h\`](${commit_url_base}/%H) %s (%an)"   "${prev}..${current}" -- .  ${excludes})
+  lines_s=$(git log --pretty=format:"* [\`%h\`](${commit_url_base}/%H) %s (%an)"   "${prev}..${current}" -- .)
   local IFS=$'\n'
   lines=($lines_s)
   for line in "${lines[@]:-}"; do

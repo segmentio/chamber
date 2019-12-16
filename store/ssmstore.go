@@ -29,6 +29,9 @@ var validKeyFormat = regexp.MustCompile(`^[\w\-\.]+$`)
 // ensure SSMStore confirms to Store interface
 var _ Store = &SSMStore{}
 
+// label check regexp
+var labelMatchRegex = regexp.MustCompile(`^(\/[\w\-\.]+)+:(.+)$`)
+
 // SSMStore implements the Store interface for storing secrets in SSM Parameter
 // Store
 type SSMStore struct {
@@ -296,10 +299,12 @@ func (s *SSMStore) ListServices(service string, includeSecretName bool) ([]strin
 // List lists all secrets for a given service.  If includeValues is true,
 // then those secrets are decrypted and returned, otherwise only the metadata
 // about a secret is returned.
-func (s *SSMStore) List(service string, includeValues bool) ([]Secret, error) {
+func (s *SSMStore) List(serviceName string, includeValues bool) ([]Secret, error) {
 	secrets := map[string]Secret{}
 
 	var describeParametersInput *ssm.DescribeParametersInput
+
+	service, _ := parseServiceLabel(serviceName)
 
 	if s.usePaths {
 		describeParametersInput = &ssm.DescribeParametersInput{
@@ -372,12 +377,22 @@ func (s *SSMStore) List(service string, includeValues bool) ([]Secret, error) {
 // ListRaw lists all secrets keys and values for a given service. Does not include any
 // other meta-data. Uses faster AWS APIs with much higher rate-limits. Suitable for
 // use in production environments.
-func (s *SSMStore) ListRaw(service string) ([]RawSecret, error) {
+func (s *SSMStore) ListRaw(serviceName string) ([]RawSecret, error) {
+	service, label := parseServiceLabel(serviceName)
 	if s.usePaths {
 		secrets := map[string]RawSecret{}
 		getParametersByPathInput := &ssm.GetParametersByPathInput{
 			Path:           aws.String("/" + service + "/"),
 			WithDecryption: aws.Bool(true),
+		}
+		if label != "" {
+			getParametersByPathInput.ParameterFilters = []*ssm.ParameterStringFilter{
+				{
+					Key:    aws.String("Label"),
+					Option: aws.String("Equals"),
+					Values: []*string{aws.String(label)},
+				},
+			}
 		}
 
 		err := s.svc.GetParametersByPathPages(getParametersByPathInput, func(resp *ssm.GetParametersByPathOutput, lastPage bool) bool {
@@ -558,4 +573,20 @@ func getChangeType(version int) ChangeEventType {
 		return Created
 	}
 	return Updated
+}
+
+func parseServiceLabel(serviceAndLabel string) (string, string) {
+	if labelMatchRegex.MatchString(serviceAndLabel) {
+		i := strings.Index(serviceAndLabel, ":")
+
+		if i > -1 {
+			service := serviceAndLabel[:i]
+			label := serviceAndLabel[i+1:]
+			return service, label
+		} else {
+			return serviceAndLabel, ""
+		}
+	} else {
+		return serviceAndLabel, ""
+	}
 }

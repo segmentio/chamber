@@ -107,4 +107,35 @@ func TestValidations(t *testing.T) {
 		})
 	}
 	os.Unsetenv("CHAMBER_NO_PATHS")
+
+	// Test Service format with PATH and Label
+	validServicePathFormatWithLabel := []string{
+		"foo/bar:-current-",
+		"foo.bar/foo:current",
+		"foo-bar/foo:current",
+		"foo-bar/foo-bar:current",
+		"foo/bar/foo:current",
+		"foo/bar/foo-bar:current",
+		"foo/bar/foo-bar",
+	}
+
+	for _, k := range validServicePathFormatWithLabel {
+		t.Run("Service with PATH validation and label should return Nil", func(t *testing.T) {
+			result := validateServiceWithLabel(k)
+			assert.Nil(t, result)
+		})
+	}
+
+	invalidServicePathFormatWithLabel := []string{
+		"foo:current$",
+		"foo.:",
+		"foo.bar:cur|rent",
+	}
+
+	for _, k := range invalidServicePathFormatWithLabel {
+		t.Run("Service with PATH validation and label should return Error", func(t *testing.T) {
+			result := validateServiceWithLabel(k)
+			assert.Error(t, result)
+		})
+	}
 }

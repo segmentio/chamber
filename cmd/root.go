@@ -14,9 +14,11 @@ import (
 
 // Regex's used to validate service and key names
 var (
-	validKeyFormat         = regexp.MustCompile(`^[\w\-\.]+$`)
-	validServiceFormat     = regexp.MustCompile(`^[\w\-\.]+$`)
-	validServicePathFormat = regexp.MustCompile(`^[\w\-\.]+(\/[\w\-\.]+)*$`)
+	validKeyFormat                  = regexp.MustCompile(`^[\w\-\.]+$`)
+	validServiceFormat              = regexp.MustCompile(`^[\w\-\.]+$`)
+	validServicePathFormat          = regexp.MustCompile(`^[\w\-\.]+(\/[\w\-\.]+)*$`)
+	validServiceFormatWithLabel     = regexp.MustCompile(`^[\w\-\.\:]+$`)
+	validServicePathFormatWithLabel = regexp.MustCompile(`^[\w\-\.]+(\/[\w\-\.]+)+(\:[\w\-\.]+)*$`)
 
 	verbose        bool
 	numRetries     int
@@ -104,6 +106,21 @@ func validateService(service string) error {
 	} else {
 		if !validServicePathFormat.MatchString(service) {
 			return fmt.Errorf("Failed to validate service name '%s'.  Only alphanumeric, dashes, forwardslashes, fullstops and underscores are allowed for service names", service)
+		}
+	}
+
+	return nil
+}
+
+func validateServiceWithLabel(service string) error {
+	_, noPaths := os.LookupEnv("CHAMBER_NO_PATHS")
+	if noPaths {
+		if !validServiceFormatWithLabel.MatchString(service) {
+			return fmt.Errorf("Failed to validate service name '%s'.  Only alphanumeric, dashes, fullstops and underscores are allowed for service names, and colon followed by a label name", service)
+		}
+	} else {
+		if !validServicePathFormatWithLabel.MatchString(service) {
+			return fmt.Errorf("Failed to validate service name '%s'.  Only alphanumeric, dashes, forwardslashes, fullstops and underscores are allowed for service names, and colon followed by a label name", service)
 		}
 	}
 

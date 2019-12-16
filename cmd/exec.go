@@ -87,7 +87,7 @@ func execRun(cmd *cobra.Command, args []string) error {
 	}
 
 	for _, service := range services {
-		if err := validateService(service); err != nil {
+		if err := validateServiceWithLabel(service); err != nil {
 			return errors.Wrap(err, "Failed to validate service")
 		}
 	}

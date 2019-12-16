@@ -855,21 +855,6 @@ func TestValidations(t *testing.T) {
 			assert.Equal(t, label, k[2])
 		})
 	}
-
-	// invalidPathWithLabelFormat := []string{
-	// "/foo//bar:current",
-	// "foo//bar:blue",
-	// "foo/bar:green",
-	// "foo/b:v10",
-	// "foo:current",
-	// }
-	//
-	// for _, k := range invalidPathWithLabelFormat {
-	// t.Run("Path Validation with Label should return false", func(t *testing.T) {
-	// result := parseServiceLabel(k)
-	// assert.False(t, result)
-	// })
-	// }
 }
 
 type ByKey []Secret

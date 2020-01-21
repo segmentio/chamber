@@ -583,10 +583,10 @@ func parseServiceLabel(serviceAndLabel string) (string, string) {
 			service := serviceAndLabel[:i]
 			label := serviceAndLabel[i+1:]
 			return service, label
-		} else {
-			return serviceAndLabel, ""
 		}
-	} else {
+
 		return serviceAndLabel, ""
 	}
+
+	return serviceAndLabel, ""
 }

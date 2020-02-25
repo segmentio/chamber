@@ -87,6 +87,7 @@ key already exists, it will increment the version and store a new value.
 If `-` is provided as the value argument, the value will be read from standard
 input.
 
+Secret keys are normalized automatically. The `-` will be `_` and the letters will be converted to upper case (for example a secret with key `secret_key` and `secret-key` will become `SECRET_KEY`).
 
 ### Listing Secrets
 

@@ -831,6 +831,30 @@ func TestValidations(t *testing.T) {
 			assert.False(t, result)
 		})
 	}
+
+	// Valid Path with Label
+	validPathWithLabelFormat := [][]string{
+		{"/foo", "/foo", ""},
+		{"/foo.", "/foo.", ""},
+		{"/foo.", "/foo.", ""},
+		{"/.foo:blue", "/.foo", "blue"},
+		{"/foo.bar:v30", "/foo.bar", "v30"},
+		{"/foo-bar:v90", "/foo-bar", "v90"},
+		{"/foo/bar:current", "/foo/bar", "current"},
+		{"/foo.bar/foo:yellow", "/foo.bar/foo", "yellow"},
+		{"/foo-bar/foo:v30:current", "/foo-bar/foo", "v30:current"},
+		{"/foo-bar/foo-bar:v10", "/foo-bar/foo-bar", "v10"},
+		{"/foo/bar/foo:90", "/foo/bar/foo", "90"},
+		{"/foo/bar/foo-bar:90-10", "/foo/bar/foo-bar", "90-10"},
+	}
+
+	for _, k := range validPathWithLabelFormat {
+		t.Run("Path Validation with Label should return true", func(t *testing.T) {
+			result, label := parseServiceLabel(k[0])
+			assert.Equal(t, result, k[1])
+			assert.Equal(t, label, k[2])
+		})
+	}
 }
 
 type ByKey []Secret

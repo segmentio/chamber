@@ -110,6 +110,7 @@ func TestValidations(t *testing.T) {
 
 	// Test Service format with PATH and Label
 	validServicePathFormatWithLabel := []string{
+		"foo",
 		"foo/bar:-current-",
 		"foo.bar/foo:current",
 		"foo-bar/foo:current",

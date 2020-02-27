@@ -18,7 +18,7 @@ var (
 	validServiceFormat              = regexp.MustCompile(`^[\w\-\.]+$`)
 	validServicePathFormat          = regexp.MustCompile(`^[\w\-\.]+(\/[\w\-\.]+)*$`)
 	validServiceFormatWithLabel     = regexp.MustCompile(`^[\w\-\.\:]+$`)
-	validServicePathFormatWithLabel = regexp.MustCompile(`^[\w\-\.]+(\/[\w\-\.]+)+(\:[\w\-\.]+)*$`)
+	validServicePathFormatWithLabel = regexp.MustCompile(`^[\w\-\.]+((\/[\w\-\.]+)+(\:[\w\-\.]+)*)?$`)
 
 	verbose        bool
 	numRetries     int

@@ -1,0 +1,12 @@
+#ignore git history to avoid commiting sensitive info
+.git
+# ignore Dockerfile
+Dockerfile
+# ignore docker compose to avoid commiting sensitive info
+docker-compose
+# ignore .ciricleci to avoid commiting sensitive info
+.circleci
+# ignore .buildkite to avoid commiting sensitive info
+.buildkite
+# ignore .github to avoid commiting sensitive info
+.github

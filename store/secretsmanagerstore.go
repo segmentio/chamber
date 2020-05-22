@@ -119,8 +119,9 @@ func (s *SecretsManagerStore) Write(id SecretId, value string) error {
 		}
 	} else {
 		putSecretValueInput := &secretsmanager.PutSecretValueInput{
-			SecretId:     aws.String(id.Service),
-			SecretString: aws.String(string(contents)),
+			SecretId:      aws.String(id.Service),
+			SecretString:  aws.String(string(contents)),
+			VersionStages: []*string{aws.String("AWSCURRENT"), aws.String("CHAMBER" + string(version))},
 		}
 		_, err = s.svc.PutSecretValue(putSecretValueInput)
 		if err != nil {

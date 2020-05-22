@@ -178,11 +178,12 @@ func (s *SecretsManagerStore) readVersion(id SecretId, version int) (Secret, err
 	}
 
 	for _, history := range resp.Versions {
+		h := history
 		thisVersion := 0
 
 		getSecretValueInput := &secretsmanager.GetSecretValueInput{
 			SecretId:  aws.String(id.Service),
-			VersionId: history.VersionId,
+			VersionId: h.VersionId,
 		}
 
 		resp, err := s.svc.GetSecretValue(getSecretValueInput)
@@ -268,17 +269,18 @@ func (s *SecretsManagerStore) List(serviceName string, includeValues bool) ([]Se
 	}
 
 	for key, meta := range latest {
+		m := meta
 		secret := Secret{
 			Value: nil,
 			Meta: SecretMetadata{
-				Created:   meta.Created,
-				CreatedBy: meta.CreatedBy,
-				Version:   meta.Version,
+				Created:   m.Created,
+				CreatedBy: m.CreatedBy,
+				Version:   m.Version,
 				Key:       key,
 			},
 		}
 		if includeValues {
-			secret.Value = &meta.Value
+			secret.Value = &m.Value
 		}
 		secrets[key] = secret
 	}
@@ -297,8 +299,9 @@ func (s *SecretsManagerStore) ListRaw(serviceName string) ([]RawSecret, error) {
 	rawSecrets := make([]RawSecret, len(latest))
 	i := 0
 	for key, meta := range latest {
+		m := meta
 		rawSecrets[i] = RawSecret{
-			Value: meta.Value,
+			Value: m.Value,
 			Key:   key,
 		}
 		i++
@@ -322,9 +325,10 @@ func (s *SecretsManagerStore) History(id SecretId) ([]ChangeEvent, error) {
 	}
 
 	for _, history := range resp.Versions {
+		h := history
 		getSecretValueInput := &secretsmanager.GetSecretValueInput{
 			SecretId:  aws.String(id.Service),
-			VersionId: history.VersionId,
+			VersionId: h.VersionId,
 		}
 
 		resp, err := s.svc.GetSecretValue(getSecretValueInput)

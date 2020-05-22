@@ -46,10 +46,11 @@ const (
 )
 
 const (
-	NullBackend  = "NULL"
-	SSMBackend   = "SSM"
-	S3Backend    = "S3"
-	S3KMSBackend = "S3-KMS"
+	NullBackend           = "NULL"
+	SSMBackend            = "SSM"
+	SecretsManagerBackend = "SECRETSMANAGER"
+	S3Backend             = "S3"
+	S3KMSBackend          = "S3-KMS"
 
 	BackendEnvVar = "CHAMBER_SECRET_BACKEND"
 	BucketEnvVar  = "CHAMBER_S3_BUCKET"
@@ -58,7 +59,7 @@ const (
 	DefaultKMSKey = "alias/parameter_store_key"
 )
 
-var Backends = []string{SSMBackend, S3Backend, NullBackend, S3KMSBackend}
+var Backends = []string{SSMBackend, SecretsManagerBackend, S3Backend, NullBackend, S3KMSBackend}
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
@@ -70,13 +71,14 @@ var RootCmd = &cobra.Command{
 }
 
 func init() {
-	RootCmd.PersistentFlags().IntVarP(&numRetries, "retries", "r", DefaultNumRetries, "For SSM, the number of retries we'll make before giving up")
+	RootCmd.PersistentFlags().IntVarP(&numRetries, "retries", "r", DefaultNumRetries, "For SSM or Secrets Manager, the number of retries we'll make before giving up")
 	RootCmd.PersistentFlags().DurationVarP(&minThrottleDelay, "min-throttle-delay", "", store.DefaultMinThrottleDelay, "For SSM, minimal delay before retrying throttled requests. Default 500ms.")
 	RootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "", false, "Print more information to STDOUT")
 	RootCmd.PersistentFlags().StringVarP(&backendFlag, "backend", "b", "ssm",
 		`Backend to use; AKA $CHAMBER_SECRET_BACKEND
 	null: no-op
 	ssm: SSM Parameter Store
+	secretsmanager: Secrets Manager
 	s3: S3; requires --backend-s3-bucket
 	s3-kms: S3 using AWS-KMS encryption; requires --backend-s3-bucket and --kms-key-alias set (if you want to write or delete keys).`,
 	)
@@ -194,6 +196,8 @@ func getSecretStore() (store.Store, error) {
 		}
 
 		s, err = store.NewS3KMSStore(numRetries, bucket, kmsKeyAlias)
+	case SecretsManagerBackend:
+		s, err = store.NewSecretsManagerStore(numRetries)
 	case SSMBackend:
 		if kmsKeyAliasFlag != DefaultKMSKey {
 			return nil, errors.New("Unable to use --kms-key-alias with this backend. Use CHAMBER_KMS_KEY_ALIAS instead.")

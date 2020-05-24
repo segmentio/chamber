@@ -161,6 +161,7 @@ $ chamber export [--format <format>] [--output-file <file>]  <service...>
 file formats are supported:
 
 * json (default)
+* yaml
 * java-properties
 * csv
 * tsv
@@ -175,7 +176,7 @@ file.
 $ chamber import <service> <filepath>
 ```
 
-`import` provides the ability to import secrets from a json file (like the kind
+`import` provides the ability to import secrets from a json or yaml file (like the kind
 you get from `chamber export`).
 
 You can set `filepath` to `-` to instead read input from stdin.

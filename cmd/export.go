@@ -14,6 +14,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	analytics "gopkg.in/segmentio/analytics-go.v3"
+	"gopkg.in/yaml.v3"
 )
 
 const doubleQuoteSpecialChars = "\\\n\r\"!$`"
@@ -32,7 +33,7 @@ var (
 )
 
 func init() {
-	exportCmd.Flags().StringVarP(&exportFormat, "format", "f", "json", "Output format (json, java-properties, csv, tsv, dotenv, tfvars)")
+	exportCmd.Flags().StringVarP(&exportFormat, "format", "f", "json", "Output format (json, yaml, java-properties, csv, tsv, dotenv, tfvars)")
 	exportCmd.Flags().StringVarP(&exportOutput, "output-file", "o", "", "Output file (default is standard output)")
 	RootCmd.AddCommand(exportCmd)
 }
@@ -89,6 +90,8 @@ func runExport(cmd *cobra.Command, args []string) error {
 	switch strings.ToLower(exportFormat) {
 	case "json":
 		err = exportAsJson(params, w)
+	case "yaml":
+		err = exportAsYaml(params, w)
 	case "java-properties", "properties":
 		err = exportAsJavaProperties(params, w)
 	case "csv":
@@ -136,6 +139,10 @@ func exportAsJson(params map[string]string, w io.Writer) error {
 	// {"param1":"value1","param2":"value2"}
 	// NOTE: json encoder does sorting by key
 	return json.NewEncoder(w).Encode(params)
+}
+
+func exportAsYaml(params map[string]string, w io.Writer) error {
+	return yaml.NewEncoder(w).Encode(params)
 }
 
 func exportAsJavaProperties(params map[string]string, w io.Writer) error {

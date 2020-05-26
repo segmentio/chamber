@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -11,12 +10,13 @@ import (
 	"github.com/segmentio/chamber/v2/store"
 	"github.com/spf13/cobra"
 	analytics "gopkg.in/segmentio/analytics-go.v3"
+	"gopkg.in/yaml.v3"
 )
 
 var (
 	importCmd = &cobra.Command{
 		Use:   "import <service> <file|->",
-		Short: "import secrets from json",
+		Short: "import secrets from json or yaml",
 		Args:  cobra.ExactArgs(2),
 		RunE:  importRun,
 	}
@@ -47,7 +47,7 @@ func importRun(cmd *cobra.Command, args []string) error {
 
 	var toBeImported map[string]string
 
-	decoder := json.NewDecoder(in)
+	decoder := yaml.NewDecoder(in)
 	if err := decoder.Decode(&toBeImported); err != nil {
 		return errors.Wrap(err, "Failed to decode input as json")
 	}

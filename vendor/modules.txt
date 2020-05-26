@@ -64,3 +64,5 @@ github.com/stretchr/testify/assert
 github.com/xtgo/uuid
 # gopkg.in/segmentio/analytics-go.v3 v3.0.1
 gopkg.in/segmentio/analytics-go.v3
+# gopkg.in/yaml.v3 v3.0.0-20200506231410-2ff61e1afc86
+gopkg.in/yaml.v3

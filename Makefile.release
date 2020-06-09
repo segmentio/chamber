@@ -127,6 +127,7 @@ publish-dockerhub:
 		-t segment/chamber:$(DOCKERHUB_TAG_PREFIX)$(VERSION_MAJOR_MINOR) \
 		-t segment/chamber:$(DOCKERHUB_TAG_PREFIX)$(VERSION_MAJOR) \
 		-t segment/chamber:$(DOCKERHUB_TAG_PREFIX)$(VERSION_NO_V) \
+		--build-arg VERSION=$(VERSION) \
 		.
 	docker push segment/chamber:$(DOCKERHUB_TAG_PREFIX)$(VERSION_MAJOR_MINOR_PATCH)
 	docker push segment/chamber:$(DOCKERHUB_TAG_PREFIX)$(VERSION_MAJOR_MINOR)

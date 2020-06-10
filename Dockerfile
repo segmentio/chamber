@@ -6,7 +6,7 @@ COPY . .
 ARG VERSION
 RUN test -n "${VERSION}"
 
-RUN apk add -U make git
+RUN apk add -U make
 RUN make linux VERSION=${VERSION}
 
 FROM scratch AS run

@@ -4,11 +4,14 @@
 #
 # This makefile is meant for humans
 
-VERSION := $(shell git describe --tags --always --dirty="-dev")
-VERSION_NO_V := $(shell git describe --tags --always --dirty="-dev" | sed 's/^v//')
-VERSION_MAJOR_MINOR_PATCH := $(shell git describe --tags --always --dirty="-dev" | sed 's/^v\([0-9]*.[0-9]*.[0-9]*\).*/\1/')
-VERSION_MAJOR_MINOR := $(shell git describe --tags --always --dirty="-dev" | sed 's/^v\([0-9]*.[0-9]*\).*/\1/')
-VERSION_MAJOR := $(shell git describe --tags --always --dirty="-dev" | sed 's/^v\([0-9]*\).*/\1/')
+ifndef VERSION
+	VERSION := $(shell git describe --tags --always --dirty="-dev")
+endif
+
+VERSION_NO_V := $(shell echo "$(VERSION)" | sed 's/^v//')
+VERSION_MAJOR_MINOR_PATCH := $(shell echo "$(VERSION)" | sed 's/^v\([0-9]*.[0-9]*.[0-9]*\).*/\1/')
+VERSION_MAJOR_MINOR := $(shell echo "$(VERSION)" | sed 's/^v\([0-9]*.[0-9]*\).*/\1/')
+VERSION_MAJOR := $(shell echo "$(VERSION)" | sed 's/^v\([0-9]*\).*/\1/')
 ANALYTICS_WRITE_KEY ?=
 LDFLAGS := -ldflags='-X "main.Version=$(VERSION)" -X "main.AnalyticsWriteKey=$(ANALYTICS_WRITE_KEY)"'
 

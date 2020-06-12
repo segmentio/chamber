@@ -199,7 +199,7 @@ func (s *SecretsManagerStore) readVersion(id SecretId, version int) (Secret, err
 		}
 
 		var obj secretValueObject
-		if err := json.Unmarshal([]byte(*resp.SecretString), &obj); err != nil {
+		if obj, err = jsonToSecretValueObject(*resp.SecretString); err != nil {
 			return Secret{}, err
 		}
 
@@ -247,7 +247,7 @@ func (s *SecretsManagerStore) readLatest(service string) (secretValueObject, err
 	}
 
 	var obj secretValueObject
-	if err := json.Unmarshal([]byte(*resp.SecretString), &obj); err != nil {
+	if obj, err = jsonToSecretValueObject(*resp.SecretString); err != nil {
 		return secretValueObject{}, err
 	}
 
@@ -344,7 +344,7 @@ func (s *SecretsManagerStore) History(id SecretId) ([]ChangeEvent, error) {
 		}
 
 		var obj secretValueObject
-		if err := json.Unmarshal([]byte(*resp.SecretString), &obj); err != nil {
+		if obj, err = jsonToSecretValueObject(*resp.SecretString); err != nil {
 			return events, err
 		}
 
@@ -371,4 +371,13 @@ func (s *SecretsManagerStore) getCurrentUser() (string, error) {
 	}
 
 	return *resp.Arn, nil
+}
+
+func jsonToSecretValueObject(s string) (secretValueObject, error) {
+	var obj secretValueObject
+	err := json.Unmarshal([]byte(s), &obj)
+	if err != nil {
+		return secretValueObject{}, err
+	}
+	return obj, nil
 }

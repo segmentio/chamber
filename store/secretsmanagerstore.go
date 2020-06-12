@@ -3,6 +3,7 @@ package store
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -326,6 +327,11 @@ func (s *SecretsManagerStore) History(id SecretId) ([]ChangeEvent, error) {
 		return events, err
 	}
 
+	// m is a temporary map to allow us to (1) deduplicate ChangeEvents, since
+	// saving the secret only increments the Version of the Key being created or
+	// modified, and (2) sort the ChangeEvents by Version when
+	m := make(map[int]*ChangeEvent)
+
 	for _, history := range resp.Versions {
 		h := history
 		getSecretValueInput := &secretsmanager.GetSecretValueInput{
@@ -353,14 +359,29 @@ func (s *SecretsManagerStore) History(id SecretId) ([]ChangeEvent, error) {
 			continue
 		}
 
-		events = append(events, ChangeEvent{
-			Type:    getChangeType(prop.Version),
-			Time:    prop.Created,
-			User:    prop.CreatedBy,
-			Version: prop.Version,
-		})
+		// This is where we deduplicate
+		if _, ok := m[prop.Version]; !ok {
+			m[prop.Version] = &ChangeEvent{
+				Type:    getChangeType(prop.Version),
+				Time:    prop.Created,
+				User:    prop.CreatedBy,
+				Version: prop.Version,
+			}
+		}
 	}
 
+	if len(m) == 0 {
+		return events, ErrSecretNotFound
+	}
+
+	keys := make([]int, 0)
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Ints(keys)
+	for _, k := range keys {
+		events = append(events, *m[k])
+	}
 	return events, nil
 }
 

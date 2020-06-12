@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
 	"github.com/aws/aws-sdk-go/service/secretsmanager/secretsmanageriface"
 	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 )
 
 // secretValueObject is the serialized format for storing secrets
@@ -32,7 +33,7 @@ var _ Store = &SecretsManagerStore{}
 // Store
 type SecretsManagerStore struct {
 	svc    secretsmanageriface.SecretsManagerAPI
-	stsSvc *sts.STS
+	stsSvc stsiface.STSAPI
 }
 
 // NewSecretsManagerStore creates a new SecretsManagerStore

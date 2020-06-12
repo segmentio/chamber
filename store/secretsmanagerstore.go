@@ -86,7 +86,14 @@ func (s *SecretsManagerStore) Write(id SecretId, value string) error {
 	}
 
 	if len(value) == 0 {
-		delete(latest, id.Key)
+		if mustCreate {
+			return err
+		}
+		if _, ok := latest[id.Key]; ok {
+			delete(latest, id.Key)
+		} else {
+			return ErrSecretNotFound
+		}
 	} else {
 		if prop, ok := latest[id.Key]; ok {
 			version = prop.Version + 1

@@ -77,6 +77,14 @@ func TestS3StoreConcurrency(t *testing.T) {
 	benchmarkStore(t, s, []string{"foo"})
 }
 
+func TestSecretsManagerStoreConcurrency(t *testing.T) {
+	if !benchmarkEnabled {
+		t.SkipNow()
+	}
+	s, _ := NewSecretsManagerStore(10)
+	benchmarkStore(t, s, []string{"foo"})
+}
+
 func TestSSMConcurrency(t *testing.T) {
 	if !benchmarkEnabled {
 		t.SkipNow()

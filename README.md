@@ -172,10 +172,10 @@ file formats are supported:
 File is written to standard output by default but you may specify an output
 file.
 
-To set env vars in your terminal you can eval the dotenv export format. For example, 
+To set env vars in your terminal you can use the `chamber env` command. For example, 
 ```shell
-eval `chamber export foo -f dotenv`
-echo $foo_var
+source <(chamber env service)`
+printf "%s" "$SERVICE_VAR"
 ```
 
 ### Importing

@@ -5,6 +5,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/segmentio/chamber/v2/store"
@@ -20,9 +21,10 @@ var (
 	validServiceFormatWithLabel     = regexp.MustCompile(`^[\w\-\.\:]+$`)
 	validServicePathFormatWithLabel = regexp.MustCompile(`^[\w\-\.]+((\/[\w\-\.]+)+(\:[\w\-\.]+)*)?$`)
 
-	verbose        bool
-	numRetries     int
-	chamberVersion string
+	verbose          bool
+	numRetries       int
+	minThrottleDelay time.Duration
+	chamberVersion   string
 	// one of *Backend consts
 	backend             string
 	backendFlag         string
@@ -69,6 +71,7 @@ var RootCmd = &cobra.Command{
 
 func init() {
 	RootCmd.PersistentFlags().IntVarP(&numRetries, "retries", "r", DefaultNumRetries, "For SSM, the number of retries we'll make before giving up")
+	RootCmd.PersistentFlags().DurationVarP(&minThrottleDelay, "min-throttle-delay", "", store.DefaultMinThrottleDelay, "For SSM, minimal delay before retrying throttled requests. Default 500ms.")
 	RootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "", false, "Print more information to STDOUT")
 	RootCmd.PersistentFlags().StringVarP(&backendFlag, "backend", "b", "ssm",
 		`Backend to use; AKA $CHAMBER_SECRET_BACKEND
@@ -196,7 +199,7 @@ func getSecretStore() (store.Store, error) {
 			return nil, errors.New("Unable to use --kms-key-alias with this backend. Use CHAMBER_KMS_KEY_ALIAS instead.")
 		}
 
-		s, err = store.NewSSMStore(numRetries)
+		s, err = store.NewSSMStoreWithMinThrottleDelay(numRetries, minThrottleDelay)
 	default:
 		return nil, fmt.Errorf("invalid backend `%s`", backend)
 	}

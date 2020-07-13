@@ -6,9 +6,11 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
 )
@@ -16,6 +18,9 @@ import (
 const (
 	// DefaultKeyID is the default alias for the KMS key used to encrypt/decrypt secrets
 	DefaultKeyID = "alias/parameter_store_key"
+
+	// DefaultMinThrottleDelay is the default delay before retrying throttled requests
+	DefaultMinThrottleDelay = client.DefaultRetryerMinThrottleDelay
 )
 
 // validPathKeyFormat is the format that is expected for key names inside parameter store
@@ -41,21 +46,33 @@ type SSMStore struct {
 
 // NewSSMStore creates a new SSMStore
 func NewSSMStore(numRetries int) (*SSMStore, error) {
+	return ssmStoreUsingRetryer(numRetries, DefaultMinThrottleDelay)
+}
+
+// NewSSMStoreWithMinThrottleDelay creates a new SSMStore with the aws sdk max retries and min throttle delay are configured.
+func NewSSMStoreWithMinThrottleDelay(numRetries int, minThrottleDelay time.Duration) (*SSMStore, error) {
+	return ssmStoreUsingRetryer(numRetries, minThrottleDelay)
+}
+
+func ssmStoreUsingRetryer(numRetries int, minThrottleDelay time.Duration) (*SSMStore, error) {
 	ssmSession, region, err := getSession(numRetries)
+
 	if err != nil {
 		return nil, err
 	}
 
-	svc := ssm.New(ssmSession, &aws.Config{
-		MaxRetries: aws.Int(numRetries),
-		Region:     region,
-	})
+	retryer := client.DefaultRetryer{NumMaxRetries: numRetries, MinThrottleDelay: minThrottleDelay}
 
 	usePaths := true
 	_, ok := os.LookupEnv("CHAMBER_NO_PATHS")
 	if ok {
 		usePaths = false
 	}
+
+	svc := ssm.New(ssmSession, &aws.Config{
+		Retryer: retryer,
+		Region:  region,
+	})
 
 	return &SSMStore{
 		svc:      svc,

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
@@ -343,6 +344,21 @@ func TestNewSSMStore(t *testing.T) {
 		assert.Equal(t, "https://ssm.us-west-2.amazonaws.com", endpoint.URL)
 	})
 
+	t.Run("Should set aws sdk min throttle delay to default", func(t *testing.T) {
+		s, err := NewSSMStore(1)
+		assert.Nil(t, err)
+		assert.Equal(t, DefaultMinThrottleDelay, s.svc.(*ssm.SSM).Config.Retryer.(client.DefaultRetryer).MinThrottleDelay)
+	})
+
+}
+
+func TestNewSSMStoreMinThrottleDelay(t *testing.T) {
+	t.Run("Should configure aws sdk retryer - num max retries and min throttle delay", func(t *testing.T) {
+		s, err := NewSSMStoreWithMinThrottleDelay(2, time.Duration(1000)*time.Millisecond)
+		assert.Nil(t, err)
+		assert.Equal(t, 2, s.svc.(*ssm.SSM).Config.Retryer.(client.DefaultRetryer).NumMaxRetries)
+		assert.Equal(t, time.Duration(1000)*time.Millisecond, s.svc.(*ssm.SSM).Config.Retryer.(client.DefaultRetryer).MinThrottleDelay)
+	})
 }
 
 func TestWrite(t *testing.T) {

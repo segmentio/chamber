@@ -14,17 +14,24 @@ import (
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 )
 
+// We store all Chamber metadata in a stringified JSON format,
+// in a field named "_chamber_metadata"
+const metadataKey = "_chamber_metadata"
+
 // secretValueObject is the serialized format for storing secrets
 // as a SecretsManager SecretValue
-type secretValueObject map[string]secretValueVersion
+type secretValueObject map[string]string
 
-// secretValueVersion holds all the metadata for a specific version
-// of a secret
-type secretValueVersion struct {
+// secretValueObjectMetadata holds all the metadata for all the secrets
+// keyed by the name of the secret
+type secretValueObjectMetadata map[string]secretMetadata
+
+// secretMetadata holds all the metadata for a specific version
+// of a specific secret
+type secretMetadata struct {
 	Created   time.Time `json:"created"`
 	CreatedBy string    `json:"created_by"`
 	Version   int       `json:"version"`
-	Value     string    `json:"value"`
 }
 
 // ensure SecretsManagerStore confirms to Store interface
@@ -94,22 +101,47 @@ func (s *SecretsManagerStore) Write(id SecretId, value string) error {
 		} else {
 			return ErrSecretNotFound
 		}
-	} else {
-		if prop, ok := latest[id.Key]; ok {
-			version = prop.Version + 1
+		metadata, err := getHydratedMetadata(&latest)
+		if err != nil {
+			return err
+		}
+		if _, ok := metadata[id.Key]; ok {
+			delete(metadata, id.Key)
 		}
 
+		rawMetadata, err := dehydrateMetadata(&metadata)
+		if err != nil {
+			return err
+		}
+		latest[metadataKey] = rawMetadata
+	} else {
 		user, err := s.getCurrentUser()
 		if err != nil {
 			return err
 		}
 
-		latest[id.Key] = secretValueVersion{
+		metadata, err := getHydratedMetadata(&latest)
+		if err != nil {
+			return err
+		}
+
+		if keyMetadata, ok := metadata[id.Key]; ok {
+			version = keyMetadata.Version + 1
+		}
+
+		metadata[id.Key] = secretMetadata{
 			Version:   version,
-			Value:     value,
 			Created:   time.Now().UTC(),
 			CreatedBy: user,
 		}
+
+		rawMetadata, err := dehydrateMetadata(&metadata)
+		if err != nil {
+			return err
+		}
+
+		latest[id.Key] = value
+		latest[metadataKey] = rawMetadata
 	}
 
 	contents, err := json.Marshal(latest)
@@ -145,22 +177,27 @@ func (s *SecretsManagerStore) Write(id SecretId, value string) error {
 // To grab the latest version, use -1 as the version number.
 func (s *SecretsManagerStore) Read(id SecretId, version int) (Secret, error) {
 	if version == -1 {
-		obj, err := s.readLatest(id.Service)
+		latest, err := s.readLatest(id.Service)
 		if err != nil {
 			return Secret{}, err
 		}
 
-		prop, ok := obj[id.Key]
+		value, ok := latest[id.Key]
 		if !ok {
 			return Secret{}, ErrSecretNotFound
 		}
 
+		keyMetadata, err := getHydratedKeyMetadata(&latest, &id.Key)
+		if err != nil {
+			return Secret{}, err
+		}
+
 		return Secret{
-			Value: &prop.Value,
+			Value: &value,
 			Meta: SecretMetadata{
-				Created:   prop.Created,
-				CreatedBy: prop.CreatedBy,
-				Version:   prop.Version,
+				Created:   keyMetadata.Created,
+				CreatedBy: keyMetadata.CreatedBy,
+				Version:   keyMetadata.Version,
 				Key:       id.Key,
 			},
 		}, nil
@@ -206,24 +243,28 @@ func (s *SecretsManagerStore) readVersion(id SecretId, version int) (Secret, err
 			continue
 		}
 
-		var obj secretValueObject
-		if obj, err = jsonToSecretValueObject(*resp.SecretString); err != nil {
+		var historyItem secretValueObject
+		if historyItem, err = jsonToSecretValueObject(*resp.SecretString); err != nil {
 			return Secret{}, err
 		}
 
-		prop, ok := obj[id.Key]
-		if !ok {
-			continue
+		keyMetadata, err := getHydratedKeyMetadata(&historyItem, &id.Key)
+		if err != nil {
+			return Secret{}, err
 		}
 
-		thisVersion = prop.Version
+		thisVersion = keyMetadata.Version
 
 		if thisVersion == version {
+			thisValue, ok := historyItem[id.Key]
+			if !ok {
+				return Secret{}, ErrSecretNotFound
+			}
 			result = Secret{
-				Value: &prop.Value,
+				Value: &thisValue,
 				Meta: SecretMetadata{
-					Created:   prop.Created,
-					CreatedBy: prop.CreatedBy,
+					Created:   keyMetadata.Created,
+					CreatedBy: keyMetadata.CreatedBy,
 					Version:   thisVersion,
 					Key:       id.Key,
 				},
@@ -278,19 +319,33 @@ func (s *SecretsManagerStore) List(serviceName string, includeValues bool) ([]Se
 		return nil, err
 	}
 
-	for key, meta := range latest {
-		m := meta
+	metadata, err := getHydratedMetadata(&latest)
+	if err != nil {
+		return nil, err
+	}
+
+	for key, value := range latest {
+		if key == metadataKey {
+			continue
+		}
+
+		keyMetadata, ok := metadata[key]
+		if !ok {
+			continue
+		}
+
 		secret := Secret{
 			Value: nil,
 			Meta: SecretMetadata{
-				Created:   m.Created,
-				CreatedBy: m.CreatedBy,
-				Version:   m.Version,
+				Created:   keyMetadata.Created,
+				CreatedBy: keyMetadata.CreatedBy,
+				Version:   keyMetadata.Version,
 				Key:       key,
 			},
 		}
 		if includeValues {
-			secret.Value = &m.Value
+			v := value
+			secret.Value = &v
 		}
 		secrets[key] = secret
 	}
@@ -299,7 +354,7 @@ func (s *SecretsManagerStore) List(serviceName string, includeValues bool) ([]Se
 }
 
 // ListRaw lists all secrets keys and values for a given service. Does not include any
-// other meta-data. Suitable for use in production environments.
+// other metadata. Suitable for use in production environments.
 func (s *SecretsManagerStore) ListRaw(serviceName string) ([]RawSecret, error) {
 	latest, err := s.readLatest(serviceName)
 	if err != nil {
@@ -308,10 +363,10 @@ func (s *SecretsManagerStore) ListRaw(serviceName string) ([]RawSecret, error) {
 
 	rawSecrets := make([]RawSecret, len(latest))
 	i := 0
-	for key, meta := range latest {
-		m := meta
+	for key, value := range latest {
+		// v := value
 		rawSecrets[i] = RawSecret{
-			Value: m.Value,
+			Value: value,
 			Key:   key,
 		}
 		i++
@@ -336,7 +391,7 @@ func (s *SecretsManagerStore) History(id SecretId) ([]ChangeEvent, error) {
 
 	// m is a temporary map to allow us to (1) deduplicate ChangeEvents, since
 	// saving the secret only increments the Version of the Key being created or
-	// modified, and (2) sort the ChangeEvents by Version when
+	// modified, and (2) sort the ChangeEvents by Version
 	m := make(map[int]*ChangeEvent)
 
 	for _, history := range resp.Versions {
@@ -356,23 +411,30 @@ func (s *SecretsManagerStore) History(id SecretId) ([]ChangeEvent, error) {
 			continue
 		}
 
-		var obj secretValueObject
-		if obj, err = jsonToSecretValueObject(*resp.SecretString); err != nil {
+		var historyItem secretValueObject
+		if historyItem, err = jsonToSecretValueObject(*resp.SecretString); err != nil {
 			return events, err
 		}
 
-		prop, ok := obj[id.Key]
+		metadata, err := getHydratedMetadata(&historyItem)
+		if err != nil {
+			return nil, err
+		}
+
+		keyMetadata, ok := metadata[id.Key]
 		if !ok {
 			continue
 		}
 
+		thisVersion := keyMetadata.Version
+
 		// This is where we deduplicate
-		if _, ok := m[prop.Version]; !ok {
-			m[prop.Version] = &ChangeEvent{
-				Type:    getChangeType(prop.Version),
-				Time:    prop.Created,
-				User:    prop.CreatedBy,
-				Version: prop.Version,
+		if _, ok := m[thisVersion]; !ok {
+			m[thisVersion] = &ChangeEvent{
+				Type:    getChangeType(thisVersion),
+				Time:    keyMetadata.Created,
+				User:    keyMetadata.CreatedBy,
+				Version: thisVersion,
 			}
 		}
 	}
@@ -399,6 +461,45 @@ func (s *SecretsManagerStore) getCurrentUser() (string, error) {
 	}
 
 	return *resp.Arn, nil
+}
+
+func getHydratedMetadata(raw *secretValueObject) (secretValueObjectMetadata, error) {
+	r := *raw
+	rawMetadata, ok := r[metadataKey]
+	if !ok {
+		return secretValueObjectMetadata{}, nil
+	}
+	return rehydrateMetadata(&rawMetadata)
+}
+
+func getHydratedKeyMetadata(raw *secretValueObject, key *string) (secretMetadata, error) {
+	metadata, err := getHydratedMetadata(raw)
+	if err != nil {
+		return secretMetadata{}, err
+	}
+
+	keyMetadata, ok := metadata[*key]
+	if !ok {
+		return secretMetadata{}, nil
+	}
+	return keyMetadata, nil
+}
+
+func rehydrateMetadata(rawMetadata *string) (secretValueObjectMetadata, error) {
+	var metadata secretValueObjectMetadata
+	err := json.Unmarshal([]byte(*rawMetadata), &metadata)
+	if err != nil {
+		return secretValueObjectMetadata{}, err
+	}
+	return metadata, nil
+}
+
+func dehydrateMetadata(metadata *secretValueObjectMetadata) (string, error) {
+	rawMetadata, err := json.Marshal(metadata)
+	if err != nil {
+		return "", err
+	}
+	return string(rawMetadata), nil
 }
 
 func jsonToSecretValueObject(s string) (secretValueObject, error) {

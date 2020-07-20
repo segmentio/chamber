@@ -174,29 +174,37 @@ func TestSecretsManagerWrite(t *testing.T) {
 	store := NewTestSecretsManagerStore(mock)
 
 	t.Run("Setting a new key should work", func(t *testing.T) {
-		secretId := SecretId{Service: "test", Key: "mykey"}
+		key := "mykey"
+		secretId := SecretId{Service: "test", Key: key}
 		err := store.Write(secretId, "value")
 		assert.Nil(t, err)
 		assert.Contains(t, mock.secrets, secretId.Service)
-		assert.Equal(t, "value", (*mock.secrets[secretId.Service].currentSecret)["mykey"].Value)
-		assert.Equal(t, 1, (*mock.secrets[secretId.Service].currentSecret)["mykey"].Version)
+		assert.Equal(t, "value", (*mock.secrets[secretId.Service].currentSecret)[key])
+		keyMetadata, err := getHydratedKeyMetadata(mock.secrets[secretId.Service].currentSecret, &key)
+		assert.Nil(t, err)
+		assert.Equal(t, 1, keyMetadata.Version)
 		assert.Equal(t, 1, len(mock.secrets[secretId.Service].history))
 	})
 
 	t.Run("Setting a key twice should create a new version", func(t *testing.T) {
-		secretId := SecretId{Service: "test", Key: "multipleversions"}
+		key := "multipleversions"
+		secretId := SecretId{Service: "test", Key: key}
 		err := store.Write(secretId, "value")
 		assert.Nil(t, err)
 		assert.Contains(t, mock.secrets, secretId.Service)
-		assert.Equal(t, "value", (*mock.secrets[secretId.Service].currentSecret)["multipleversions"].Value)
-		assert.Equal(t, 1, (*mock.secrets[secretId.Service].currentSecret)["multipleversions"].Version)
+		assert.Equal(t, "value", (*mock.secrets[secretId.Service].currentSecret)[key])
+		keyMetadata, err := getHydratedKeyMetadata(mock.secrets[secretId.Service].currentSecret, &key)
+		assert.Nil(t, err)
+		assert.Equal(t, 1, keyMetadata.Version)
 		assert.Equal(t, 2, len(mock.secrets[secretId.Service].history))
 
 		err = store.Write(secretId, "newvalue")
 		assert.Nil(t, err)
 		assert.Contains(t, mock.secrets, secretId.Service)
-		assert.Equal(t, "newvalue", (*mock.secrets[secretId.Service].currentSecret)["multipleversions"].Value)
-		assert.Equal(t, 2, (*mock.secrets[secretId.Service].currentSecret)["multipleversions"].Version)
+		assert.Equal(t, "newvalue", (*mock.secrets[secretId.Service].currentSecret)[key])
+		keyMetadata, err = getHydratedKeyMetadata(mock.secrets[secretId.Service].currentSecret, &key)
+		assert.Nil(t, err)
+		assert.Equal(t, 2, keyMetadata.Version)
 		assert.Equal(t, 3, len(mock.secrets[secretId.Service].history))
 	})
 }
@@ -306,8 +314,9 @@ func TestSecretsManagerListRaw(t *testing.T) {
 	t.Run("ListRaw should return all keys and values for a service", func(t *testing.T) {
 		s, err := store.ListRaw("test")
 		assert.Nil(t, err)
-		assert.Equal(t, 3, len(s))
 		sort.Sort(ByKeyRaw(s))
+		s = s[1:]
+		assert.Equal(t, 3, len(s))
 		assert.Equal(t, "a", s[0].Key)
 		assert.Equal(t, "b", s[1].Key)
 		assert.Equal(t, "c", s[2].Key)
@@ -322,6 +331,8 @@ func TestSecretsManagerListRaw(t *testing.T) {
 		store.Write(SecretId{Service: "matchlonger", Key: "a"}, "val")
 
 		s, err := store.ListRaw("match")
+		sort.Sort(ByKeyRaw(s))
+		s = s[1:]
 		assert.Nil(t, err)
 		assert.Equal(t, 1, len(s))
 		assert.Equal(t, "a", s[0].Key)
@@ -355,7 +366,7 @@ func TestSecretsManagerHistory(t *testing.T) {
 		assert.Equal(t, Created, events[0].Type)
 	})
 
-	t.Run("Histor should return create followed by updates for keys that have been updated", func(t *testing.T) {
+	t.Run("History should return create followed by updates for keys that have been updated", func(t *testing.T) {
 		events, err := store.History(SecretId{Service: "test", Key: "update"})
 		assert.Nil(t, err)
 		assert.Equal(t, 3, len(events))

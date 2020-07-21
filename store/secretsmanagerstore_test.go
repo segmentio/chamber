@@ -124,6 +124,31 @@ func NewTestSecretsManagerStore(mock secretsmanageriface.SecretsManagerAPI) *Sec
 	}
 }
 
+func TestSecretValueObjectUnmarshalling(t *testing.T) {
+	t.Run("Unmarshalling JSON to a SecretValueObject converts non-string values", func(t *testing.T) {
+		const j = `
+		{
+			"dbInstanceIdentifier": "database-1",
+			"port": 3306,
+			"isPhony": true,
+			"empty": null,
+			"nested": {
+				"foo": "bar"
+			},
+			"array": [1,2,3]
+		}
+		`
+		obj, err := jsonToSecretValueObject(j)
+		assert.Nil(t, err)
+		assert.Equal(t, "database-1", obj["dbInstanceIdentifier"])
+		assert.Equal(t, "3306", obj["port"])
+		assert.Equal(t, "true", obj["isPhony"])
+		assert.Equal(t, "", obj["empty"])
+		assert.Equal(t, "", obj["nested"])
+		assert.Equal(t, "", obj["array"])
+	})
+}
+
 func TestNewSecretsManagerStore(t *testing.T) {
 	t.Run("Using region override should take precedence over other settings", func(t *testing.T) {
 		os.Setenv("CHAMBER_AWS_REGION", "us-east-1")

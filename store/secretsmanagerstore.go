@@ -3,7 +3,9 @@ package store
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"sort"
+	"strconv"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -21,6 +23,37 @@ const metadataKey = "_chamber_metadata"
 // secretValueObject is the serialized format for storing secrets
 // as a SecretsManager SecretValue
 type secretValueObject map[string]string
+
+// We use a custom unmarshaller to provide better interoperability
+// with Secrets Manager secrets that are created/managed outside Chamber
+// For example, when creating secrets for an RDS instance,
+// the "port" is stored as a number, so we need to convert it to a string.
+// So we handle converting numbers and also booleans to strings.
+func (o *secretValueObject) UnmarshalJSON(b []byte) error {
+	var v map[string]interface{}
+	if err := json.Unmarshal(b, &v); err != nil {
+		return err
+	}
+
+	res := secretValueObject{}
+
+	for key, value := range v {
+		var s string
+		switch value := reflect.ValueOf(value); value.Kind() {
+		case reflect.String:
+			s = value.String()
+		case reflect.Float64:
+			s = strconv.FormatFloat(value.Float(), 'f', -1, 64)
+		case reflect.Bool:
+			s = strconv.FormatBool(value.Bool())
+		default:
+			s = ""
+		}
+		res[key] = s
+	}
+	*o = res
+	return nil
+}
 
 // secretValueObjectMetadata holds all the metadata for all the secrets
 // keyed by the name of the secret
@@ -331,7 +364,7 @@ func (s *SecretsManagerStore) List(serviceName string, includeValues bool) ([]Se
 
 		keyMetadata, ok := metadata[key]
 		if !ok {
-			continue
+			keyMetadata = secretMetadata{}
 		}
 
 		secret := Secret{

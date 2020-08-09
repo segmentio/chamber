@@ -100,16 +100,23 @@ func NewSecretsManagerStore(numRetries int) (*SecretsManagerStore, error) {
 	}, nil
 }
 
-// Write writes a given value to a secret identified by id.  If the secret
+// Write writes a given value to a secret identified by id. If the secret
 // already exists, then write a new version.
 func (s *SecretsManagerStore) Write(id SecretId, value string) error {
 	version := 1
 	// first read to get the current version
 	latest, err := s.readLatest(id.Service)
 	mustCreate := false
+	deleteKeyFromSecret := len(value) == 0
 
+	// Failure to readLatest may be a true error or an expected error.
+	// We expect that when we write a secret that it may not already exist:
+	// that's the secretsmanager.ErrCodeResourceNotFoundException.
 	if err != nil {
-		if len(value) == 0 {
+		// However, if the operation is to deleteKeyFromSecret and there's either
+		// a true error or the secret does not yet exist, that's true error because
+		// we cannot delete something that does not exist.
+		if deleteKeyFromSecret {
 			return err
 		}
 		if err != ErrSecretNotFound {
@@ -125,7 +132,7 @@ func (s *SecretsManagerStore) Write(id SecretId, value string) error {
 		}
 	}
 
-	if len(value) == 0 {
+	if deleteKeyFromSecret {
 		if _, ok := latest[id.Key]; ok {
 			delete(latest, id.Key)
 		} else {

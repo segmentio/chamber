@@ -126,9 +126,6 @@ func (s *SecretsManagerStore) Write(id SecretId, value string) error {
 	}
 
 	if len(value) == 0 {
-		if mustCreate {
-			return err
-		}
 		if _, ok := latest[id.Key]; ok {
 			delete(latest, id.Key)
 		} else {

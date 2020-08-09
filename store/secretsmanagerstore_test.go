@@ -22,6 +22,7 @@ import (
 type mockSecretsManagerClient struct {
 	secretsmanageriface.SecretsManagerAPI
 	secrets map[string]mockSecret
+	outputs map[string]secretsmanager.DescribeSecretOutput
 }
 
 type mockSecret struct {
@@ -104,6 +105,14 @@ func (m *mockSecretsManagerClient) ListSecretVersionIds(i *secretsmanager.ListSe
 	}
 
 	return &secretsmanager.ListSecretVersionIdsOutput{Versions: Versions}, nil
+}
+
+func (m *mockSecretsManagerClient) DescribeSecret(i *secretsmanager.DescribeSecretInput) (*secretsmanager.DescribeSecretOutput, error) {
+	output, ok := m.outputs[*i.SecretId]
+	if !ok {
+		return &secretsmanager.DescribeSecretOutput{RotationEnabled: aws.Bool(false)}, nil
+	}
+	return &output, nil
 }
 
 type mockSTSClient struct {
@@ -195,7 +204,7 @@ func TestNewSecretsManagerStore(t *testing.T) {
 }
 
 func TestSecretsManagerWrite(t *testing.T) {
-	mock := &mockSecretsManagerClient{secrets: map[string]mockSecret{}}
+	mock := &mockSecretsManagerClient{secrets: map[string]mockSecret{}, outputs: map[string]secretsmanager.DescribeSecretOutput{}}
 	store := NewTestSecretsManagerStore(mock)
 
 	t.Run("Setting a new key should work", func(t *testing.T) {
@@ -231,6 +240,15 @@ func TestSecretsManagerWrite(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, 2, keyMetadata.Version)
 		assert.Equal(t, 3, len(mock.secrets[secretId.Service].history))
+	})
+
+	t.Run("Setting a key on a secret with rotation enabled should fail", func(t *testing.T) {
+		service := "rotationtest"
+		mock.secrets[service] = mockSecret{}
+		mock.outputs[service] = secretsmanager.DescribeSecretOutput{RotationEnabled: aws.Bool(true)}
+		secretId := SecretId{Service: service, Key: "doesnotmatter"}
+		err := store.Write(secretId, "value")
+		assert.EqualError(t, err, "Cannot write to a secret with rotation enabled")
 	})
 }
 

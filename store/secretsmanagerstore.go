@@ -196,6 +196,19 @@ func (s *SecretsManagerStore) Write(id SecretId, value string) error {
 			return err
 		}
 	} else {
+		// Check that rotation is not enabled. We refuse to write to secrets with
+		// rotation enabled.
+		describeSecretInput := &secretsmanager.DescribeSecretInput{
+			SecretId: aws.String(id.Service),
+		}
+		details, err := s.svc.DescribeSecret(describeSecretInput)
+		if err != nil {
+			return err
+		}
+		if aws.BoolValue(details.RotationEnabled) {
+			return fmt.Errorf("Cannot write to a secret with rotation enabled")
+		}
+
 		putSecretValueInput := &secretsmanager.PutSecretValueInput{
 			SecretId:      aws.String(id.Service),
 			SecretString:  aws.String(string(contents)),

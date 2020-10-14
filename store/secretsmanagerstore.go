@@ -1,3 +1,4 @@
+// Secrets Manager Store is maintained by Dan MacTough https://github.com/danmactough. Thanks Dan!
 package store
 
 import (

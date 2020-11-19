@@ -3,6 +3,7 @@ package store
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 	"sort"
@@ -222,6 +223,10 @@ func (s *SecretsManagerStore) Write(id SecretId, value string) error {
 	}
 
 	return nil
+}
+
+func (s *SecretsManagerStore) WriteInclude(id SecretId, service string) error {
+	return errors.New("WriteImport is not supported by SecretsManagerStore")
 }
 
 // Read reads a secret at a specific version.

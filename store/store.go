@@ -44,11 +44,16 @@ type RawSecret struct {
 	Key   string
 }
 
+type ServiceMetadata struct {
+	IncludedServices []string `json:"includes"`
+}
+
 type SecretMetadata struct {
-	Created   time.Time
-	CreatedBy string
-	Version   int
-	Key       string
+	Created      time.Time
+	CreatedBy    string
+	Version      int
+	Key          string
+	ImportedFrom string
 }
 
 type ChangeEvent struct {
@@ -61,6 +66,7 @@ type ChangeEvent struct {
 type Store interface {
 	Write(id SecretId, value string) error
 	Read(id SecretId, version int) (Secret, error)
+	WriteInclude(id SecretId, serviceToInclude string) error
 	List(service string, includeValues bool) ([]Secret, error)
 	ListRaw(service string) ([]RawSecret, error)
 	ListServices(service string, includeSecretName bool) ([]string, error)

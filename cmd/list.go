@@ -83,8 +83,14 @@ func list(cmd *cobra.Command, args []string) error {
 	}
 
 	for _, secret := range secrets {
+		secretKey := key(secret.Meta.Key)
+		secretService := serviceFromKey(secret.Meta.Key)
+		if secretService != service {
+			secretKey = fmt.Sprintf("%s (%s)", secretKey, secretService)
+		}
+
 		fmt.Fprintf(w, "%s\t%d\t%s\t%s",
-			key(secret.Meta.Key),
+			key(secretKey),
 			secret.Meta.Version,
 			secret.Meta.Created.Local().Format(ShortTimeFormat),
 			secret.Meta.CreatedBy)
@@ -96,6 +102,18 @@ func list(cmd *cobra.Command, args []string) error {
 
 	w.Flush()
 	return nil
+}
+
+func serviceFromKey(s string) string {
+	_, noPaths := os.LookupEnv("CHAMBER_NO_PATHS")
+	sep := "/"
+	if noPaths {
+		sep = "."
+	}
+
+	tokens := strings.Split(s, sep)
+	secretService := tokens[len(tokens)-2]
+	return secretService
 }
 
 func key(s string) string {

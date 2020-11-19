@@ -1,6 +1,7 @@
 package store
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"regexp"
@@ -13,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -116,6 +118,84 @@ func (s *SSMStore) Write(id SecretId, value string) error {
 
 	// This API call returns an empty struct
 	_, err = s.svc.PutParameter(putParameterInput)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ReadServiceMetadata - return the metadata for the service, can be expanded to hold processesing instructions for the service
+func (s *SSMStore) readServiceMetadata(serviceName string) (*ServiceMetadata, error) {
+	//metadata is not inteded to be secret or encrypted
+	serviceMetadata := &ServiceMetadata{}
+	// service metadata is stored as JSON document within a special variable _chamber.meta.data
+	getParameterInput := &ssm.GetParameterInput{
+		Name: aws.String(fmt.Sprintf("/%s/__chamber.service.metadata", serviceName)),
+	}
+
+	parameter, err := s.svc.GetParameter(getParameterInput)
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			if aerr.Code() != ssm.ErrCodeParameterNotFound {
+				return nil, errors.Wrap(aerr, "There was an error retreiving the service metadata record")
+			} else {
+				//no service metadata parameter found, return an empty struct
+				return serviceMetadata, nil
+			}
+		}
+	}
+
+	json.Unmarshal([]byte(*parameter.Parameter.Value), serviceMetadata)
+
+	return serviceMetadata, nil
+}
+
+// WriteServiceMetadata - update the service metadata
+func (s *SSMStore) writeServiceMetadata(serviceName string, metadata *ServiceMetadata) error {
+	encodedJSON, err := json.Marshal(metadata)
+	if err != nil {
+		return errors.Wrap(err, "Failed to convert the metadata into json")
+	}
+
+	putParameterInput := &ssm.PutParameterInput{
+		Name:      aws.String(fmt.Sprintf("/%s/__chamber.service.metadata", serviceName)),
+		Type:      aws.String(ssm.ParameterTypeString),
+		Value:     aws.String(string(encodedJSON)),
+		Overwrite: aws.Bool(true),
+	}
+
+	_, err = s.svc.PutParameter(putParameterInput)
+
+	if err != nil {
+		return errors.Wrap(err, "There was an error updating the service metadata")
+	}
+
+	return nil
+}
+
+//WriteInclude - write an include stub into the store, this is an instruction to include another service's contents
+// include records are not versioned and cannot be updated since the key is a special
+// and the value does not matter
+func (s *SSMStore) WriteInclude(id SecretId, includeService string) error {
+	serviceMetadata, err := s.readServiceMetadata(id.Service)
+	if err != nil {
+		return err
+	}
+
+	for _, service := range serviceMetadata.IncludedServices {
+		if service == includeService {
+			// this service is already in the list, not update required
+			return nil
+		}
+	}
+
+	appendedServices := append(serviceMetadata.IncludedServices, includeService)
+
+	serviceMetadata.IncludedServices = appendedServices
+
+	err = s.writeServiceMetadata(id.Service, serviceMetadata)
+
 	if err != nil {
 		return err
 	}
@@ -319,6 +399,21 @@ func (s *SSMStore) ListServices(service string, includeSecretName bool) ([]strin
 func (s *SSMStore) List(serviceName string, includeValues bool) ([]Secret, error) {
 	secrets := map[string]Secret{}
 
+	serviceMetadata, err := s.readServiceMetadata(serviceName)
+
+	for _, service := range serviceMetadata.IncludedServices {
+		includedSecrets, err := s.List(service, false)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+
+		for _, secret := range includedSecrets {
+			secrets[secret.Meta.Key] = secret
+		}
+
+	}
+
 	var describeParametersInput *ssm.DescribeParametersInput
 
 	service, _ := parseServiceLabel(serviceName)
@@ -344,12 +439,18 @@ func (s *SSMStore) List(serviceName string, includeValues bool) ([]Secret, error
 		}
 	}
 
-	err := s.svc.DescribeParametersPages(describeParametersInput, func(resp *ssm.DescribeParametersOutput, lastPage bool) bool {
+	err = s.svc.DescribeParametersPages(describeParametersInput, func(resp *ssm.DescribeParametersOutput, lastPage bool) bool {
 		for _, meta := range resp.Parameters {
 			if !s.validateName(*meta.Name) {
 				continue
 			}
 			secretMeta := parameterMetaToSecretMeta(meta)
+
+			if strings.HasSuffix(secretMeta.Key, "__chamber.service.metadata") {
+				//do not include the metadata key as a valid config param
+				continue
+			}
+
 			secrets[secretMeta.Key] = Secret{
 				Value: nil,
 				Meta:  secretMeta,
@@ -396,8 +497,26 @@ func (s *SSMStore) List(serviceName string, includeValues bool) ([]Secret, error
 // use in production environments.
 func (s *SSMStore) ListRaw(serviceName string) ([]RawSecret, error) {
 	service, label := parseServiceLabel(serviceName)
+
 	if s.usePaths {
 		secrets := map[string]RawSecret{}
+
+		serviceMetadata, err := s.readServiceMetadata(serviceName)
+		if err != nil {
+			return nil, errors.Wrap(err, "Error retreiving service metadata")
+		}
+
+		for _, includeService := range serviceMetadata.IncludedServices {
+			includedSecrets, err := s.ListRaw(includeService)
+			if err != nil {
+				return nil, errors.Wrap(err, "Failed to load service include")
+			}
+
+			for _, secret := range includedSecrets {
+				secrets[secret.Key] = secret
+			}
+		}
+
 		getParametersByPathInput := &ssm.GetParametersByPathInput{
 			Path:           aws.String("/" + service + "/"),
 			WithDecryption: aws.Bool(true),
@@ -412,9 +531,14 @@ func (s *SSMStore) ListRaw(serviceName string) ([]RawSecret, error) {
 			}
 		}
 
-		err := s.svc.GetParametersByPathPages(getParametersByPathInput, func(resp *ssm.GetParametersByPathOutput, lastPage bool) bool {
+		err = s.svc.GetParametersByPathPages(getParametersByPathInput, func(resp *ssm.GetParametersByPathOutput, lastPage bool) bool {
 			for _, param := range resp.Parameters {
 				if !s.validateName(*param.Name) {
+					continue
+				}
+
+				if strings.HasSuffix(*param.Name, "__chamber.service.metadata") {
+					//exclude the service metadat from being included
 					continue
 				}
 

@@ -143,6 +143,10 @@ func (s *S3KMSStore) Write(id SecretId, value string) error {
 	return s.writeLatest(id.Service, index)
 }
 
+func (s *S3KMSStore) WriteInclude(id SecretId, service string) error {
+	return errors.New("WriteInclude is not supported for the S3KMS Store")
+}
+
 func (s *S3KMSStore) ListServices(service string, includeSecretName bool) ([]string, error) {
 	return nil, fmt.Errorf("S3KMS Backend is experimental and does not implement this command")
 }

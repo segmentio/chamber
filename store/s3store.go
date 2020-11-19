@@ -3,6 +3,7 @@ package store
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -147,6 +148,10 @@ func (s *S3Store) Write(id SecretId, value string) error {
 
 	index.Latest[id.Key] = value
 	return s.writeLatest(id.Service, index)
+}
+
+func (s *S3Store) WriteInclude(id SecretId, service string) error {
+	return errors.New("WriteInclude is not implemented for S3 Store")
 }
 
 func (s *S3Store) Read(id SecretId, version int) (Secret, error) {

@@ -16,6 +16,10 @@ func (s *NullStore) Write(id SecretId, value string) error {
 	return errors.New("Write is not implemented for Null Store")
 }
 
+func (s *NullStore) WriteInclude(id SecretId, includeService string) error {
+	return errors.New("WriteInclude is not implemented for Null Store")
+}
+
 func (s *NullStore) Read(id SecretId, version int) (Secret, error) {
 	return Secret{}, errors.New("Not implemented for Null Store")
 }

@@ -213,7 +213,7 @@ func (s *SecretsManagerStore) Write(id SecretId, value string) error {
 		putSecretValueInput := &secretsmanager.PutSecretValueInput{
 			SecretId:      aws.String(id.Service),
 			SecretString:  aws.String(string(contents)),
-			VersionStages: []*string{aws.String("AWSCURRENT"), aws.String("CHAMBER" + string(version))},
+			VersionStages: []*string{aws.String("AWSCURRENT"), aws.String("CHAMBER" + fmt.Sprint(version))},
 		}
 		_, err = s.svc.PutSecretValue(putSecretValueInput)
 		if err != nil {

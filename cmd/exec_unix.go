@@ -4,7 +4,8 @@ package cmd
 
 import (
 	osexec "os/exec"
-	"syscall"
+
+	"golang.org/x/sys/unix"
 )
 
 func exec(command string, args []string, env []string) error {
@@ -17,6 +18,6 @@ func exec(command string, args []string, env []string) error {
 	argv = append(argv, command)
 	argv = append(argv, args...)
 
-	// Only return if the execution fails.
-	return syscall.Exec(argv0, argv, env)
+	// Only returns if the execution fails.
+	return unix.Exec(argv0, argv, env)
 }

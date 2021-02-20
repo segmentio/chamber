@@ -1,4 +1,4 @@
-// +build go1.7
+// +build !go1.13,go1.7
 
 package session
 
@@ -10,7 +10,7 @@ import (
 
 // Transport that should be used when a custom CA bundle is specified with the
 // SDK.
-func getCABundleTransport() *http.Transport {
+func getCustomTransport() *http.Transport {
 	return &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
 		DialContext: (&net.Dialer{

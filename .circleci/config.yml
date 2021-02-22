@@ -2,7 +2,7 @@ version: 2
 jobs:
   test-install-golang-prev:
     docker:
-      - image: circleci/golang:1.12
+      - image: circleci/golang:1.15
     steps:
       - checkout
       - run:
@@ -12,7 +12,7 @@ jobs:
 
   test-install-golang-current:
     docker:
-      - image: circleci/golang:1.13
+      - image: circleci/golang:1.16
     steps:
       - checkout
       - run:
@@ -22,7 +22,7 @@ jobs:
 
   test:
     docker:
-      - image: circleci/golang:1.13
+      - image: circleci/golang:1.16
     working_directory: /go/src/github.com/segmentio/chamber
     steps:
       - checkout
@@ -35,17 +35,16 @@ jobs:
           command: |
             export GO111MODULE=on
             go mod tidy
-            go mod vendor
             if [ "$(git status --porcelain)" != "" ]; then
-              echo "git tree is dirty after tidying and vendoring modules"
-              echo "ensure go.mod and go.sum are tidy and vendor is checked in"
+              echo "git tree is dirty after tidying modules"
+              echo "ensure go.mod and go.sum are tidy"
               git status
               exit 1
             fi
 
   dist:
     docker:
-      - image: circleci/golang:1.13
+      - image: circleci/golang:1.16
     steps:
       - checkout
       - run:
@@ -62,7 +61,7 @@ jobs:
 
   publish-packagecloud:
     docker:
-      - image: circleci/golang:1.13
+      - image: circleci/golang:1.16
     steps:
       - checkout
       - attach_workspace: { at: . }
@@ -82,7 +81,7 @@ jobs:
 
   publish-github:
     docker:
-      - image: circleci/golang:1.13
+      - image: circleci/golang:1.16
     steps:
       - checkout
       - attach_workspace: { at: . }
@@ -97,7 +96,7 @@ jobs:
 
   publish-dockerhub:
     docker:
-      - image: circleci/golang:1.13
+      - image: circleci/golang:1.16
     steps:
       - checkout
       - attach_workspace: { at: . }

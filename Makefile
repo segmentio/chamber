@@ -16,7 +16,7 @@ ANALYTICS_WRITE_KEY ?=
 LDFLAGS := -ldflags='-X "main.Version=$(VERSION)" -X "main.AnalyticsWriteKey=$(ANALYTICS_WRITE_KEY)"'
 
 test:
-	go test -mod=vendor -v ./...
+	go test -v ./...
 
 all: dist/chamber-$(VERSION)-darwin-amd64 dist/chamber-$(VERSION)-linux-amd64 dist/chamber-$(VERSION)-windows-amd64.exe
 
@@ -29,18 +29,18 @@ dist/:
 build: chamber
 
 chamber:
-	CGO_ENABLED=0 go build -trimpath -mod=vendor $(LDFLAGS) -o $@
+	CGO_ENABLED=0 go build -trimpath $(LDFLAGS) -o $@
 
 dist/chamber-$(VERSION)-darwin-amd64: | dist/
-	GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -mod=vendor $(LDFLAGS) -o $@
+	GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -trimpath $(LDFLAGS) -o $@
 
 linux: dist/chamber-$(VERSION)-linux-amd64
 	cp $^ chamber
 
 dist/chamber-$(VERSION)-linux-amd64: | dist/
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -mod=vendor $(LDFLAGS) -o $@
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath $(LDFLAGS) -o $@
 
 dist/chamber-$(VERSION)-windows-amd64.exe: | dist/
-	GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -mod=vendor $(LDFLAGS) -o $@
+	GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath $(LDFLAGS) -o $@
 
 .PHONY: clean all linux

@@ -52,6 +52,10 @@ func importRun(cmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, "Failed to decode input as json")
 	}
 
+	if err := loadTagsFile(); err != nil {
+		return errors.Wrap(err, "Failed to load tags file")
+	}
+
 	if analyticsEnabled && analyticsClient != nil {
 		analyticsClient.Enqueue(analytics.Track{
 			UserId: username,
@@ -64,6 +68,7 @@ func importRun(cmd *cobra.Command, args []string) error {
 		})
 	}
 
+
 	secretStore, err := getSecretStore()
 	if err != nil {
 		return errors.Wrap(err, "Failed to get secret store")
@@ -74,7 +79,7 @@ func importRun(cmd *cobra.Command, args []string) error {
 			Service: service,
 			Key:     key,
 		}
-		if err := secretStore.Write(secretId, value); err != nil {
+		if err := secretStore.Write(secretId, value, tags); err != nil {
 			return errors.Wrap(err, "Failed to write secret")
 		}
 	}

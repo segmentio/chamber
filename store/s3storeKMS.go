@@ -75,7 +75,7 @@ func NewS3KMSStore(numRetries int, bucket string, kmsKeyAlias string) (*S3KMSSto
 	}, nil
 }
 
-func (s *S3KMSStore) Write(id SecretId, value string) error {
+func (s *S3KMSStore) Write(id SecretId, value string, tags map[string]string) error {
 	index, err := s.readLatest(id.Service)
 	if err != nil {
 		return err

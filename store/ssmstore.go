@@ -42,6 +42,10 @@ var labelMatchRegex = regexp.MustCompile(`^(\/[\w\-\.]+)+:(.+)$`)
 type SSMStore struct {
 	svc      ssmiface.SSMAPI
 	usePaths bool
+    //
+    //    * Key=OS,Value=Windows
+    //
+    //    * Key=ParameterType,Value=LicenseKey
 }
 
 // NewSSMStore creates a new SSMStore
@@ -94,7 +98,16 @@ func (s *SSMStore) KMSKey() string {
 
 // Write writes a given value to a secret identified by id.  If the secret
 // already exists, then write a new version.
-func (s *SSMStore) Write(id SecretId, value string) error {
+func (s *SSMStore) Write(id SecretId, value string, tags map[string]string) error {
+	ssmTags := make([]*ssm.Tag, 0, len(tags))
+	for k, v := range tags {
+		tag := ssm.Tag{
+			Key: aws.String(k),
+			Value: aws.String(v),
+		}
+		ssmTags = append(ssmTags, &tag)
+	}
+
 	version := 1
 	// first read to get the current version
 	current, err := s.Read(id, -1)
@@ -119,6 +132,19 @@ func (s *SSMStore) Write(id SecretId, value string) error {
 	if err != nil {
 		return err
 	}
+
+	if len(ssmTags) != 0 {
+		addTagsToResourceInput := &ssm.AddTagsToResourceInput{
+			ResourceId:     aws.String(s.idToName(id)),
+			ResourceType:   aws.String("Parameter"),
+			Tags:           ssmTags,
+		}
+
+		_, err = s.svc.AddTagsToResource(addTagsToResourceInput)
+		if err != nil {
+			return err
+		}
+  }
 
 	return nil
 }

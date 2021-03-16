@@ -59,7 +59,7 @@ type ChangeEvent struct {
 }
 
 type Store interface {
-	Write(id SecretId, value string) error
+	Write(id SecretId, value string, tags map[string]string) error
 	Read(id SecretId, version int) (Secret, error)
 	List(service string, includeValues bool) ([]Secret, error)
 	ListRaw(service string) ([]RawSecret, error)

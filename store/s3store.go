@@ -90,7 +90,7 @@ func NewS3StoreWithBucket(numRetries int, bucket string) (*S3Store, error) {
 	}, nil
 }
 
-func (s *S3Store) Write(id SecretId, value string) error {
+func (s *S3Store) Write(id SecretId, value string, tags map[string]string) error {
 	index, err := s.readLatest(id.Service)
 	if err != nil {
 		return err

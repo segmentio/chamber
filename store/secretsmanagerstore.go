@@ -103,7 +103,7 @@ func NewSecretsManagerStore(numRetries int) (*SecretsManagerStore, error) {
 
 // Write writes a given value to a secret identified by id. If the secret
 // already exists, then write a new version.
-func (s *SecretsManagerStore) Write(id SecretId, value string) error {
+func (s *SecretsManagerStore) Write(id SecretId, value string, tags map[string]string) error {
 	version := 1
 	// first read to get the current version
 	latest, err := s.readLatest(id.Service)
@@ -260,7 +260,7 @@ func (s *SecretsManagerStore) Read(id SecretId, version int) (Secret, error) {
 // Delete removes a secret. Note this removes all versions of the secret. (True?)
 func (s *SecretsManagerStore) Delete(id SecretId) error {
 	// delegate to Write
-	return s.Write(id, "")
+	return s.Write(id, "", map[string]string{})
 }
 
 func (s *SecretsManagerStore) readVersion(id SecretId, version int) (Secret, error) {

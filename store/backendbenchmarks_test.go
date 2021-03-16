@@ -104,7 +104,7 @@ func setupStore(t *testing.T, store Store, services []string) {
 				Key:     key,
 			}
 
-			store.Write(id, RandStringRunes(100))
+			store.Write(id, RandStringRunes(100), map[string]string{})
 		}
 	}
 }

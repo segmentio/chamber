@@ -28,6 +28,7 @@ var (
 func init() {
 	writeCmd.Flags().BoolVarP(&singleline, "singleline", "s", false, "Insert single line parameter (end with \\n)")
 	writeCmd.Flags().BoolVarP(&skipUnchanged, "skip-unchanged", "", false, "Skip writing secret if value is unchanged")
+	writeCmd.Flags().StringVarP(&tagsFilePath, "tags-file", "t", "", "Tags file path")
 	RootCmd.AddCommand(writeCmd)
 }
 
@@ -40,6 +41,10 @@ func write(cmd *cobra.Command, args []string) error {
 	key := strings.ToLower(args[1])
 	if err := validateKey(key); err != nil {
 		return errors.Wrap(err, "Failed to validate key")
+	}
+
+	if err := loadTagsFile(); err != nil {
+		return errors.Wrap(err, "Failed to load tags file")
 	}
 
 	if analyticsEnabled && analyticsClient != nil {
@@ -74,6 +79,7 @@ func write(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+
 	secretStore, err := getSecretStore()
 	if err != nil {
 		return errors.Wrap(err, "Failed to get secret store")
@@ -91,5 +97,5 @@ func write(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	return secretStore.Write(secretId, value)
+	return secretStore.Write(secretId, value, tags)
 }

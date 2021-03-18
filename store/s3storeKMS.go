@@ -188,18 +188,21 @@ func (s *S3KMSStore) List(service string, includeValues bool) ([]Secret, error) 
 	return secrets, nil
 }
 
+// ListRaw returns RawSecrets by extracting them from the index file. It only ever uses the 
+// index file; it never consults the actual secrets, so if the index file is out of sync, these
+// results will reflect that.
 func (s *S3KMSStore) ListRaw(service string) ([]RawSecret, error) {
-
-	secretList, err := s.List(service, true)
+	index, err := s.readLatest(service)
 	if err != nil {
 		return []RawSecret{}, err
 	}
 
+	// Read raw secrets directly from the index file (which caches the latest values)
 	secrets := []RawSecret{}
-	for _, secret := range secretList {
+	for key := range index.Latest {
 		s := RawSecret{
-			Key:   fmt.Sprintf("/%s/%s", service, secret.Meta.Key),
-			Value: *secret.Value,
+			Key:   fmt.Sprintf("/%s/%s", service, key),
+			Value: index.Latest[key].Value,
 		}
 		secrets = append(secrets, s)
 	}

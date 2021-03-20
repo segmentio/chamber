@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"regexp"
 	"strings"
@@ -12,7 +11,6 @@ import (
 	"github.com/segmentio/chamber/v2/store"
 	"github.com/spf13/cobra"
 	analytics "gopkg.in/segmentio/analytics-go.v3"
-	"gopkg.in/yaml.v3"
 )
 
 // Regex's used to validate service and key names
@@ -32,9 +30,6 @@ var (
 	backendFlag         string
 	backendS3BucketFlag string
 	kmsKeyAliasFlag     string
-
-  tagsFilePath string
-  tags map[string]string
 
 	analyticsEnabled  bool
 	analyticsWriteKey string
@@ -89,7 +84,6 @@ func init() {
 	)
 	RootCmd.PersistentFlags().StringVarP(&backendS3BucketFlag, "backend-s3-bucket", "", "", "bucket for S3 backend; AKA $CHAMBER_S3_BUCKET")
 	RootCmd.PersistentFlags().StringVarP(&kmsKeyAliasFlag, "kms-key-alias", "", DefaultKMSKey, "KMS Key Alias for writing and deleting secrets; AKA $CHAMBER_KMS_KEY_ALIAS. This option is currently only supported for the S3-KMS backend.")
-	RootCmd.PersistentFlags().StringVarP(&tagsFilePath, "tags-file", "t", "", "Tags file path")
 }
 
 // Execute adds all child commands to the root command sets flags appropriately.
@@ -214,28 +208,6 @@ func getSecretStore() (store.Store, error) {
 		return nil, fmt.Errorf("invalid backend `%s`", backend)
 	}
 	return s, err
-}
-
-func loadTagsFile() error {
-	if tagsFilePath != "" {
-		var tagsFileIn io.Reader
-		var err error
-
-		if tagsFilePath == "-" {
-			tagsFileIn = os.Stdin
-		} else {
-			tagsFileIn, err = os.Open(tagsFilePath)
-			if err != nil {
-				return errors.Wrap(err, "Failed to open tags file")
-			}
-		}
-
-		decoder := yaml.NewDecoder(tagsFileIn)
-		if err := decoder.Decode(&tags); err != nil {
-			return errors.Wrap(err, "Failed to decode tags file input as json")
-		}
-	}
-  return nil
 }
 
 func prerun(cmd *cobra.Command, args []string) {

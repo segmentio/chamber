@@ -23,7 +23,7 @@ var (
 )
 
 func init() {
-	RootCmd.AddCommand(importCmd)
+	AddCommandWithTagging(RootCmd, importCmd)
 }
 
 func importRun(cmd *cobra.Command, args []string) error {
@@ -50,10 +50,6 @@ func importRun(cmd *cobra.Command, args []string) error {
 	decoder := yaml.NewDecoder(in)
 	if err := decoder.Decode(&toBeImported); err != nil {
 		return errors.Wrap(err, "Failed to decode input as json")
-	}
-
-	if err := loadTagsFile(); err != nil {
-		return errors.Wrap(err, "Failed to load tags file")
 	}
 
 	if analyticsEnabled && analyticsClient != nil {

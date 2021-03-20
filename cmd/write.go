@@ -29,7 +29,7 @@ func init() {
 	writeCmd.Flags().BoolVarP(&singleline, "singleline", "s", false, "Insert single line parameter (end with \\n)")
 	writeCmd.Flags().BoolVarP(&skipUnchanged, "skip-unchanged", "", false, "Skip writing secret if value is unchanged")
 	writeCmd.Flags().StringVarP(&tagsFilePath, "tags-file", "t", "", "Tags file path")
-	RootCmd.AddCommand(writeCmd)
+	AddCommandWithTagging(RootCmd, writeCmd)
 }
 
 func write(cmd *cobra.Command, args []string) error {
@@ -41,10 +41,6 @@ func write(cmd *cobra.Command, args []string) error {
 	key := strings.ToLower(args[1])
 	if err := validateKey(key); err != nil {
 		return errors.Wrap(err, "Failed to validate key")
-	}
-
-	if err := loadTagsFile(); err != nil {
-		return errors.Wrap(err, "Failed to load tags file")
 	}
 
 	if analyticsEnabled && analyticsClient != nil {

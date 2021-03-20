@@ -367,7 +367,7 @@ func TestWrite(t *testing.T) {
 
 	t.Run("Setting a new key should work", func(t *testing.T) {
 		secretId := SecretId{Service: "test", Key: "mykey"}
-		err := store.Write(secretId, "value", map[string]string{})
+		err := store.Write(secretId, "value")
 		assert.Nil(t, err)
 		assert.Contains(t, mock.parameters, store.idToName(secretId))
 		assert.Equal(t, "value", *mock.parameters[store.idToName(secretId)].currentParam.Value)
@@ -377,9 +377,9 @@ func TestWrite(t *testing.T) {
 
 	t.Run("Setting a key twice should create a new version", func(t *testing.T) {
 		secretId := SecretId{Service: "test", Key: "multipleversions"}
-		err := store.Write(secretId, "value", map[string]string{})
+		err := store.Write(secretId, "value")
 		assert.Nil(t, err)
-		err = store.Write(secretId, "newvalue", map[string]string{})
+		err = store.Write(secretId, "newvalue")
 		assert.Nil(t, err)
 
 		assert.Contains(t, mock.parameters, store.idToName(secretId))
@@ -393,9 +393,9 @@ func TestRead(t *testing.T) {
 	mock := &mockSSMClient{parameters: map[string]mockParameter{}}
 	store := NewTestSSMStore(mock)
 	secretId := SecretId{Service: "test", Key: "key"}
-	store.Write(secretId, "value", map[string]string{})
-	store.Write(secretId, "second value", map[string]string{})
-	store.Write(secretId, "third value", map[string]string{})
+	store.Write(secretId, "value")
+	store.Write(secretId, "second value")
+	store.Write(secretId, "third value")
 
 	t.Run("Reading the latest value should work", func(t *testing.T) {
 		s, err := store.Read(secretId, -1)
@@ -438,7 +438,7 @@ func TestList(t *testing.T) {
 		{Service: "test", Key: "c"},
 	}
 	for _, secret := range secrets {
-		store.Write(secret, "value", map[string]string{})
+		store.Write(secret, "value")
 	}
 
 	t.Run("List should return all keys for a service", func(t *testing.T) {
@@ -468,8 +468,8 @@ func TestList(t *testing.T) {
 	})
 
 	t.Run("List should only return exact matches on service name", func(t *testing.T) {
-		store.Write(SecretId{Service: "match", Key: "a"}, "val", map[string]string{})
-		store.Write(SecretId{Service: "matchlonger", Key: "a"}, "val", map[string]string{})
+		store.Write(SecretId{Service: "match", Key: "a"}, "val")
+		store.Write(SecretId{Service: "matchlonger", Key: "a"}, "val")
 
 		s, err := store.List("match", false)
 		assert.Nil(t, err)
@@ -488,7 +488,7 @@ func TestListRaw(t *testing.T) {
 		{Service: "test", Key: "c"},
 	}
 	for _, secret := range secrets {
-		store.Write(secret, "value", map[string]string{})
+		store.Write(secret, "value")
 	}
 
 	t.Run("ListRaw should return all keys and values for a service", func(t *testing.T) {
@@ -506,8 +506,8 @@ func TestListRaw(t *testing.T) {
 	})
 
 	t.Run("List should only return exact matches on service name", func(t *testing.T) {
-		store.Write(SecretId{Service: "match", Key: "a"}, "val", map[string]string{})
-		store.Write(SecretId{Service: "matchlonger", Key: "a"}, "val", map[string]string{})
+		store.Write(SecretId{Service: "match", Key: "a"}, "val")
+		store.Write(SecretId{Service: "matchlonger", Key: "a"}, "val")
 
 		s, err := store.ListRaw("match")
 		assert.Nil(t, err)
@@ -526,7 +526,7 @@ func TestListRawWithPaths(t *testing.T) {
 		{Service: "test", Key: "c"},
 	}
 	for _, secret := range secrets {
-		store.Write(secret, "value", map[string]string{})
+		store.Write(secret, "value")
 	}
 
 	t.Run("ListRaw should return all keys and values for a service", func(t *testing.T) {
@@ -544,8 +544,8 @@ func TestListRawWithPaths(t *testing.T) {
 	})
 
 	t.Run("List should only return exact matches on service name", func(t *testing.T) {
-		store.Write(SecretId{Service: "match", Key: "a"}, "val", map[string]string{})
-		store.Write(SecretId{Service: "matchlonger", Key: "a"}, "val", map[string]string{})
+		store.Write(SecretId{Service: "match", Key: "a"}, "val")
+		store.Write(SecretId{Service: "matchlonger", Key: "a"}, "val")
 
 		s, err := store.ListRaw("match")
 		assert.Nil(t, err)
@@ -566,7 +566,7 @@ func TestHistory(t *testing.T) {
 	}
 
 	for _, s := range secrets {
-		store.Write(s, "value", map[string]string{})
+		store.Write(s, "value")
 	}
 
 	t.Run("History for a non-existent key should return not found error", func(t *testing.T) {
@@ -604,7 +604,7 @@ func TestWritePaths(t *testing.T) {
 
 	t.Run("Setting a new key should work", func(t *testing.T) {
 		secretId := SecretId{Service: "test", Key: "mykey"}
-		err := store.Write(secretId, "value", map[string]string{})
+		err := store.Write(secretId, "value")
 		assert.Nil(t, err)
 		assert.Contains(t, mock.parameters, store.idToName(secretId))
 		assert.Equal(t, "value", *mock.parameters[store.idToName(secretId)].currentParam.Value)
@@ -614,9 +614,9 @@ func TestWritePaths(t *testing.T) {
 
 	t.Run("Setting a key twice should create a new version", func(t *testing.T) {
 		secretId := SecretId{Service: "test", Key: "multipleversions"}
-		err := store.Write(secretId, "value", map[string]string{})
+		err := store.Write(secretId, "value")
 		assert.Nil(t, err)
-		err = store.Write(secretId, "newvalue", map[string]string{})
+		err = store.Write(secretId, "newvalue")
 		assert.Nil(t, err)
 
 		assert.Contains(t, mock.parameters, store.idToName(secretId))
@@ -630,9 +630,9 @@ func TestReadPaths(t *testing.T) {
 	mock := &mockSSMClient{parameters: map[string]mockParameter{}}
 	store := NewTestSSMStoreWithPaths(mock)
 	secretId := SecretId{Service: "test", Key: "key"}
-	store.Write(secretId, "value", map[string]string{})
-	store.Write(secretId, "second value", map[string]string{})
-	store.Write(secretId, "third value", map[string]string{})
+	store.Write(secretId, "value")
+	store.Write(secretId, "second value")
+	store.Write(secretId, "third value")
 
 	t.Run("Reading the latest value should work", func(t *testing.T) {
 		s, err := store.Read(secretId, -1)
@@ -675,7 +675,7 @@ func TestListPaths(t *testing.T) {
 		{Service: "test", Key: "c"},
 	}
 	for _, secret := range secrets {
-		store.Write(secret, "value", map[string]string{})
+		store.Write(secret, "value")
 	}
 
 	t.Run("List should return all keys for a service", func(t *testing.T) {
@@ -705,8 +705,8 @@ func TestListPaths(t *testing.T) {
 	})
 
 	t.Run("List should only return exact matches on service name", func(t *testing.T) {
-		store.Write(SecretId{Service: "match", Key: "a"}, "val", map[string]string{})
-		store.Write(SecretId{Service: "matchlonger", Key: "a"}, "val", map[string]string{})
+		store.Write(SecretId{Service: "match", Key: "a"}, "val")
+		store.Write(SecretId{Service: "matchlonger", Key: "a"}, "val")
 
 		s, err := store.List("match", false)
 		assert.Nil(t, err)
@@ -727,7 +727,7 @@ func TestHistoryPaths(t *testing.T) {
 	}
 
 	for _, s := range secrets {
-		store.Write(s, "value", map[string]string{})
+		store.Write(s, "value")
 	}
 
 	t.Run("History for a non-existent key should return not found error", func(t *testing.T) {
@@ -757,7 +757,7 @@ func TestDelete(t *testing.T) {
 	store := NewTestSSMStore(mock)
 
 	secretId := SecretId{Service: "test", Key: "key"}
-	store.Write(secretId, "value", map[string]string{})
+	store.Write(secretId, "value")
 
 	t.Run("Deleting secret should work", func(t *testing.T) {
 		err := store.Delete(secretId)

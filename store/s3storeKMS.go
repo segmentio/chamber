@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/pkg/errors"
+	"github.com/segmentio/chamber/v2/common"
 )
 
 // latest is used to keep a single object in s3 with all of the
@@ -75,7 +76,7 @@ func NewS3KMSStore(numRetries int, bucket string, kmsKeyAlias string) (*S3KMSSto
 	}, nil
 }
 
-func (s *S3KMSStore) Write(id SecretId, value string, tags map[string]string) error {
+func (s *S3KMSStore) Write(id SecretId, value string) error {
 	index, err := s.readLatest(id.Service)
 	if err != nil {
 		return err
@@ -127,6 +128,7 @@ func (s *S3KMSStore) Write(id SecretId, value string, tags map[string]string) er
 		SSEKMSKeyId:          aws.String(s.kmsKeyAlias),
 		Key:                  aws.String(objPath),
 		Body:                 bytes.NewReader(contents),
+		Tagging:              aws.String(common.GetTagsString()),
 	}
 
 	_, err = s.svc.PutObject(putObjectInput)

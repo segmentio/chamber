@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
+	"github.com/segmentio/chamber/v2/common"
 )
 
 const (
@@ -98,16 +99,7 @@ func (s *SSMStore) KMSKey() string {
 
 // Write writes a given value to a secret identified by id.  If the secret
 // already exists, then write a new version.
-func (s *SSMStore) Write(id SecretId, value string, tags map[string]string) error {
-	ssmTags := make([]*ssm.Tag, 0, len(tags))
-	for k, v := range tags {
-		tag := ssm.Tag{
-			Key: aws.String(k),
-			Value: aws.String(v),
-		}
-		ssmTags = append(ssmTags, &tag)
-	}
-
+func (s *SSMStore) Write(id SecretId, value string) error {
 	version := 1
 	// first read to get the current version
 	current, err := s.Read(id, -1)
@@ -133,11 +125,11 @@ func (s *SSMStore) Write(id SecretId, value string, tags map[string]string) erro
 		return err
 	}
 
-	if len(ssmTags) != 0 {
+	if len(common.GetSSMtags()) != 0 {
 		addTagsToResourceInput := &ssm.AddTagsToResourceInput{
 			ResourceId:     aws.String(s.idToName(id)),
 			ResourceType:   aws.String("Parameter"),
-			Tags:           ssmTags,
+			Tags:           common.GetSSMtags(),
 		}
 
 		_, err = s.svc.AddTagsToResource(addTagsToResourceInput)

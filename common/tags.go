@@ -1,11 +1,15 @@
-package cmd
+package common
 
 import (
 	"fmt"
 	"io"
+  "net/url"
 	"os"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/secretsmanager"
+	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/spf13/cobra"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
@@ -15,16 +19,19 @@ var (
 	tagsFilePath string
 	tags map[string]string
 	argTags []string
+	tagsString string
+	ssmTags []*ssm.Tag
+	secretsManagerTags []*secretsmanager.Tag
 )
 
 func AddCommandWithTagging(parentCmd *cobra.Command, cmd *cobra.Command) {
 	// recommended way to set up tagging - prevents accidental override of pre-run hooks
-	setupTagging(cmd)
+	SetupTagging(cmd)
 	parentCmd.AddCommand(cmd)
 }
 
 
-func setupTagging(cmd *cobra.Command) {
+func SetupTagging(cmd *cobra.Command) {
 	// Set up flags required for tagging
   // Wrap existing PreRunE / PreRun hooks with tag parsing
 
@@ -109,4 +116,53 @@ func loadTagsFile() error {
 		}
 	}
   return nil
+}
+
+
+func GetTagsString() string {
+	if tagsString == "" {
+		if len(tags) != 0 {
+			var tag_buffer []string
+			for k, v := range tags {
+				tag_buffer = append(tag_buffer, fmt.Sprintf("%s=%s", url.QueryEscape(k), url.QueryEscape(v)))
+			}
+			tagsString = strings.Join(tag_buffer[:], "&")
+		}
+	}
+
+	return tagsString
+}
+
+
+func GetSSMtags() []*ssm.Tag {
+	if len(ssmTags) == 0 {
+		if len(tags) != 0 {
+			for k, v := range tags {
+				tag := ssm.Tag{
+					Key: aws.String(k),
+					Value: aws.String(v),
+				}
+				ssmTags = append(ssmTags, &tag)
+			}
+		}
+	}
+
+	return ssmTags
+}
+
+
+func GetSecretsManagerTags() []*secretsmanager.Tag {
+	if len(secretsManagerTags) == 0 {
+		if len(tags) != 0 {
+			for k, v := range tags {
+				tag := secretsmanager.Tag{
+					Key: aws.String(k),
+					Value: aws.String(v),
+				}
+				secretsManagerTags = append(secretsManagerTags, &tag)
+			}
+		}
+	}
+
+	return secretsManagerTags
 }

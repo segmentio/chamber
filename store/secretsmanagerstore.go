@@ -15,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/secretsmanager/secretsmanageriface"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
+	"github.com/segmentio/chamber/v2/common"
 )
 
 // We store all Chamber metadata in a stringified JSON format,
@@ -103,7 +104,7 @@ func NewSecretsManagerStore(numRetries int) (*SecretsManagerStore, error) {
 
 // Write writes a given value to a secret identified by id. If the secret
 // already exists, then write a new version.
-func (s *SecretsManagerStore) Write(id SecretId, value string, tags map[string]string) error {
+func (s *SecretsManagerStore) Write(id SecretId, value string) error {
 	version := 1
 	// first read to get the current version
 	latest, err := s.readLatest(id.Service)
@@ -191,6 +192,7 @@ func (s *SecretsManagerStore) Write(id SecretId, value string, tags map[string]s
 		createSecretValueInput := &secretsmanager.CreateSecretInput{
 			Name:         aws.String(id.Service),
 			SecretString: aws.String(string(contents)),
+			Tags:         common.GetSecretsManagerTags(),
 		}
 		_, err = s.svc.CreateSecret(createSecretValueInput)
 		if err != nil {
@@ -218,6 +220,18 @@ func (s *SecretsManagerStore) Write(id SecretId, value string, tags map[string]s
 		_, err = s.svc.PutSecretValue(putSecretValueInput)
 		if err != nil {
 			return err
+		}
+
+		if len(common.GetSecretsManagerTags()) != 0 {
+			tagResourceInput := &secretsmanager.TagResourceInput{
+				SecretId:      aws.String(id.Service),
+				Tags:          common.GetSecretsManagerTags(),
+			}
+
+			_, err = s.svc.TagResource(tagResourceInput)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -260,7 +274,7 @@ func (s *SecretsManagerStore) Read(id SecretId, version int) (Secret, error) {
 // Delete removes a secret. Note this removes all versions of the secret. (True?)
 func (s *SecretsManagerStore) Delete(id SecretId) error {
 	// delegate to Write
-	return s.Write(id, "", map[string]string{})
+	return s.Write(id, "")
 }
 
 func (s *SecretsManagerStore) readVersion(id SecretId, version int) (Secret, error) {

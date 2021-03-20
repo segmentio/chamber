@@ -12,7 +12,7 @@ func NewNullStore() *NullStore {
 	return &NullStore{}
 }
 
-func (s *NullStore) Write(id SecretId, value string, tags map[string]string) error {
+func (s *NullStore) Write(id SecretId, value string) error {
 	return errors.New("Write is not implemented for Null Store")
 }
 

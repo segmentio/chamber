@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/segmentio/chamber/v2/common"
 	"github.com/segmentio/chamber/v2/store"
 	"github.com/spf13/cobra"
 	analytics "gopkg.in/segmentio/analytics-go.v3"
@@ -23,7 +24,7 @@ var (
 )
 
 func init() {
-	AddCommandWithTagging(RootCmd, importCmd)
+	common.AddCommandWithTagging(RootCmd, importCmd)
 }
 
 func importRun(cmd *cobra.Command, args []string) error {
@@ -75,7 +76,7 @@ func importRun(cmd *cobra.Command, args []string) error {
 			Service: service,
 			Key:     key,
 		}
-		if err := secretStore.Write(secretId, value, tags); err != nil {
+		if err := secretStore.Write(secretId, value); err != nil {
 			return errors.Wrap(err, "Failed to write secret")
 		}
 	}

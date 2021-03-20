@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/segmentio/chamber/v2/common"
 )
 
 const (
@@ -90,7 +91,7 @@ func NewS3StoreWithBucket(numRetries int, bucket string) (*S3Store, error) {
 	}, nil
 }
 
-func (s *S3Store) Write(id SecretId, value string, tags map[string]string) error {
+func (s *S3Store) Write(id SecretId, value string) error {
 	index, err := s.readLatest(id.Service)
 	if err != nil {
 		return err
@@ -137,6 +138,7 @@ func (s *S3Store) Write(id SecretId, value string, tags map[string]string) error
 		ServerSideEncryption: aws.String(s3.ServerSideEncryptionAes256),
 		Key:                  aws.String(objPath),
 		Body:                 bytes.NewReader(contents),
+		Tagging:              aws.String(common.GetTagsString()),
 	}
 
 	_, err = s.svc.PutObject(putObjectInput)
@@ -362,6 +364,7 @@ func (s *S3Store) puts3raw(path string, contents []byte) error {
 		ServerSideEncryption: aws.String(s3.ServerSideEncryptionAes256),
 		Key:                  aws.String(path),
 		Body:                 bytes.NewReader(contents),
+		Tagging:              aws.String(common.GetTagsString()),
 	}
 
 	_, err := s.svc.PutObject(putObjectInput)

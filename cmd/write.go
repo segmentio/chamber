@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/segmentio/chamber/v2/common"
 	"github.com/segmentio/chamber/v2/store"
 	"github.com/spf13/cobra"
 	analytics "gopkg.in/segmentio/analytics-go.v3"
@@ -28,8 +29,7 @@ var (
 func init() {
 	writeCmd.Flags().BoolVarP(&singleline, "singleline", "s", false, "Insert single line parameter (end with \\n)")
 	writeCmd.Flags().BoolVarP(&skipUnchanged, "skip-unchanged", "", false, "Skip writing secret if value is unchanged")
-	writeCmd.Flags().StringVarP(&tagsFilePath, "tags-file", "t", "", "Tags file path")
-	AddCommandWithTagging(RootCmd, writeCmd)
+	common.AddCommandWithTagging(RootCmd, writeCmd)
 }
 
 func write(cmd *cobra.Command, args []string) error {
@@ -93,5 +93,5 @@ func write(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	return secretStore.Write(secretId, value, tags)
+	return secretStore.Write(secretId, value)
 }

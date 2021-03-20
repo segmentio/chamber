@@ -43,10 +43,6 @@ var labelMatchRegex = regexp.MustCompile(`^(\/[\w\-\.]+)+:(.+)$`)
 type SSMStore struct {
 	svc      ssmiface.SSMAPI
 	usePaths bool
-    //
-    //    * Key=OS,Value=Windows
-    //
-    //    * Key=ParameterType,Value=LicenseKey
 }
 
 // NewSSMStore creates a new SSMStore
@@ -136,7 +132,7 @@ func (s *SSMStore) Write(id SecretId, value string) error {
 		if err != nil {
 			return err
 		}
-  }
+	}
 
 	return nil
 }

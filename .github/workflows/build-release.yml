@@ -34,3 +34,9 @@ jobs:
             - Updated aws-sdk-go to v1.38.22
           draft: false
           prerelease: false
+
+      - uses: alexellis/upload-assets@0.2.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          asset_paths: '["./dist/*"]'

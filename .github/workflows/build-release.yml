@@ -19,7 +19,7 @@ jobs:
         run: make test
 
       - name: Build
-        run: make all
+        run: make -f Makefile.release dist
 
       - name: Create Release
         id: create_release

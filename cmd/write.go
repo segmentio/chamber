@@ -82,7 +82,9 @@ func write(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	tagging.EnsureTagsLoaded()
+	if err := tagging.EnsureTagsLoaded(); err != nil {
+		return errors.Wrap(err, "Failed to load tags")
+	}
 
 	secretStore, err := getSecretStore()
 	if err != nil {

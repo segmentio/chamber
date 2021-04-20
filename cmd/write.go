@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/segmentio/chamber/v2/common"
+	"github.com/segmentio/chamber/v2/tagging"
 	"github.com/segmentio/chamber/v2/store"
 	"github.com/spf13/cobra"
 	analytics "gopkg.in/segmentio/analytics-go.v3"
@@ -29,7 +29,14 @@ var (
 func init() {
 	writeCmd.Flags().BoolVarP(&singleline, "singleline", "s", false, "Insert single line parameter (end with \\n)")
 	writeCmd.Flags().BoolVarP(&skipUnchanged, "skip-unchanged", "", false, "Skip writing secret if value is unchanged")
-	common.AddCommandWithTagging(RootCmd, writeCmd)
+	writeCmd.PersistentFlags().StringVarP(&tagging.TagsFilePath, "tags-file", "T", "",
+		`Path to a JSON file, whose key-value pairs will be used as tags.
+Tags supplied with --tag override tags with the same keys.`,
+	)
+	writeCmd.PersistentFlags().StringSliceVarP(&tagging.ArgTags, "tag", "t", []string{},
+		"A single tag in key=value format. Multiple instances possible.",
+	)
+	RootCmd.AddCommand(writeCmd)
 }
 
 func write(cmd *cobra.Command, args []string) error {
@@ -74,6 +81,8 @@ func write(cmd *cobra.Command, args []string) error {
 			value = string(v)
 		}
 	}
+
+	tagging.EnsureTagsLoaded()
 
 	secretStore, err := getSecretStore()
 	if err != nil {

@@ -15,7 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/secretsmanager/secretsmanageriface"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
-	"github.com/segmentio/chamber/v2/common"
+	"github.com/segmentio/chamber/v2/tagging"
 )
 
 // We store all Chamber metadata in a stringified JSON format,
@@ -192,7 +192,7 @@ func (s *SecretsManagerStore) Write(id SecretId, value string) error {
 		createSecretValueInput := &secretsmanager.CreateSecretInput{
 			Name:         aws.String(id.Service),
 			SecretString: aws.String(string(contents)),
-			Tags:         common.GetSecretsManagerTags(),
+			Tags:         tagging.GetSecretsManagerTags(),
 		}
 		_, err = s.svc.CreateSecret(createSecretValueInput)
 		if err != nil {
@@ -222,10 +222,10 @@ func (s *SecretsManagerStore) Write(id SecretId, value string) error {
 			return err
 		}
 
-		if len(common.GetSecretsManagerTags()) != 0 {
+		if len(tagging.GetSecretsManagerTags()) != 0 {
 			tagResourceInput := &secretsmanager.TagResourceInput{
 				SecretId:      aws.String(id.Service),
-				Tags:          common.GetSecretsManagerTags(),
+				Tags:          tagging.GetSecretsManagerTags(),
 			}
 
 			_, err = s.svc.TagResource(tagResourceInput)

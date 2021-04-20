@@ -14,7 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/segmentio/chamber/v2/common"
+	"github.com/segmentio/chamber/v2/tagging"
 )
 
 const (
@@ -138,7 +138,7 @@ func (s *S3Store) Write(id SecretId, value string) error {
 		ServerSideEncryption: aws.String(s3.ServerSideEncryptionAes256),
 		Key:                  aws.String(objPath),
 		Body:                 bytes.NewReader(contents),
-		Tagging:              aws.String(common.GetTagsString()),
+		Tagging:              aws.String(tagging.GetTagsString()),
 	}
 
 	_, err = s.svc.PutObject(putObjectInput)
@@ -364,7 +364,7 @@ func (s *S3Store) puts3raw(path string, contents []byte) error {
 		ServerSideEncryption: aws.String(s3.ServerSideEncryptionAes256),
 		Key:                  aws.String(path),
 		Body:                 bytes.NewReader(contents),
-		Tagging:              aws.String(common.GetTagsString()),
+		Tagging:              aws.String(tagging.GetTagsString()),
 	}
 
 	_, err := s.svc.PutObject(putObjectInput)

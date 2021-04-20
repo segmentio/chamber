@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/segmentio/chamber/v2/common"
+	"github.com/segmentio/chamber/v2/tagging"
 	"github.com/segmentio/chamber/v2/store"
 	"github.com/spf13/cobra"
 	analytics "gopkg.in/segmentio/analytics-go.v3"
@@ -24,7 +24,14 @@ var (
 )
 
 func init() {
-	common.AddCommandWithTagging(RootCmd, importCmd)
+	importCmd.PersistentFlags().StringVarP(&tagging.TagsFilePath, "tags-file", "T", "",
+		`Path to a JSON file, whose key-value pairs will be used as tags.
+Tags supplied with --tag override tags with the same keys.`,
+	)
+	importCmd.PersistentFlags().StringSliceVarP(&tagging.ArgTags, "tag", "t", []string{},
+		"A single tag in key=value format. Multiple instances possible.",
+	)
+	RootCmd.AddCommand(importCmd)
 }
 
 func importRun(cmd *cobra.Command, args []string) error {
@@ -64,6 +71,8 @@ func importRun(cmd *cobra.Command, args []string) error {
 				Set("backend", backend),
 		})
 	}
+
+	tagging.EnsureTagsLoaded()
 
 	secretStore, err := getSecretStore()
 	if err != nil {

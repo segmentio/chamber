@@ -14,7 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/pkg/errors"
-	"github.com/segmentio/chamber/v2/common"
+	"github.com/segmentio/chamber/v2/tagging"
 )
 
 // latest is used to keep a single object in s3 with all of the
@@ -128,7 +128,7 @@ func (s *S3KMSStore) Write(id SecretId, value string) error {
 		SSEKMSKeyId:          aws.String(s.kmsKeyAlias),
 		Key:                  aws.String(objPath),
 		Body:                 bytes.NewReader(contents),
-		Tagging:              aws.String(common.GetTagsString()),
+		Tagging:              aws.String(tagging.GetTagsString()),
 	}
 
 	_, err = s.svc.PutObject(putObjectInput)

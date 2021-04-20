@@ -13,7 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
-	"github.com/segmentio/chamber/v2/common"
+	"github.com/segmentio/chamber/v2/tagging"
 )
 
 const (
@@ -121,11 +121,11 @@ func (s *SSMStore) Write(id SecretId, value string) error {
 		return err
 	}
 
-	if len(common.GetSSMtags()) != 0 {
+	if len(tagging.GetSSMtags()) != 0 {
 		addTagsToResourceInput := &ssm.AddTagsToResourceInput{
 			ResourceId:     aws.String(s.idToName(id)),
 			ResourceType:   aws.String("Parameter"),
-			Tags:           common.GetSSMtags(),
+			Tags:           tagging.GetSSMtags(),
 		}
 
 		_, err = s.svc.AddTagsToResource(addTagsToResourceInput)

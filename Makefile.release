@@ -67,6 +67,15 @@ publish-github-linux: dist/chamber-$(VERSION)-linux-amd64 | github-release
 	--name chamber-$(VERSION)-linux-amd64 \
 	--file $<
 
+publish-github-linux-arm64: dist/chamber-$(VERSION)-linux-arm64 | github-release
+	github-release upload \
+	--security-token $$GH_LOGIN \
+	--user segmentio \
+	--repo chamber \
+	--tag $(VERSION) \
+	--name chamber-$(VERSION)-linux-arm64 \
+	--file $<
+
 publish-github-windows: dist/chamber-$(VERSION)-windows-amd64.exe | github-release
 	github-release upload \
 	--security-token $$GH_LOGIN \

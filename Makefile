@@ -34,6 +34,9 @@ chamber:
 dist/chamber-$(VERSION)-darwin-amd64: | dist/
 	GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -trimpath $(LDFLAGS) -o $@
 
+dist/chamber-$(VERSION)-darwin-arm64: | dist/
+	GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -trimpath $(LDFLAGS) -o $@
+
 linux: dist/chamber-$(VERSION)-linux-amd64
 	cp $^ chamber
 

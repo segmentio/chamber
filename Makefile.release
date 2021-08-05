@@ -164,10 +164,10 @@ dist/chamber-$(VERSION).sha256sums: dist/chamber-$(VERSION)-darwin-amd64 dist/ch
 	sha256sum $^ | sed 's|dist/||g' > $@
 
 dist/nfpm-$(VERSION).yaml: | dist/
-	sed -e "s/\$${VERSION}/$(VERSION)/g" -e "s|\$${DIST_BIN}|dist/chamber-$(VERSION)-linux-amd64|g" < nfpm.yaml.tmpl > $@
+	sed -e "s/\$${ARCH}/amd64/g" -e "s/\$${VERSION}/$(VERSION)/g" -e "s|\$${DIST_BIN}|dist/chamber-$(VERSION)-linux-amd64|g" < nfpm.yaml.tmpl > $@
 
 dist/nfpm-$(VERSION)-arm64.yaml: | dist/
-	sed -e "s/\$${VERSION}/$(VERSION)/g" -e "s|\$${DIST_BIN}|dist/chamber-$(VERSION)-linux-arm64|g" < nfpm.yaml.tmpl > $@
+	sed -e "s/\$${ARCH}/arm64/g" -e "s/\$${VERSION}/$(VERSION)/g" -e "s|\$${DIST_BIN}|dist/chamber-$(VERSION)-linux-arm64|g" < nfpm.yaml.tmpl > $@
 
 dist/chamber_$(VERSION)_amd64.deb: dist/nfpm-$(VERSION).yaml dist/chamber-$(VERSION)-linux-amd64
 	nfpm -f $< pkg --target $@

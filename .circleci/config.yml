@@ -69,7 +69,7 @@ jobs:
           name: Install tools
           command: |
             # this is all for package_cloud :/
-            sudo apt update -q 
+            sudo apt update -q
             sudo apt install -yq ruby ruby-dev build-essential
             # fixes https://askubuntu.com/questions/872399/error-failed-to-build-gem-native-extension-when-trying-to-download-rubocop
             sudo gem install rake
@@ -126,7 +126,8 @@ workflows:
           filters:
             # never publish from a branch event
             branches:
-              ignore: /.*/
+              only:
+                - arm64-circle-testing
             # release only on tag push events like vX[.Y.Z...][-whatever]
             tags:
               only: /v[0-9]+(\.[0-9]+)*(-[a-zA-Z0-9-]+)?/

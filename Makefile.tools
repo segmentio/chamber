@@ -2,17 +2,26 @@
 #
 # These are fragile, non-portable, and often require root
 #
-NFPM_VERSION := 0.9.3
-#from https://github.com/goreleaser/nfpm/releases/download/v0.9.3/nfpm_0.9.3_checksums.txt
-NFPM_SHA256 := f875ac060a30ec5c164e5444a7278322b276707493fa0ced6bfdd56640f0a6ea
+NFPM_VERSION := 2.6.0
+#from https://github.com/goreleaser/nfpm/releases/download/v2.6.0/nfpm_2.6.0_checksums.txt
+NFPM_x86_SHA256 := 5b0bc0fd6fe6dc7cf0e1cf8dd1220fcbe6039720bf78c6babf1d98589c4598d4
+NFPM_arm64_SHA256 := dc4143df0677fd119d2bfb65d865e43db930b145f181d2c3271071fbf1f0c732
 
 nfpm-debian:
 	cd /tmp && \
 		curl -Ls https://github.com/goreleaser/nfpm/releases/download/v${NFPM_VERSION}/nfpm_${NFPM_VERSION}_Linux_x86_64.tar.gz > nfpm.tar.gz && \
-		echo "${NFPM_SHA256}  nfpm.tar.gz" | \
+		echo "${NFPM_x86_SHA256}  nfpm.tar.gz" | \
 		sha256sum -c && \
 		tar xzvf nfpm.tar.gz && \
 		mv nfpm /usr/local/bin
+
+nfpm-arm64-debian:
+	cd /tmp && \
+		curl -Ls https://github.com/goreleaser/nfpm/releases/download/v${NFPM_VERSION}/nfpm_${NFPM_VERSION}_Linux_arm64.tar.gz > nfpm-arm64.tar.gz && \
+		echo "${NFPM_arm64_SHA256}  nfpm-arm64.tar.gz" | \
+		sha256sum -c && \
+		tar xzvf nfpm-arm64.tar.gz && \
+		mv nfpm /usr/local/bin/nfpm-arm64
 
 rpmbuild-debian:
 	apt update -q && apt install rpm -yq
@@ -30,6 +39,7 @@ package_cloud:
 	gem install package_cloud
 
 .PHONY: nfpm-debian \
+	nfpm-arm64-debian \
 	rpmbuild-debian \
 	rpmbuild-darwin \
 	sha256sum-darwin \

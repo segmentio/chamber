@@ -50,7 +50,7 @@ jobs:
       - run:
           name: Install nfpm, rpmbuild
           command: |
-            sudo make -f Makefile.tools nfpm-debian rpmbuild-debian
+            sudo make -f Makefile.tools nfpm-debian rpmbuild-debian nfpm-arm64-debian
       - run:
           name: Make distributables
           command: |

@@ -21,7 +21,7 @@ nfpm-arm64-debian:
 		echo "${NFPM_arm64_SHA256}  nfpm-arm64.tar.gz" | \
 		sha256sum -c && \
 		tar xzvf nfpm-arm64.tar.gz && \
-		mv nfpm /usr/local/bin/nfpm-arm64
+		mv nfpm-arm64 /usr/local/bin
 
 rpmbuild-debian:
 	apt update -q && apt install rpm -yq

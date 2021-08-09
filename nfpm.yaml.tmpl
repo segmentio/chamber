@@ -11,6 +11,9 @@ maintainer: tooling-team@segment.com
 homepage: "https://github.com/segmentio/chamber"
 license: "MIT"
 # IMHO packages should install to /usr/bin
+contents:
+  - src: "${DIST_BIN}"
+    dst: "/usr/bin/chamber"
 description: >
   Chamber is a tool for managing secrets. Currently it does so by storing
   secrets in SSM Parameter Store, an AWS service for storing secrets.

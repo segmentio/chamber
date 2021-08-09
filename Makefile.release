@@ -169,7 +169,7 @@ dist/nfpm-$(VERSION).yaml: | dist/
 dist/nfpm-$(VERSION)-arm64.yaml: | dist/
 	sed -e "s/\$${ARCH}/arm64/g" -e "s/\$${VERSION}/$(VERSION)/g" -e "s|\$${DIST_BIN}|dist/chamber-$(VERSION)-linux-arm64|g" < nfpm.yaml.tmpl > $@
 	cat $@
-	ls usr/local/bin
+	ls /usr/local/bin
 
 dist/chamber_$(VERSION)_amd64.deb: dist/nfpm-$(VERSION).yaml dist/chamber-$(VERSION)-linux-amd64
 	nfpm -f $< pkg --target $@

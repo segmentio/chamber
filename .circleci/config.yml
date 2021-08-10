@@ -3,9 +3,6 @@ jobs:
   test-install-golang-prev:
     docker:
       - image: circleci/golang:1.15
-    environment:
-      DOCKER_BUILDKIT: 1
-      BUILDX_PLATFORMS: linux/amd64,linux/arm64,linux/ppc64le,linux/s390x,linux/386,linux/arm/v7,linux/arm/v6
     steps:
       - checkout
       - run:
@@ -48,6 +45,7 @@ jobs:
   dist:
     docker:
       - image: circleci/golang:1.16
+    resource_class: arm.medium
     steps:
       - checkout
       - run:

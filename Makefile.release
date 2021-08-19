@@ -30,9 +30,9 @@ PACKAGECLOUD_RPM_DISTROS := \
 
 publish: publish-github publish-packagecloud
 
-publish-github: publish-github-darwin publish-github-linux publish-github-linux-arm64 publish-github-windows publish-github-deb publish-github-arm64-deb publish-github-rpm publish-github-sha256sums
+publish-github: publish-github-darwin publish-github-linux publish-github-windows publish-github-deb publish-github-rpm publish-github-sha256sums
 
-publish-packagecloud: publish-packagecloud-deb publish-packagecloud-arm64-deb publish-packagecloud-rpm
+publish-packagecloud: publish-packagecloud-deb publish-packagecloud-rpm
 
 github-release:
 	scripts/changelog | github-release release \
@@ -94,15 +94,6 @@ publish-github-deb: dist/chamber_$(VERSION)_amd64.deb | github-release
 	--name chamber_$(VERSION)_amd64.deb \
 	--file $<
 
-publish-github-arm64-deb: dist/chamber_$(VERSION)_arm64.deb | github-release
-	github-release upload \
-	--security-token $$GH_LOGIN \
-	--user segmentio \
-	--repo chamber \
-	--tag $(VERSION) \
-	--name chamber_$(VERSION)_arm64.deb \
-	--file $<
-
 publish-github-rpm: dist/chamber_$(VERSION)_amd64.rpm | github-release
 	github-release upload \
 	--security-token $$GH_LOGIN \
@@ -133,12 +124,6 @@ publish-packagecloud-deb: dist/chamber_$(VERSION)_amd64.deb packagecloud.conf.js
 			grep -v 'with token:' ; \
 	done
 
-publish-packagecloud-arm64-deb: dist/chamber_$(VERSION)_arm64.deb packagecloud.conf.json
-	@for v in $(PACKAGECLOUD_DEB_DISTROS); do \
-		package_cloud push --config packagecloud.conf.json segment/chamber$(PACKAGECLOUD_NAME_SUFFIX)/$$v $< | \
-			grep -v 'with token:' ; \
-	done
-
 publish-packagecloud-rpm: dist/chamber_$(VERSION)_amd64.rpm packagecloud.conf.json
 	@for v in $(PACKAGECLOUD_RPM_DISTROS); do \
 		package_cloud push --config packagecloud.conf.json segment/chamber$(PACKAGECLOUD_NAME_SUFFIX)/$$v $< | \
@@ -158,7 +143,7 @@ publish-dockerhub:
 	docker push segment/chamber:$(DOCKERHUB_TAG_PREFIX)$(VERSION_MAJOR)
 	docker push segment/chamber:$(DOCKERHUB_TAG_PREFIX)$(VERSION_NO_V)
 
-dist: dist/chamber-$(VERSION)-darwin-amd64 dist/chamber-$(VERSION)-linux-amd64 dist/chamber-$(VERSION)-linux-arm64 dist/chamber-$(VERSION)-windows-amd64.exe dist/chamber_$(VERSION)_amd64.deb dist/chamber_$(VERSION)_amd64.rpm dist/chamber-$(VERSION).sha256sums
+dist: dist/chamber-$(VERSION)-darwin-amd64 dist/chamber-$(VERSION)-linux-amd64 dist/chamber-$(VERSION)-windows-amd64.exe dist/chamber_$(VERSION)_amd64.deb dist/chamber_$(VERSION)_amd64.rpm dist/chamber-$(VERSION).sha256sums
 
 dist/chamber-$(VERSION).sha256sums: dist/chamber-$(VERSION)-darwin-amd64 dist/chamber-$(VERSION)-linux-amd64 dist/chamber-$(VERSION)-windows-amd64.exe dist/chamber_$(VERSION)_amd64.deb dist/chamber_$(VERSION)_amd64.rpm
 	sha256sum $^ | sed 's|dist/||g' > $@
@@ -166,13 +151,7 @@ dist/chamber-$(VERSION).sha256sums: dist/chamber-$(VERSION)-darwin-amd64 dist/ch
 dist/nfpm-$(VERSION).yaml: | dist/
 	sed -e "s/\$${VERSION}/$(VERSION)/g" -e "s|\$${DIST_BIN}|dist/chamber-$(VERSION)-linux-amd64|g" < nfpm.yaml.tmpl > $@
 
-dist/nfpm-$(VERSION)-arm64.yaml: | dist/
-	sed -e "s/\$${VERSION}/$(VERSION)/g" -e "s|\$${DIST_BIN}|dist/chamber-$(VERSION)-linux-arm64|g" < nfpm.yaml.tmpl > $@
-
 dist/chamber_$(VERSION)_amd64.deb: dist/nfpm-$(VERSION).yaml dist/chamber-$(VERSION)-linux-amd64
-	nfpm -f $< pkg --target $@
-
-dist/chamber_$(VERSION)_arm64.deb: dist/nfpm-$(VERSION)-arm64.yaml dist/chamber-$(VERSION)-linux-arm64
 	nfpm -f $< pkg --target $@
 
 dist/chamber_$(VERSION)_amd64.rpm: dist/nfpm-$(VERSION).yaml dist/chamber-$(VERSION)-linux-amd64
@@ -181,11 +160,9 @@ dist/chamber_$(VERSION)_amd64.rpm: dist/nfpm-$(VERSION).yaml dist/chamber-$(VERS
 .PHONY: \
 	publish-github \
 	publish-github-linux \
-	publish-github-linux-arm64 \
 	publish-github-windows \
 	publish-github-rpm \
 	publish-github-deb \
-	publish-github-arm64-deb \
 	publish-github-darwin \
 	publish-dockerhub \
 	github-release

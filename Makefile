@@ -5,7 +5,7 @@
 # This makefile is meant for humans
 
 ifndef VERSION
-	VERSION := $(shell git describe --tags --always --dirty="-dev")
+	VERSION := $(shell git describe --tags --always --dirty="-dev" | sed 's/-[0-9]*-g[a-z0-9]\{7\}//')
 endif
 
 VERSION_NO_V := $(shell echo "$(VERSION)" | sed 's/^v//')

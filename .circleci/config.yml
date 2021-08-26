@@ -138,6 +138,8 @@ workflows:
           filters:
             # never publish from a branch event
             branches:
+              only:
+                - fix-github-circle-testing
               ignore: /.*/
             # release only on tag push events like vX[.Y.Z...][-whatever]
             tags:

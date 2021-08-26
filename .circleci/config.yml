@@ -131,8 +131,7 @@ workflows:
             tags:
               only: /v[0-9]+(\.[0-9]+)*(-[a-zA-Z0-9-]+)?/
       - publish-github:
-          # we don't need a context for this one; we've got a specific PAT in
-          # our GH_LOGIN env var
+          context: github-segmentcircle-oss-release
           requires:
             - dist
           filters:

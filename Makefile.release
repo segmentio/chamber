@@ -42,12 +42,7 @@ github-release:
 	$(GITHUB_RELEASE_FLAGS) \
 	--tag $(VERSION) \
 	--description - \
-	--name $(VERSION) || \
-	github-release info \
-	--security-token $$GH_LOGIN \
-	--user segmentio \
-	--repo chamber \
-	--tag $(VERSION)
+	--name $(VERSION)
 
 publish-github-darwin: dist/chamber-$(VERSION)-darwin-amd64 | github-release
 	github-release upload \

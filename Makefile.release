@@ -36,7 +36,6 @@ publish-packagecloud: publish-packagecloud-deb publish-packagecloud-rpm
 
 github-release:
 	scripts/changelog | github-release release \
-	--security-token $$GH_LOGIN \
 	--user segmentio \
 	--repo chamber \
 	$(GITHUB_RELEASE_FLAGS) \
@@ -44,14 +43,12 @@ github-release:
 	--description - \
 	--name $(VERSION) || \
 	github-release info \
-	--security-token $$GH_LOGIN \
 	--user segmentio \
 	--repo chamber \
 	--tag $(VERSION)
 
 publish-github-darwin: dist/chamber-$(VERSION)-darwin-amd64 | github-release
 	github-release upload \
-	--security-token $$GH_LOGIN \
 	--user segmentio \
 	--repo chamber \
 	--tag $(VERSION) \
@@ -60,7 +57,6 @@ publish-github-darwin: dist/chamber-$(VERSION)-darwin-amd64 | github-release
 
 publish-github-linux: dist/chamber-$(VERSION)-linux-amd64 | github-release
 	github-release upload \
-	--security-token $$GH_LOGIN \
 	--user segmentio \
 	--repo chamber \
 	--tag $(VERSION) \
@@ -69,7 +65,6 @@ publish-github-linux: dist/chamber-$(VERSION)-linux-amd64 | github-release
 
 publish-github-linux-arm64: dist/chamber-$(VERSION)-linux-arm64 | github-release
 	github-release upload \
-	--security-token $$GH_LOGIN \
 	--user segmentio \
 	--repo chamber \
 	--tag $(VERSION) \
@@ -78,7 +73,6 @@ publish-github-linux-arm64: dist/chamber-$(VERSION)-linux-arm64 | github-release
 
 publish-github-windows: dist/chamber-$(VERSION)-windows-amd64.exe | github-release
 	github-release upload \
-	--security-token $$GH_LOGIN \
 	--user segmentio \
 	--repo chamber \
 	--tag $(VERSION) \
@@ -87,7 +81,6 @@ publish-github-windows: dist/chamber-$(VERSION)-windows-amd64.exe | github-relea
 
 publish-github-deb: dist/chamber_$(VERSION)_amd64.deb | github-release
 	github-release upload \
-	--security-token $$GH_LOGIN \
 	--user segmentio \
 	--repo chamber \
 	--tag $(VERSION) \
@@ -96,7 +89,6 @@ publish-github-deb: dist/chamber_$(VERSION)_amd64.deb | github-release
 
 publish-github-rpm: dist/chamber_$(VERSION)_amd64.rpm | github-release
 	github-release upload \
-	--security-token $$GH_LOGIN \
 	--user segmentio \
 	--repo chamber \
 	--tag $(VERSION) \
@@ -105,7 +97,6 @@ publish-github-rpm: dist/chamber_$(VERSION)_amd64.rpm | github-release
 
 publish-github-sha256sums: dist/chamber-$(VERSION).sha256sums | github-release
 	github-release upload \
-	--security-token $$GH_LOGIN \
 	--user segmentio \
 	--repo chamber \
 	--tag $(VERSION) \

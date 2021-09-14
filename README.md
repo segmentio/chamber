@@ -22,7 +22,7 @@ $ CHAMBER_NO_PATHS=1 chamber export foo | chamber import foo -
 If you have a functional go environment, you can install with:
 
 ```bash
-$ go get github.com/segmentio/chamber
+go get github.com/segmentio/chamber
 ```
 
 [See the wiki for more installation options like Docker images, Linux packages, and precompiled binaries.](https://github.com/segmentio/chamber/wiki/Installation)

@@ -14,7 +14,7 @@ As a side effect of this change, if you didn't use path based secrets before 2.0
 To migrate to the new format, you can take advantage of the `export` and `import` commands.  For example, if you wanted to convert secrets for service `foo` to the new format using chamber 2.0, you can do:
 
 ```bash
-$ CHAMBER_NO_PATHS=1 chamber export foo | chamber import foo -
+CHAMBER_NO_PATHS=1 chamber export foo | chamber import foo -
 ```
 
 ## Installing
@@ -22,7 +22,7 @@ $ CHAMBER_NO_PATHS=1 chamber export foo | chamber import foo -
 If you have a functional go environment, you can install with:
 
 ```bash
-$ go get github.com/segmentio/chamber
+go get github.com/segmentio/chamber
 ```
 
 [See the wiki for more installation options like Docker images, Linux packages, and precompiled binaries.](https://github.com/segmentio/chamber/wiki/Installation)
@@ -35,7 +35,7 @@ values to SSM Parameter Store.  The easiest way to do so is by using
 `aws-vault`, like:
 
 ```bash
-$ aws-vault exec prod -- chamber
+aws-vault exec prod -- chamber
 ```
 
 For this reason, it is recommended that you create an alias in your shell of

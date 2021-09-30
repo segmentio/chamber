@@ -131,8 +131,9 @@ workflows:
             tags:
               only: /v[0-9]+(\.[0-9]+)*(-[a-zA-Z0-9-]+)?/
       - publish-github:
-          # we don't need a context for this one; we've got a specific PAT in
-          # our GH_LOGIN env var
+          # GH_LOGIN env var for this project in circle contains the PAT (personal access token) IT manages for our service account
+          # IT has the secret stored in 1-password and it was also securely emailed
+          # to @aerlich and @jadametz originally
           requires:
             - dist
           filters:

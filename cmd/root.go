@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -52,9 +53,10 @@ const (
 	S3Backend             = "S3"
 	S3KMSBackend          = "S3-KMS"
 
-	BackendEnvVar = "CHAMBER_SECRET_BACKEND"
-	BucketEnvVar  = "CHAMBER_S3_BUCKET"
-	KMSKeyEnvVar  = "CHAMBER_KMS_KEY_ALIAS"
+	BackendEnvVar    = "CHAMBER_SECRET_BACKEND"
+	BucketEnvVar     = "CHAMBER_S3_BUCKET"
+	KMSKeyEnvVar     = "CHAMBER_KMS_KEY_ALIAS"
+	NumRetriesEnvVar = "CHAMBER_RETRIES"
 
 	DefaultKMSKey = "alias/parameter_store_key"
 )
@@ -71,7 +73,7 @@ var RootCmd = &cobra.Command{
 }
 
 func init() {
-	RootCmd.PersistentFlags().IntVarP(&numRetries, "retries", "r", DefaultNumRetries, "For SSM or Secrets Manager, the number of retries we'll make before giving up")
+	RootCmd.PersistentFlags().IntVarP(&numRetries, "retries", "r", DefaultNumRetries, "For SSM or Secrets Manager, the number of retries we'll make before giving up; AKA $CHAMBER_RETRIES")
 	RootCmd.PersistentFlags().DurationVarP(&minThrottleDelay, "min-throttle-delay", "", store.DefaultMinThrottleDelay, "For SSM, minimal delay before retrying throttled requests. Default 500ms.")
 	RootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "", false, "Print more information to STDOUT")
 	RootCmd.PersistentFlags().StringVarP(&backendFlag, "backend", "b", "ssm",
@@ -147,6 +149,14 @@ func getSecretStore() (store.Store, error) {
 		backend = backendFlag
 	}
 	backend = strings.ToUpper(backend)
+
+	if numRetriesEnvVarValue := os.Getenv(NumRetriesEnvVar); !rootPflags.Changed("retries") && numRetriesEnvVarValue != "" {
+		var err error
+		numRetries, err = strconv.Atoi(numRetriesEnvVarValue)
+		if err != nil {
+			return nil, errors.New("Cannot parse $CHAMBER_RETRIES to an integer.")
+		}
+	}
 
 	var s store.Store
 	var err error

@@ -31,8 +31,13 @@ go get github.com/segmentio/chamber
 
 Using `chamber` requires you to be running in an environment with an
 authenticated AWS user which has the appropriate permission to read/write
-values to SSM Parameter Store.  The easiest way to do so is by using
-`aws-vault`, like:
+values to SSM Parameter Store.
+
+This is going to vary based on your organization but chamber needs AWS credentials to run.
+
+One of the easiest ways to do so is by using [aws-vault](https://github.com/99designs/aws-vault). To adjust these instructions for your needs, examine the env output of [Aws-Vault: How It Works](https://github.com/99designs/aws-vault#how-it-works) and use your organization's secrets tool accordingly with chamber.
+
+### An `aws-vault` usage example with chamber:
 
 ```bash
 aws-vault exec prod -- chamber

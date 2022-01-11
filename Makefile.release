@@ -30,7 +30,7 @@ PACKAGECLOUD_RPM_DISTROS := \
 
 publish: publish-github publish-packagecloud
 
-publish-github: publish-github-darwin publish-github-linux publish-github-windows publish-github-deb publish-github-rpm publish-github-sha256sums
+publish-github: publish-github-darwin publish-github-darwin-arm64 publish-github-linux publish-github-linux-arm64 publish-github-windows publish-github-deb publish-github-arm64-deb publish-github-rpm publish-github-sha256sums
 
 publish-packagecloud: publish-packagecloud-deb publish-packagecloud-rpm
 
@@ -56,6 +56,15 @@ publish-github-darwin: dist/chamber-$(VERSION)-darwin-amd64 | github-release
 	--repo chamber \
 	--tag $(VERSION) \
 	--name chamber-$(VERSION)-darwin-amd64 \
+	--file $<
+
+publish-github-darwin-arm64: dist/chamber-$(VERSION)-darwin-arm64 | github-release
+	github-release upload \
+	--security-token $$GH_LOGIN \
+	--user segmentio \
+	--repo chamber \
+	--tag $(VERSION) \
+	--name chamber-$(VERSION)-darwin-arm64 \
 	--file $<
 
 publish-github-linux: dist/chamber-$(VERSION)-linux-amd64 | github-release
@@ -143,7 +152,7 @@ publish-dockerhub:
 	docker push segment/chamber:$(DOCKERHUB_TAG_PREFIX)$(VERSION_MAJOR)
 	docker push segment/chamber:$(DOCKERHUB_TAG_PREFIX)$(VERSION_NO_V)
 
-dist: dist/chamber-$(VERSION)-darwin-amd64 dist/chamber-$(VERSION)-linux-amd64 dist/chamber-$(VERSION)-windows-amd64.exe dist/chamber_$(VERSION)_amd64.deb dist/chamber_$(VERSION)_amd64.rpm dist/chamber-$(VERSION).sha256sums
+dist: dist/chamber-$(VERSION)-darwin-amd64 dist/chamber-$(VERSION)-darwin-arm64 dist/chamber-$(VERSION)-linux-amd64 dist/chamber-$(VERSION)-linux-arm64 dist/chamber-$(VERSION)-windows-amd64.exe dist/chamber_$(VERSION)_amd64.deb dist/chamber_$(VERSION)_amd64.rpm dist/chamber-$(VERSION).sha256sums
 
 dist/chamber-$(VERSION).sha256sums: dist/chamber-$(VERSION)-darwin-amd64 dist/chamber-$(VERSION)-linux-amd64 dist/chamber-$(VERSION)-windows-amd64.exe dist/chamber_$(VERSION)_amd64.deb dist/chamber_$(VERSION)_amd64.rpm
 	sha256sum $^ | sed 's|dist/||g' > $@
@@ -164,5 +173,6 @@ dist/chamber_$(VERSION)_amd64.rpm: dist/nfpm-$(VERSION).yaml dist/chamber-$(VERS
 	publish-github-rpm \
 	publish-github-deb \
 	publish-github-darwin \
+	publish-github-darwin-arm64 \
 	publish-dockerhub \
 	github-release

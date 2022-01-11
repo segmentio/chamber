@@ -14,7 +14,7 @@ As a side effect of this change, if you didn't use path based secrets before 2.0
 To migrate to the new format, you can take advantage of the `export` and `import` commands.  For example, if you wanted to convert secrets for service `foo` to the new format using chamber 2.0, you can do:
 
 ```bash
-$ CHAMBER_NO_PATHS=1 chamber export foo | chamber import foo -
+CHAMBER_NO_PATHS=1 chamber export foo | chamber import foo -
 ```
 
 ## Installing
@@ -22,7 +22,7 @@ $ CHAMBER_NO_PATHS=1 chamber export foo | chamber import foo -
 If you have a functional go environment, you can install with:
 
 ```bash
-$ go get github.com/segmentio/chamber
+go get github.com/segmentio/chamber
 ```
 
 [See the wiki for more installation options like Docker images, Linux packages, and precompiled binaries.](https://github.com/segmentio/chamber/wiki/Installation)
@@ -31,11 +31,16 @@ $ go get github.com/segmentio/chamber
 
 Using `chamber` requires you to be running in an environment with an
 authenticated AWS user which has the appropriate permission to read/write
-values to SSM Parameter Store.  The easiest way to do so is by using
-`aws-vault`, like:
+values to SSM Parameter Store.
+
+This is going to vary based on your organization but chamber needs AWS credentials to run.
+
+One of the easiest ways to do so is by using [aws-vault](https://github.com/99designs/aws-vault). To adjust these instructions for your needs, examine the env output of [Aws-Vault: How It Works](https://github.com/99designs/aws-vault#how-it-works) and use your organization's secrets tool accordingly with chamber.
+
+### An `aws-vault` usage example with chamber:
 
 ```bash
-$ aws-vault exec prod -- chamber
+aws-vault exec prod -- chamber
 ```
 
 For this reason, it is recommended that you create an alias in your shell of

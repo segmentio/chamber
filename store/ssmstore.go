@@ -265,6 +265,7 @@ func (s *SSMStore) ListServices(service string, includeSecretName bool) ([]strin
 
 	if s.usePaths {
 		describeParametersInput = &ssm.DescribeParametersInput{
+			MaxResults: aws.Int64(50),
 			ParameterFilters: []*ssm.ParameterStringFilter{
 				{
 					Key:    aws.String("Name"),
@@ -275,6 +276,7 @@ func (s *SSMStore) ListServices(service string, includeSecretName bool) ([]strin
 		}
 	} else {
 		describeParametersInput = &ssm.DescribeParametersInput{
+			MaxResults: aws.Int64(50),
 			Filters: []*ssm.ParametersFilter{
 				{
 					Key:    aws.String("Name"),

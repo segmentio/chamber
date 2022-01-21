@@ -1,4 +1,4 @@
-FROM golang:1.13-alpine AS build
+FROM 528451384384.dkr.ecr.us-west-2.amazonaws.com/segment-golang:1.17.3 AS build
 
 WORKDIR /go/src/github.com/segmentio/chamber
 COPY . .

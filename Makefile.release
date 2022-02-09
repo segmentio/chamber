@@ -30,7 +30,7 @@ PACKAGECLOUD_RPM_DISTROS := \
 
 publish: publish-github publish-packagecloud
 
-publish-github: publish-github-darwin publish-github-darwin-arm64 publish-github-linux publish-github-linux-arm64 publish-github-windows publish-github-deb publish-github-arm64-deb publish-github-rpm publish-github-sha256sums
+publish-github: publish-github-darwin publish-github-darwin-arm64 publish-github-linux publish-github-linux-arm64 publish-github-windows publish-github-deb publish-github-rpm publish-github-sha256sums
 
 publish-packagecloud: publish-packagecloud-deb publish-packagecloud-rpm
 
@@ -169,6 +169,7 @@ dist/chamber_$(VERSION)_amd64.rpm: dist/nfpm-$(VERSION).yaml dist/chamber-$(VERS
 .PHONY: \
 	publish-github \
 	publish-github-linux \
+	publish-github-linux-arm64 \
 	publish-github-windows \
 	publish-github-rpm \
 	publish-github-deb \

@@ -23,12 +23,24 @@ var (
 		Args:  cobra.ExactArgs(2),
 		RunE:  read,
 	}
+
+	// an alias for the read command
+	viewCmd = &cobra.Command{
+		Use:   "view <service> <key>",
+		Short: "Read a specific secret from the parameter store",
+		Args:  cobra.ExactArgs(2),
+		RunE:  read,
+	}
 )
 
 func init() {
 	readCmd.Flags().IntVarP(&version, "version", "v", -1, "The version number of the secret. Defaults to latest.")
 	readCmd.Flags().BoolVarP(&quiet, "quiet", "q", false, "Only print the secret")
 	RootCmd.AddCommand(readCmd)
+
+	viewCmd.Flags().IntVarP(&version, "version", "v", -1, "The version number of the secret. Defaults to latest.")
+	viewCmd.Flags().BoolVarP(&quiet, "quiet", "q", false, "Only print the secret")
+	RootCmd.AddCommand(viewCmd)
 }
 
 func read(cmd *cobra.Command, args []string) error {

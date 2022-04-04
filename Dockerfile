@@ -6,9 +6,8 @@ COPY . .
 ARG VERSION
 RUN test -n "${VERSION}"
 
-RUN apk add -U make
+RUN apk add -U make ca-certificates
 RUN make linux VERSION=${VERSION}
-RUN apk --no-cache add ca-certificates
 
 FROM scratch AS run
 

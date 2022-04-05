@@ -1,0 +1,21 @@
+
+name: Chamber Release
+on:
+- pull_request
+
+jobs:
+  test-install-golang:
+    strategy:
+      matrix:
+        go: ['1.16.x', '1.15.x']
+    
+    runs-on: [self-hosted, linux, arm64, segment]
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Test install Go modules for v${{ matrix.go }}
+      uses: actions/setup-go@v2
+      with:
+        go-version: ${{ matrix.go }}
+      run: go get -v . && chamber version

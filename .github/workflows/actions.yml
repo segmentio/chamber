@@ -9,7 +9,7 @@ jobs:
       matrix:
         go: ['1.16.x', '1.15.x']
     
-    runs-on: [self-hosted, linux, arm64, segment]
+    runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v2

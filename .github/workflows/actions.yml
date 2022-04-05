@@ -49,3 +49,28 @@ jobs:
           git status
           exit 1
         fi
+
+  dist:
+    strategy:
+      matrix:
+        go: ['1.16.x']
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup Go 
+      uses: actions/setup-go@v2
+      with:
+        go-version: ${{ matrix.go }}
+    
+    - name: Install nfpm, rpmbuild
+      run: sudo make -f Makefile.tools nfpm-debian rpmbuild-debian
+    
+    - name: Make distributables
+      run: make -f Makefile.release dist
+    - uses: actions/upload-artifact@master
+      with:
+        name: dist
+        path: 'dist/*'
+  

@@ -37,11 +37,9 @@ jobs:
         go-version: ${{ matrix.go }}
     
     - name: Test
-      working-directory: /go/src/github.com/segmentio/chamber 
       run: make test
     
     - name: Check modules are tidy and checked in
-      working-directory: /go/src/github.com/segmentio/chamber 
       run: |
         export GO111MODULE=on
         go mod tidy

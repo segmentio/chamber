@@ -4,12 +4,12 @@ on:
 - pull_request
 
 jobs:
-  test-install-golang:
+  install-go-modules:
     strategy:
       matrix:
         go: ['1.16.x', '1.15.x']
     
-    runs-on: [self-hosted, linux, arm64, segment]
+    runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v2
@@ -21,3 +21,33 @@ jobs:
 
     - name: Test install Go modules for v${{ matrix.go }} 
       run: go get -v . && chamber version
+
+  test:
+    strategy:
+      matrix:
+        go: ['1.16.x']
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup Go 
+      uses: actions/setup-go@v2
+      with:
+        go-version: ${{ matrix.go }}
+    
+    - name: Test
+      working-directory: /go/src/github.com/segmentio/chamber 
+      run: make test
+    
+    - name: Check modules are tidy and checked in
+      working-directory: /go/src/github.com/segmentio/chamber 
+      run: |
+        export GO111MODULE=on
+        go mod tidy
+        if [ "$(git status --porcelain)" != "" ]; then
+          echo "git tree is dirty after tidying modules"
+          echo "ensure go.mod and go.sum are tidy"
+          git status
+          exit 1
+        fi

@@ -14,8 +14,10 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Test install Go modules for v${{ matrix.go }}
+    - name: Setup Go ${{ matrix.go }}
       uses: actions/setup-go@v2
       with:
         go-version: ${{ matrix.go }}
+
+    - name: Test install Go modules for v${{ matrix.go }} 
       run: go get -v . && chamber version

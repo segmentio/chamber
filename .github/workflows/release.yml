@@ -1,0 +1,93 @@
+name: Release
+on:
+  push:
+    tags: 
+     - '/v[0-9]+(\.[0-9]+)*(-[a-zA-Z0-9-]+)?/'
+
+jobs:
+  dist:
+    strategy:
+      matrix:
+        go: ['1.16.x']
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup Go 
+      uses: actions/setup-go@v2
+      with:
+        go-version: ${{ matrix.go }}
+    
+    - name: Install nfpm, rpmbuild
+      run: sudo make -f Makefile.tools nfpm-debian rpmbuild-debian
+    
+    - name: Make distributables
+      run: make -f Makefile.release dist
+    - uses: actions/upload-artifact@v3
+      with:
+        name: dist
+        path: 'dist/*'
+ 
+  publish-github:
+    strategy:
+      matrix:
+        go: ['1.16.x']
+    runs-on: ubuntu-latest
+    needs: dist
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - uses: actions/download-artifact@v3
+      with:
+        name: dist
+        path: 'dist/*'
+
+    - name: Setup Go 
+      uses: actions/setup-go@v2
+      with:
+        go-version: ${{ matrix.go }}
+    
+    - name: Install tools
+      run: make -f Makefile.tools github-release
+    
+    - name: Release
+      run: make -f Makefile.release publish-github
+
+  publish-dockerhub:
+    strategy:
+      matrix:
+        go: ['1.16.x']
+    runs-on: ubuntu-latest
+    needs: dist
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - uses: actions/download-artifact@v3
+      with:
+        name: dist
+        path: 'dist/*'
+
+    - name: Setup Go 
+      uses: actions/setup-go@v2
+      with:
+        go-version: ${{ matrix.go }}
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v1
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v1
+
+    - name: Login to DockerHub
+      uses: docker/login-action@v1
+      with:
+        username: ${{ secrets.DOCKER_USER }}
+        password: ${{ secrets.DOCKER_PASS }}
+    
+    - name: Release
+      run: 
+        make -f Makefile.release publish-dockerhub
+      

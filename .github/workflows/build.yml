@@ -1,7 +1,11 @@
 
-name: Chamber Release
+name: Test & Build
 on:
-- pull_request
+  push:
+    branches:
+      - main
+
+  pull_request:
 
 jobs:
   install-go-modules:
@@ -69,7 +73,7 @@ jobs:
     
     - name: Make distributables
       run: make -f Makefile.release dist
-    - uses: actions/upload-artifact@master
+    - uses: actions/upload-artifact@v3
       with:
         name: dist
         path: 'dist/*'

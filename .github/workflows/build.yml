@@ -59,7 +59,8 @@ jobs:
       matrix:
         go: ['1.16.x']
     runs-on: ubuntu-latest
-
+    needs: test
+    
     steps:
     - uses: actions/checkout@v2
 

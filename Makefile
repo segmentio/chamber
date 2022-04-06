@@ -1,6 +1,6 @@
 # Goals:
 # - user can build binaries on their system without having to install special tools
-# - user can fork the canonical repo and expect to be able to run CircleCI checks
+# - user can fork the canonical repo and expect to be able to run Github Actions checks
 #
 # This makefile is meant for humans
 

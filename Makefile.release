@@ -1,5 +1,5 @@
 # Goals:
-# - Linux releases can be published to Github automatically by CircleCI
+# - Linux releases can be published to Github automatically by Github Actions
 #
 # This Makefile is meant for machines
 

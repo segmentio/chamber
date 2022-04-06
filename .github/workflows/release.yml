@@ -91,4 +91,3 @@ jobs:
     - name: Release
       run: 
         make -f Makefile.release publish-dockerhub
-      

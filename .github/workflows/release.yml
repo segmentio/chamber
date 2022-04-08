@@ -30,31 +30,27 @@ jobs:
         name: dist
         path: 'dist/*'
  
-  publish-github:
-    strategy:
-      matrix:
-        go: ['1.16.x']
+  publish-github-release:
     runs-on: ubuntu-latest
     needs: dist
 
     steps:
-    - uses: actions/checkout@v2
+    - name: Checkout
+      uses: actions/checkout@v2
 
     - uses: actions/download-artifact@v3
       with:
         name: dist
-        path: 'dist/*'
+        path: 'dist'
 
-    - name: Setup Go 
-      uses: actions/setup-go@v2
-      with:
-        go-version: ${{ matrix.go }}
-    
-    - name: Install tools
-      run: make -f Makefile.tools github-release
-    
     - name: Release
-      run: make -f Makefile.release publish-github
+      uses: softprops/action-gh-release@v1
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        generate_release_notes: true
+        fail_on_unmatched_files: true
+        files: |
+          dist/*
 
   publish-dockerhub:
     strategy:

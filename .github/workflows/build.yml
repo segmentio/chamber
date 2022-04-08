@@ -103,7 +103,7 @@ jobs:
     - uses: actions/download-artifact@v3
       with:
         name: dist
-        path: 'dist/*'
+        path: 'dist'
 
     - name: Check dist
       run: ls -lrth dist/
@@ -116,5 +116,5 @@ jobs:
         generate_release_notes: true
         fail_on_unmatched_files: true
         files: |
-          ./dist/*
+          dist/*
         tag_name: v2.10.10

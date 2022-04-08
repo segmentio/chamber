@@ -105,8 +105,8 @@ jobs:
         name: dist
         path: 'dist/*'
 
-    # - name: Generate Changelog
-    #   run: scripts/changelog > ${{ github.workspace }}-CHANGELOG.txt
+    - name: Check dist
+      run: ls -lrth dist/
 
     - name: Release
       uses: softprops/action-gh-release@v1
@@ -114,5 +114,7 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         draft: true
         generate_release_notes: true
-        files: dist/chamber*
+        fail_on_unmatched_files: true
+        files: |
+          ./dist/*
         tag_name: v2.10.10

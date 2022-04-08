@@ -35,8 +35,7 @@ jobs:
     needs: dist
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v2
+    - uses: actions/checkout@v2
 
     - uses: actions/download-artifact@v3
       with:

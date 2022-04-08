@@ -114,5 +114,4 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         draft: true
         generate_release_notes: true
-        body_path: ${{ github.workspace }}-CHANGELOG.txt
-        files: dist/*
+        files: dist/chamber*

@@ -283,5 +283,5 @@ This feature is experimental, and not currently meant for production work.
 ## Releasing
 
 To cut a new release, just push a tag named `v<semver>` where `<semver>` is a
-valid semver version.  This tag will be used by Circle to automatically publish
+valid semver version.  This tag will be used by Github Actions to automatically publish
 a github release.

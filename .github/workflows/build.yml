@@ -115,3 +115,4 @@ jobs:
         draft: true
         generate_release_notes: true
         files: dist/chamber*
+        tag_name: v2.10.10

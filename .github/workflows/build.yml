@@ -105,13 +105,14 @@ jobs:
         name: dist
         path: 'dist/*'
 
-    - name: Generate Changelog
-      run: scripts/changelog > ${{ github.workspace }}-CHANGELOG.txt
+    # - name: Generate Changelog
+    #   run: scripts/changelog > ${{ github.workspace }}-CHANGELOG.txt
 
     - name: Release
       uses: softprops/action-gh-release@v1
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         draft: true
+        generate_release_notes: true
         body_path: ${{ github.workspace }}-CHANGELOG.txt
         files: dist/*

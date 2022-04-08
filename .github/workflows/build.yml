@@ -91,3 +91,27 @@ jobs:
       with:
         username: ${{ secrets.DOCKERHUB_USER }}
         password: ${{ secrets.DOCKERHUB_PASSWD }}
+
+  test-github-release:
+    runs-on: ubuntu-latest
+    needs: dist
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - uses: actions/download-artifact@v3
+      with:
+        name: dist
+        path: 'dist/*'
+
+      - name: Generate Changelog
+        run: scripts/changelog > ${{ github.workspace }}-CHANGELOG.txt
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          draft: true
+          body_path: ${{ github.workspace }}-CHANGELOG.txt
+        with:
+          files: dist/*

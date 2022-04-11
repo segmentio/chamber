@@ -26,12 +26,8 @@ sha256sum-darwin:
 github-release:
 	GO111MODULE=off go get -u github.com/aktau/github-release
 
-package_cloud:
-	gem install package_cloud
-
 .PHONY: nfpm-debian \
 	rpmbuild-debian \
 	rpmbuild-darwin \
 	sha256sum-darwin \
 	github-release \
-	package_cloud

@@ -8,31 +8,12 @@ include Makefile
 # set --pre-release if not tagged or tree is dirty or there's a `-` in the tag
 ifneq (,$(findstring -,$(VERSION)))
 	GITHUB_RELEASE_FLAGS := "--pre-release"
-	PACKAGECLOUD_NAME_SUFFIX := "-prerelease"
 	DOCKERHUB_TAG_PREFIX := "prerelease-"
 endif
 
-# https://www.debian.org/releases/
-# https://wiki.ubuntu.com/Releases
-PACKAGECLOUD_DEB_DISTROS := \
-	debian/jessie \
-	debian/stretch \
-	debian/buster \
-	ubuntu/trusty \
-	ubuntu/xenial \
-	ubuntu/bionic \
-	ubuntu/eoan \
-	ubuntu/focal
-
-PACKAGECLOUD_RPM_DISTROS := \
-	fedora/27 \
-	fedora/28
-
-publish: publish-github publish-packagecloud
+publish: publish-github
 
 publish-github: publish-github-darwin publish-github-darwin-arm64 publish-github-linux publish-github-linux-arm64 publish-github-windows publish-github-deb publish-github-rpm publish-github-sha256sums
-
-publish-packagecloud: publish-packagecloud-deb publish-packagecloud-rpm
 
 github-release:
 	scripts/changelog | github-release release \
@@ -120,24 +101,6 @@ publish-github-sha256sums: dist/chamber-$(VERSION).sha256sums | github-release
 	--tag $(VERSION) \
 	--name chamber-$(VERSION).sha256sums \
 	--file dist/chamber-$(VERSION).sha256sums
-
-packagecloud.conf.json:
-	@echo "{\"url\":\"https://packagecloud.io\",\"token\":\"$${PACKAGECLOUD_TOKEN}\"}" > $@
-
-# package_cloud prints the last 4 chars of our token :(
-# so we attempt to filter that out
-
-publish-packagecloud-deb: dist/chamber_$(VERSION)_amd64.deb packagecloud.conf.json
-	@for v in $(PACKAGECLOUD_DEB_DISTROS); do \
-		package_cloud push --config packagecloud.conf.json segment/chamber$(PACKAGECLOUD_NAME_SUFFIX)/$$v $< | \
-			grep -v 'with token:' ; \
-	done
-
-publish-packagecloud-rpm: dist/chamber_$(VERSION)_amd64.rpm packagecloud.conf.json
-	@for v in $(PACKAGECLOUD_RPM_DISTROS); do \
-		package_cloud push --config packagecloud.conf.json segment/chamber$(PACKAGECLOUD_NAME_SUFFIX)/$$v $< | \
-			grep -v 'with token:' ; \
-	done
 
 publish-dockerhub:
 	docker build \

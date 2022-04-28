@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/joho/godotenv"
 	"github.com/pkg/errors"
 	"github.com/segmentio/chamber/v2/store"
 	"github.com/spf13/cobra"
@@ -16,13 +17,18 @@ import (
 var (
 	importCmd = &cobra.Command{
 		Use:   "import <service> <file|->",
-		Short: "import secrets from json or yaml",
+		Short: "import secrets from json, yaml or dotenv",
 		Args:  cobra.ExactArgs(2),
 		RunE:  importRun,
 	}
 )
 
+var (
+	dotenvFile bool
+)
+
 func init() {
+	importCmd.Flags().BoolVarP(&dotenvFile, "dotenv", "e", false, "File is dotenv format")
 	RootCmd.AddCommand(importCmd)
 }
 
@@ -47,9 +53,16 @@ func importRun(cmd *cobra.Command, args []string) error {
 
 	var toBeImported map[string]string
 
-	decoder := yaml.NewDecoder(in)
-	if err := decoder.Decode(&toBeImported); err != nil {
-		return errors.Wrap(err, "Failed to decode input as json")
+	if dotenvFile {
+		toBeImported, err = godotenv.Parse(in)
+		if err != nil {
+			return errors.Wrap(err, "Failed to parse dotenv file")
+		}
+	} else {
+		decoder := yaml.NewDecoder(in)
+		if err := decoder.Decode(&toBeImported); err != nil {
+			return errors.Wrap(err, "Failed to decode input as json")
+		}
 	}
 
 	if analyticsEnabled && analyticsClient != nil {

@@ -11,17 +11,15 @@ ifneq (,$(findstring -,$(VERSION)))
 endif
 
 publish-dockerhub:
-	docker build \
+	docker buildx build \
 		-t segment/chamber:$(DOCKERHUB_TAG_PREFIX)$(VERSION_MAJOR_MINOR_PATCH) \
 		-t segment/chamber:$(DOCKERHUB_TAG_PREFIX)$(VERSION_MAJOR_MINOR) \
 		-t segment/chamber:$(DOCKERHUB_TAG_PREFIX)$(VERSION_MAJOR) \
 		-t segment/chamber:$(DOCKERHUB_TAG_PREFIX)$(VERSION_NO_V) \
 		--build-arg VERSION=$(VERSION) \
+                --platform linux/amd64,linux/arm64 \
+                --push \
 		.
-	docker push segment/chamber:$(DOCKERHUB_TAG_PREFIX)$(VERSION_MAJOR_MINOR_PATCH)
-	docker push segment/chamber:$(DOCKERHUB_TAG_PREFIX)$(VERSION_MAJOR_MINOR)
-	docker push segment/chamber:$(DOCKERHUB_TAG_PREFIX)$(VERSION_MAJOR)
-	docker push segment/chamber:$(DOCKERHUB_TAG_PREFIX)$(VERSION_NO_V)
 
 dist: dist/chamber-$(VERSION)-darwin-amd64 dist/chamber-$(VERSION)-darwin-arm64 dist/chamber-$(VERSION)-linux-amd64 dist/chamber-$(VERSION)-linux-arm64 dist/chamber-$(VERSION)-windows-amd64.exe dist/chamber_$(VERSION)_amd64.deb dist/chamber_$(VERSION)_amd64.rpm dist/chamber-$(VERSION).sha256sums
 

@@ -110,7 +110,7 @@ func validateService(service string) error {
 		}
 	} else {
 		if !validServicePathFormat.MatchString(service) {
-			return fmt.Errorf("Failed to validate service name '%s'.  Only alphanumeric, dashes, forwardslashes, fullstops and underscores are allowed for service names", service)
+			return fmt.Errorf("Failed to validate service name '%s'.  Only alphanumeric, dashes, forwardslashes, fullstops and underscores are allowed for service names. Service names must not start or end with a forwardslash", service)
 		}
 	}
 
@@ -125,7 +125,7 @@ func validateServiceWithLabel(service string) error {
 		}
 	} else {
 		if !validServicePathFormatWithLabel.MatchString(service) {
-			return fmt.Errorf("Failed to validate service name '%s'.  Only alphanumeric, dashes, forwardslashes, fullstops and underscores are allowed for service names, and colon followed by a label name", service)
+			return fmt.Errorf("Failed to validate service name '%s'.  Only alphanumeric, dashes, forwardslashes, fullstops and underscores are allowed for service names, and colon followed by a label name. Service names must not start or end with a forwardslash or colon", service)
 		}
 	}
 

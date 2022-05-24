@@ -130,6 +130,7 @@ func TestValidations(t *testing.T) {
 	invalidServicePathFormatWithLabel := []string{
 		"foo:current$",
 		"foo.:",
+		":foo/bar:current",
 		"foo.bar:cur|rent",
 	}
 

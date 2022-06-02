@@ -47,7 +47,7 @@ linux: dist/chamber-$(VERSION)-linux-$(TARGETARCH)
 dist/chamber-$(VERSION)-linux-amd64: | dist/
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath $(LDFLAGS) -o $@
 
-dist/chamber-$(VERSION)-linux-arm64: | dist/
+dist/chamber-$(VERSION)-linux-arm64 dist/chamber-$(VERSION)-linux-aarch64: | dist/
 	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -trimpath $(LDFLAGS) -o $@
 
 dist/chamber-$(VERSION)-windows-amd64.exe: | dist/

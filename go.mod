@@ -13,7 +13,7 @@ require (
 	github.com/spf13/pflag v1.0.2 // indirect
 	github.com/stretchr/testify v1.2.2
 	github.com/xtgo/uuid v0.0.0-20140804021211-a0b114877d4c // indirect
-	golang.org/x/sys v0.0.0-20200930185726-fdedc70b468f
+	golang.org/x/sys v0.0.0-20220614162138-6c1b26c55098
 	gopkg.in/segmentio/analytics-go.v3 v3.0.1
 	gopkg.in/yaml.v3 v3.0.0-20200506231410-2ff61e1afc86
 )

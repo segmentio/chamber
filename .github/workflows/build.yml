@@ -78,16 +78,3 @@ jobs:
       with:
         name: dist
         path: 'dist/*'
-
-  test-dockerhub-login:
-    runs-on: ubuntu-latest
-    needs: dist
-
-    steps:
-    - uses: actions/checkout@v2
-
-    - name: Login to DockerHub
-      uses: docker/login-action@v2
-      with:
-        username: ${{ secrets.DOCKERHUB_USER }}
-        password: ${{ secrets.DOCKERHUB_TOKEN }}

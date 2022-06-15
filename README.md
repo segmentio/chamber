@@ -22,8 +22,17 @@ CHAMBER_NO_PATHS=1 chamber export foo | chamber import foo -
 If you have a functional go environment, you can install with:
 
 ```bash
+go install github.com/segmentio/chamber/v2@latest
+```
+for Go >= 1.17;
+
+or
+
+```bash
 go get github.com/segmentio/chamber
 ```
+
+for older Go version.
 
 [See the wiki for more installation options like Docker images, Linux packages, and precompiled binaries.](https://github.com/segmentio/chamber/wiki/Installation)
 

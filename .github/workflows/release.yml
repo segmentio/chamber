@@ -9,7 +9,7 @@ jobs:
   dist:
     strategy:
       matrix:
-        go: ['1.16.x']
+        go: ['1.18.x']
     runs-on: ubuntu-latest
 
     steps:
@@ -56,7 +56,7 @@ jobs:
   publish-dockerhub:
     strategy:
       matrix:
-        go: ['1.16.x']
+        go: ['1.18.x']
     runs-on: ubuntu-latest
     needs: dist
 

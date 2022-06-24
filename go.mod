@@ -15,7 +15,7 @@ require (
 	github.com/xtgo/uuid v0.0.0-20140804021211-a0b114877d4c // indirect
 	golang.org/x/sys v0.0.0-20220614162138-6c1b26c55098
 	gopkg.in/segmentio/analytics-go.v3 v3.0.1
-	gopkg.in/yaml.v3 v3.0.0-20200506231410-2ff61e1afc86
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 go 1.13

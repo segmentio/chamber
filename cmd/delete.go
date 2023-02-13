@@ -16,7 +16,10 @@ var deleteCmd = &cobra.Command{
 	RunE:  delete,
 }
 
+var preserveKey bool
+
 func init() {
+	deleteCmd.Flags().BoolVar(&preserveKey, "preserve-key", false, "Prevent normalization of the provided key in order to delete any keys that may not have been previously normalized on write.")
 	RootCmd.AddCommand(deleteCmd)
 }
 
@@ -26,7 +29,11 @@ func delete(cmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, "Failed to validate service")
 	}
 
-	key := utils.NormalizeKey(args[1])
+	key := args[1]
+	if !preserveKey {
+		key = utils.NormalizeKey(key)
+	}
+
 	if err := validateKey(key); err != nil {
 		return errors.Wrap(err, "Failed to validate key")
 	}

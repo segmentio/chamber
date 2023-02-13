@@ -1,10 +1,9 @@
 package cmd
 
 import (
-	"strings"
-
 	"github.com/pkg/errors"
 	"github.com/segmentio/chamber/v2/store"
+	"github.com/segmentio/chamber/v2/utils"
 	"github.com/spf13/cobra"
 	analytics "gopkg.in/segmentio/analytics-go.v3"
 )
@@ -22,12 +21,12 @@ func init() {
 }
 
 func delete(cmd *cobra.Command, args []string) error {
-	service := strings.ToLower(args[0])
+	service := utils.NormalizeService(args[0])
 	if err := validateService(service); err != nil {
 		return errors.Wrap(err, "Failed to validate service")
 	}
 
-	key := strings.ToLower(args[1])
+	key := utils.NormalizeKey(args[1])
 	if err := validateKey(key); err != nil {
 		return errors.Wrap(err, "Failed to validate key")
 	}

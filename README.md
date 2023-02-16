@@ -213,6 +213,11 @@ you get from `chamber export`).
 > be written to the secrets backend in the format they exist in the source file.
 > In order to normalize keys on import, provide the `--normalize-keys` flag
 
+When normalizing keys, before write, the key will be be first converted to lowercase
+to match how `chamber write` handles keys.
+
+Example: `DB_HOST` will be converted to `db_host`.
+
 You can set `filepath` to `-` to instead read input from stdin.
 
 ### Deleting

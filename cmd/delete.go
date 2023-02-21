@@ -16,10 +16,10 @@ var deleteCmd = &cobra.Command{
 	RunE:  delete,
 }
 
-var preserveKey bool
+var exactKey bool
 
 func init() {
-	deleteCmd.Flags().BoolVar(&preserveKey, "preserve-key", false, "Prevent normalization of the provided key in order to delete any keys that may not have been previously normalized on write.")
+	deleteCmd.Flags().BoolVar(&exactKey, "exact-key", false, "Prevent normalization of the provided key in order to delete any keys that match the exact provided casing.")
 	RootCmd.AddCommand(deleteCmd)
 }
 
@@ -30,7 +30,7 @@ func delete(cmd *cobra.Command, args []string) error {
 	}
 
 	key := args[1]
-	if !preserveKey {
+	if !exactKey {
 		key = utils.NormalizeKey(key)
 	}
 

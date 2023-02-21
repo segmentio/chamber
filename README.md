@@ -223,7 +223,7 @@ You can set `filepath` to `-` to instead read input from stdin.
 ### Deleting
 
 ```bash
-$ chamber delete [--preserve-key] service key
+$ chamber delete [--exact-key] service key
 ```
 
 `delete` provides the ability to remove a secret from chamber permanently,
@@ -233,7 +233,30 @@ secret once it has been deleted so care should be taken with this command.
 <!-- prettier-ignore -->
 > __Note__
 > By default, `delete` will normalize any provided keys. To change that behavior,
-> provide the `--preserve-key` flag to attempt to delete the raw provided key.
+> provide the `--exact-key` flag to attempt to delete the raw provided key.
+
+Example: Given the following setup,
+
+```bash
+$ chamber list service
+Key         Version                  LastModified      User
+apikey      2                        06-09 17:30:56    daniel-fuentes
+APIKEY      1                        06-09 17:30:34    daniel-fuentes
+```
+
+Calling
+
+```bash
+$ chamber delete --exact-key service APIKEY
+```
+
+will delete only `APIKEY` from the service and leave only
+
+```bash
+$ chamber list service
+Key         Version                  LastModified      User
+apikey      2                        06-09 17:30:56    daniel-fuentes
+```
 
 ### Finding
 

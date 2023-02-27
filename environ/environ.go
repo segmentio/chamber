@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/segmentio/chamber/v2/store"
+	"github.com/segmentio/chamber/v2/utils"
 )
 
 // environ is a slice of strings representing the environment, in the form "key=value".
@@ -87,7 +88,7 @@ func normalizeEnvVarName(k string) string {
 // collisions will be populated with any keys that get overwritten
 // noPaths enables the behavior as if CHAMBER_NO_PATHS had been set
 func (e *Environ) load(s store.Store, service string, collisions *[]string, noPaths bool) error {
-	rawSecrets, err := s.ListRaw(strings.ToLower(service))
+	rawSecrets, err := s.ListRaw(utils.NormalizeService(service))
 	if err != nil {
 		return err
 	}
@@ -134,7 +135,7 @@ func (e *Environ) LoadStrictNoPaths(s store.Store, valueExpected string, pristin
 
 func (e *Environ) loadStrict(s store.Store, valueExpected string, pristine bool, noPaths bool, services ...string) error {
 	for _, service := range services {
-		rawSecrets, err := s.ListRaw(strings.ToLower(service))
+		rawSecrets, err := s.ListRaw(utils.NormalizeService(service))
 		if err != nil {
 			return err
 		}

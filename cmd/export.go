@@ -12,6 +12,7 @@ import (
 
 	"github.com/magiconair/properties"
 	"github.com/pkg/errors"
+	"github.com/segmentio/chamber/v2/utils"
 	"github.com/spf13/cobra"
 	analytics "gopkg.in/segmentio/analytics-go.v3"
 	"gopkg.in/yaml.v3"
@@ -59,11 +60,12 @@ func runExport(cmd *cobra.Command, args []string) error {
 	}
 	params := make(map[string]string)
 	for _, service := range args {
+		service = utils.NormalizeService(service)
 		if err := validateService(service); err != nil {
 			return errors.Wrapf(err, "Failed to validate service %s", service)
 		}
 
-		rawSecrets, err := secretStore.ListRaw(strings.ToLower(service))
+		rawSecrets, err := secretStore.ListRaw(service)
 		if err != nil {
 			return errors.Wrapf(err, "Failed to list store contents for service %s", service)
 		}

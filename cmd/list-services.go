@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"os"
 	"sort"
-	"strings"
 	"text/tabwriter"
 
 	"github.com/pkg/errors"
+	"github.com/segmentio/chamber/v2/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -32,7 +32,7 @@ func listServices(cmd *cobra.Command, args []string) error {
 	if len(args) == 0 {
 		service = ""
 	} else {
-		service = strings.ToLower(args[0])
+		service = utils.NormalizeService(args[0])
 
 	}
 	secretStore, err := getSecretStore()

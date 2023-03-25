@@ -6,13 +6,13 @@ The purpose of these guidelines is all about setting expectations.
 
 # Feature requests (`enhancement` label)
 
-New features should be requested via Issue first, to decide whether it falls within Chamber's scope. *Don't* start with a feature PR without discussion.
+New features should be requested via Issue first, to decide whether it falls within Chamber's scope. _Don't_ start with a feature PR without discussion.
 
 Even if it is decided that a feature fits Chamber's goals, that doesn't imply that someone is working on it. The only people who are obliged to work on a feature are the people who intend to use it. An `enhancement` issue without an assignee or a milestone means that nobody intends to work on it. If you're interested in working on it, just say so and we can assign it to you.
 
 An `enhancement` issue with a milestone means we intend to write it, but haven't decided who will do it yet.
 
-`enhancement` issues are subject to our [Staleness Policy](#Staleness Policy). An `enhancement` that's gone stale means that no one's intending to work on it, which implies the feature isn't really that important. If this isn't the case, commenting during the staleness grace period will freshen it; this should almost always be a commitment to implementing it.
+`enhancement` issues are subject to our [Staleness Policy](#Staleness). An `enhancement` that's gone stale means that no one's intending to work on it, which implies the feature isn't really that important. If this isn't the case, commenting during the staleness grace period will freshen it; this should almost always be a commitment to implementing it.
 
 # Timeliness
 

@@ -1,0 +1,80 @@
+
+name: Test & Build
+on:
+  push:
+    branches:
+      - master
+
+  pull_request:
+
+jobs:
+  install-go-modules:
+    strategy:
+      matrix:
+        go: ['1.19.x', '1.18.x', '1.17.x', '1.16.x', '1.15.x']
+    
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup Go ${{ matrix.go }}
+      uses: actions/setup-go@v2
+      with:
+        go-version: ${{ matrix.go }}
+
+    - name: Test install Go modules for v${{ matrix.go }} 
+      run: go install -v . && chamber version
+
+  test:
+    strategy:
+      matrix:
+        go: ['1.19.x', '1.18.x', '1.17.x', '1.16.x']
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup Go 
+      uses: actions/setup-go@v2
+      with:
+        go-version: ${{ matrix.go }}
+    
+    - name: Test
+      run: make test
+    
+    - name: Check modules are tidy and checked in
+      run: |
+        export GO111MODULE=on
+        go mod tidy
+        if [ "$(git status --porcelain)" != "" ]; then
+          echo "git tree is dirty after tidying modules"
+          echo "ensure go.mod and go.sum are tidy"
+          git status
+          exit 1
+        fi
+
+  dist:
+    strategy:
+      matrix:
+        go: ['1.19.x', '1.18.x', '1.17.x', '1.16.x']
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup Go 
+      uses: actions/setup-go@v2
+      with:
+        go-version: ${{ matrix.go }}
+    
+    - name: Install nfpm, rpmbuild
+      run: sudo make -f Makefile.tools nfpm-debian rpmbuild-debian
+    
+    - name: Make distributables
+      run: make -f Makefile.release dist
+    - uses: actions/upload-artifact@v3
+      with:
+        name: dist
+        path: 'dist/*'

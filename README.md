@@ -1,17 +1,17 @@
 # Chamber
 
-Chamber is a tool for managing secrets.  Currently it does so by storing
+Chamber is a tool for managing secrets. Currently it does so by storing
 secrets in SSM Parameter Store, an AWS service for storing secrets.
 
 For detailed info about using chamber, read [The Right Way To Manage Secrets](https://aws.amazon.com/blogs/mt/the-right-way-to-store-secrets-using-parameter-store/)
 
 ## 2.0 Breaking Changes
 
-Starting with version 2.0, chamber uses parameter store's path based API by default.  Chamber pre-2.0 supported this API using the `CHAMBER_USE_PATHS` environment variable.  The paths based API has performance benefits and is the recommended best practice by AWS.
+Starting with version 2.0, chamber uses parameter store's path based API by default. Chamber pre-2.0 supported this API using the `CHAMBER_USE_PATHS` environment variable. The paths based API has performance benefits and is the recommended best practice by AWS.
 
-As a side effect of this change, if you didn't use path based secrets before 2.0, you will need to set `CHAMBER_NO_PATHS` to enable the old behavior.  This option is deprecated, and We recommend only using this setting for supporting existing applications.
+As a side effect of this change, if you didn't use path based secrets before 2.0, you will need to set `CHAMBER_NO_PATHS` to enable the old behavior. This option is deprecated, and We recommend only using this setting for supporting existing applications.
 
-To migrate to the new format, you can take advantage of the `export` and `import` commands.  For example, if you wanted to convert secrets for service `foo` to the new format using chamber 2.0, you can do:
+To migrate to the new format, you can take advantage of the `export` and `import` commands. For example, if you wanted to convert secrets for service `foo` to the new format using chamber 2.0, you can do:
 
 ```bash
 CHAMBER_NO_PATHS=1 chamber export foo | chamber import foo -
@@ -22,8 +22,18 @@ CHAMBER_NO_PATHS=1 chamber export foo | chamber import foo -
 If you have a functional go environment, you can install with:
 
 ```bash
+go install github.com/segmentio/chamber/v2@latest
+```
+
+for Go >= 1.17;
+
+or
+
+```bash
 go get github.com/segmentio/chamber
 ```
+
+for older Go version.
 
 [See the wiki for more installation options like Docker images, Linux packages, and precompiled binaries.](https://github.com/segmentio/chamber/wiki/Installation)
 
@@ -31,8 +41,13 @@ go get github.com/segmentio/chamber
 
 Using `chamber` requires you to be running in an environment with an
 authenticated AWS user which has the appropriate permission to read/write
-values to SSM Parameter Store.  The easiest way to do so is by using
-`aws-vault`, like:
+values to SSM Parameter Store.
+
+This is going to vary based on your organization but chamber needs AWS credentials to run.
+
+One of the easiest ways to do so is by using [aws-vault](https://github.com/99designs/aws-vault). To adjust these instructions for your needs, examine the env output of [Aws-Vault: How It Works](https://github.com/99designs/aws-vault#how-it-works) and use your organization's secrets tool accordingly with chamber.
+
+### An `aws-vault` usage example with chamber:
 
 ```bash
 aws-vault exec prod -- chamber
@@ -48,7 +63,7 @@ alias chamberprod='aws-vault exec production -- chamber'
 ## Setting up KMS
 
 Chamber expects to find a KMS key with alias `parameter_store_key` in the
-account that you are writing/reading secrets.  You can follow the [AWS KMS
+account that you are writing/reading secrets. You can follow the [AWS KMS
 documentation](http://docs.aws.amazon.com/kms/latest/developerguide/create-keys.html)
 to create your key, and [follow this guide to set up your
 alias](http://docs.aws.amazon.com/kms/latest/developerguide/programming-aliases.html).
@@ -120,25 +135,28 @@ Event       Version     Date            User
 Created     1           06-09 17:30:19  daniel-fuentes
 Updated     2           06-09 17:30:56  daniel-fuentes
 ```
+
 The `history` command gives a historical view of a given secret. This view is
 useful for auditing changes, and can point you toward the user who made the
 change so it's easier to find out why changes were made.
 
 ### Exec
+
 ```bash
 $ chamber exec <service...> -- <your executable>
 ```
 
 `exec` populates the environment with the secrets from the specified services
-and executes the given command.  Secret keys are converted to upper case (for
+and executes the given command. Secret keys are converted to upper case (for
 example a secret with key `secret_key` will become `SECRET_KEY`).
 
-Secrets from services are loaded in the order specified in the command.  For
+Secrets from services are loaded in the order specified in the command. For
 example, if you do `chamber exec app apptwo -- ...` and both apps have a secret
 named `api_key`, the `api_key` from `apptwo` will be the one set in your
 environment.
 
 ### Reading
+
 ```bash
 $ chamber read service key
 Key             Value                           Version         LastModified    User
@@ -153,6 +171,7 @@ the `--version/-v` flag to read can print older versions of the secret. Default
 version (-1) is the latest secret.
 
 ### Exporting
+
 ```bash
 $ chamber export [--format <format>] [--output-file <file>]  <service...>
 {"key":"secret"}
@@ -161,43 +180,86 @@ $ chamber export [--format <format>] [--output-file <file>]  <service...>
 `export` provides ability to export secrets in various file formats. The following
 file formats are supported:
 
-* json (default)
-* yaml
-* java-properties
-* csv
-* tsv
-* dotenv
-* tfvars
+- json (default)
+- yaml
+- java-properties
+- csv
+- tsv
+- dotenv
+- tfvars
 
 File is written to standard output by default but you may specify an output
 file.
 
-To set env vars in your terminal you can use the `chamber env` command. For example, 
+To set env vars in your terminal you can use the `chamber env` command. For example,
+
 ```shell
 source <(chamber env service)`
 printf "%s" "$SERVICE_VAR"
 ```
 
 ### Importing
+
 ```bash
-$ chamber import <service> <filepath>
+$ chamber import [--normalize-keys] <service> <filepath>
 ```
 
 `import` provides the ability to import secrets from a json or yaml file (like the kind
 you get from `chamber export`).
 
+<!-- prettier-ignore -->
+> __Note__
+> By default, `import` will **not** normalize key inputs, meaning that keys will
+> be written to the secrets backend in the format they exist in the source file.
+> In order to normalize keys on import, provide the `--normalize-keys` flag
+
+When normalizing keys, before write, the key will be be first converted to lowercase
+to match how `chamber write` handles keys.
+
+Example: `DB_HOST` will be converted to `db_host`.
+
 You can set `filepath` to `-` to instead read input from stdin.
 
 ### Deleting
+
 ```bash
-$ chamber delete service key
+$ chamber delete [--exact-key] service key
 ```
 
 `delete` provides the ability to remove a secret from chamber permanently,
 including the secret's additional metadata. There is no way to recover a
 secret once it has been deleted so care should be taken with this command.
 
+<!-- prettier-ignore -->
+> __Note__
+> By default, `delete` will normalize any provided keys. To change that behavior,
+> provide the `--exact-key` flag to attempt to delete the raw provided key.
+
+Example: Given the following setup,
+
+```bash
+$ chamber list service
+Key         Version                  LastModified      User
+apikey      2                        06-09 17:30:56    daniel-fuentes
+APIKEY      1                        06-09 17:30:34    daniel-fuentes
+```
+
+Calling
+
+```bash
+$ chamber delete --exact-key service APIKEY
+```
+
+will delete only `APIKEY` from the service and leave only
+
+```bash
+$ chamber list service
+Key         Version                  LastModified      User
+apikey      2                        06-09 17:30:56    daniel-fuentes
+```
+
 ### Finding
+
 ```bash
 $ chamber find key
 ```
@@ -207,6 +269,7 @@ $ chamber find key
 ```bash
 $ chamber find value --by-value
 ```
+
 Passing `--by-value` or `-v` will search the values of all secrets and return
 the services and keys which match.
 
@@ -235,9 +298,9 @@ If you'd like to use a custom SSM endpoint for chamber, you can use `CHAMBER_AWS
 
 ## S3 Backend (experimental)
 
-By default, chamber store secrets in AWS Parameter Store.  We now also provide an experimental S3 backend for storing secrets in S3 instead.
+By default, chamber store secrets in AWS Parameter Store. We now also provide an experimental S3 backend for storing secrets in S3 instead.
 
-To configure chamber to use the S3 backend, use `chamber -b s3 --backend-s3-bucket=mybucket`.  Preferably, this bucket should reject uploads that do not set the server side encryption header ([see this doc for details how](https://aws.amazon.com/blogs/security/how-to-prevent-uploads-of-unencrypted-objects-to-amazon-s3/))
+To configure chamber to use the S3 backend, use `chamber -b s3 --backend-s3-bucket=mybucket`. Preferably, this bucket should reject uploads that do not set the server side encryption header ([see this doc for details how](https://aws.amazon.com/blogs/security/how-to-prevent-uploads-of-unencrypted-objects-to-amazon-s3/))
 
 This feature is experimental, and not currently meant for production work.
 
@@ -246,17 +309,18 @@ This feature is experimental, and not currently meant for production work.
 This backend is similar to the S3 Backend but uses KMS Key Encryption to encrypt your documents at rest, similar to the SSM Backend which encrypts your secrets at rest. You can read how S3 Encrypts documents with KMS [here](https://docs.aws.amazon.com/kms/latest/developerguide/services-s3.html).
 
 The highlights of SSE-KMS are:
+
 - You can choose to create and manage encryption keys yourself, or you can choose to use your default service key uniquely generated on a customer by service by region level.
 - The ETag in the response is not the MD5 of the object data.
 - The data keys used to encrypt your data are also encrypted and stored alongside the data they protect.
 - Auditable master keys can be created, rotated, and disabled from the AWS KMS console.
 - The security controls in AWS KMS can help you meet encryption-related compliance requirements.
+
 Source https://docs.aws.amazon.com/AmazonS3/latest/dev/UsingKMSEncryption.html
 
-To configure chamber to use the S3 KMS backend, use `chamber -b s3-kms --backend-s3-bucket=mybucket --kms-key-alias=alias/keyname`.  You must also supply an environment variable of the KMS Key Alias to use CHAMBER_KMS_KEY_ALIAS, by default "alias/parameter_store_key" will be used.
+To configure chamber to use the S3 KMS backend, use `chamber -b s3-kms --backend-s3-bucket=mybucket --kms-key-alias=alias/keyname`. You must also supply an environment variable of the KMS Key Alias to use CHAMBER_KMS_KEY_ALIAS, by default "alias/parameter_store_key" will be used.
 
 Preferably, this bucket should reject uploads that do not set the server side encryption header ([see this doc for details how](https://aws.amazon.com/blogs/security/how-to-prevent-uploads-of-unencrypted-objects-to-amazon-s3/))
-
 
 When changing secrets between KMS Keys, you must first delete the Chamber secret with the existing KMS Key, then write it again with new KMS Key.
 
@@ -270,13 +334,12 @@ If it's preferred to not use any backend at all, use `chamber -b null`. Doing so
 
 This feature is experimental, and not currently meant for production work.
 
-
 ## Analytics
 
-`chamber` includes some usage analytics code which Segment uses internally for tracking usage of internal tools.  This analytics code is turned off by default, and can only be enabled via a linker flag at build time, which we do not set for public github releases.
+`chamber` includes some usage analytics code which Segment uses internally for tracking usage of internal tools. This analytics code is turned off by default, and can only be enabled via a linker flag at build time, which we do not set for public github releases.
 
 ## Releasing
 
 To cut a new release, just push a tag named `v<semver>` where `<semver>` is a
-valid semver version.  This tag will be used by Circle to automatically publish
+valid semver version. This tag will be used by Github Actions to automatically publish
 a github release.

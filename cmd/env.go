@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/segmentio/chamber/v2/utils"
 	"github.com/spf13/cobra"
 	analytics "gopkg.in/segmentio/analytics-go.v3"
 )
@@ -27,7 +28,7 @@ func init() {
 }
 
 func env(cmd *cobra.Command, args []string) error {
-	service := strings.ToLower(args[0])
+	service := utils.NormalizeService(args[0])
 	if err := validateService(service); err != nil {
 		return errors.Wrap(err, "Failed to validate service")
 	}
@@ -36,7 +37,7 @@ func env(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return errors.Wrap(err, "Failed to get secret store")
 	}
-	secrets, err := secretStore.List(service, true)
+	rawSecrets, err := secretStore.ListRaw(service)
 	if err != nil {
 		return errors.Wrap(err, "Failed to list store contents")
 	}
@@ -53,10 +54,10 @@ func env(cmd *cobra.Command, args []string) error {
 		})
 	}
 
-	for _, secret := range secrets {
+	for _, rawSecret := range rawSecrets {
 		fmt.Printf("export %s=%s\n",
-			strings.ToUpper(key(secret.Meta.Key)),
-			shellescape(*secret.Value))
+			strings.ToUpper(key(rawSecret.Key)),
+			shellescape(rawSecret.Value))
 	}
 
 	return nil

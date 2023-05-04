@@ -11,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/segmentio/chamber/v2/store"
 	"github.com/spf13/cobra"
-	analytics "gopkg.in/segmentio/analytics-go.v3"
+	analytics "github.com/segmentio/analytics-go/v3"
 )
 
 // Regex's used to validate service and key names

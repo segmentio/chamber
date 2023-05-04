@@ -1,7 +1,7 @@
 module github.com/segmentio/chamber/v2
 
 require (
-	github.com/aws/aws-sdk-go v1.38.22
+	github.com/aws/aws-sdk-go v1.38.71
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect

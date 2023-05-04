@@ -1,7 +1,7 @@
 name: Release
 on:
   push:
-    tags: 
+    tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
       - 'v[0-9]+.[0-9]+.[0-9]-[a-zA-Z0-9]+'
 
@@ -15,21 +15,21 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Setup Go 
+    - name: Setup Go
       uses: actions/setup-go@v2
       with:
         go-version: ${{ matrix.go }}
-    
+
     - name: Install nfpm, rpmbuild
       run: sudo make -f Makefile.tools nfpm-debian rpmbuild-debian
-    
+
     - name: Make distributables
       run: make -f Makefile.release dist
     - uses: actions/upload-artifact@v3
       with:
         name: dist
         path: 'dist/*'
- 
+
   publish-github-release:
     runs-on: ubuntu-latest
     permissions:
@@ -68,7 +68,7 @@ jobs:
         name: dist
         path: 'dist/*'
 
-    - name: Setup Go 
+    - name: Setup Go
       uses: actions/setup-go@v2
       with:
         go-version: ${{ matrix.go }}
@@ -84,7 +84,7 @@ jobs:
       with:
         username: ${{ secrets.DOCKERHUB_USER }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
-    
+
     - name: Release
-      run: 
+      run:
         make -f Makefile.release publish-dockerhub

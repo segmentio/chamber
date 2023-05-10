@@ -31,6 +31,7 @@ var (
 )
 
 func init() {
+	exportCmd.Flags().SortFlags = false
 	exportCmd.Flags().StringVarP(&exportFormat, "format", "f", "json", "Output format (json, yaml, java-properties, csv, tsv, dotenv, tfvars)")
 	exportCmd.Flags().StringVarP(&exportOutput, "output-file", "o", "", "Output file (default is standard output)")
 

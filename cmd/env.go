@@ -29,6 +29,7 @@ var (
 )
 
 func init() {
+	envCmd.Flags().SortFlags = false
 	envCmd.Flags().BoolVarP(&preserveCase, "preserve-case", "p", false, "preserve variable name case")
 	envCmd.Flags().BoolVarP(&escapeSpecials, "escape-strings", "e", false, "escape special characters in values")
 	RootCmd.AddCommand(envCmd)

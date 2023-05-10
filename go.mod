@@ -3,6 +3,7 @@ module github.com/segmentio/chamber/v2
 go 1.19
 
 require (
+	github.com/alessio/shellescape v1.4.1
 	github.com/aws/aws-sdk-go v1.44.257
 	github.com/magiconair/properties v1.8.7
 	github.com/segmentio/analytics-go/v3 v3.2.1

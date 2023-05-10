@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"sort"
 	"strings"
 
 	"github.com/magiconair/properties"
@@ -17,8 +16,6 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
-
-const doubleQuoteSpecialChars = "\\\n\r\"!$`"
 
 // exportCmd represents the export command
 var (
@@ -36,6 +33,7 @@ var (
 func init() {
 	exportCmd.Flags().StringVarP(&exportFormat, "format", "f", "json", "Output format (json, yaml, java-properties, csv, tsv, dotenv, tfvars)")
 	exportCmd.Flags().StringVarP(&exportOutput, "output-file", "o", "", "Output file (default is standard output)")
+
 	RootCmd.AddCommand(exportCmd)
 }
 
@@ -103,7 +101,7 @@ func runExport(cmd *cobra.Command, args []string) error {
 	case "dotenv":
 		err = exportAsEnvFile(params, w)
 	case "tfvars":
-		err = exportAsTfvars(params, w)
+		err = exportAsTFvars(params, w)
 	default:
 		err = fmt.Errorf("Unsupported export format: %s", exportFormat)
 	}
@@ -115,22 +113,36 @@ func runExport(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+// this is fundamentally broken, in that there is no actual .env file
+// spec. some parsers support values spanned over multiple lines
+// as long as they're quoted, others only support character literals
+// inside of quotes. we should probably offer the option to control
+// which spec we adhere to, or use a marshaler that provides a
+// spec instead of hoping for the best.
 func exportAsEnvFile(params map[string]string, w io.Writer) error {
-	// Env File like:
-	// KEY=VAL
-	// OTHER=OTHERVAL
-	for _, k := range sortedKeys(params) {
-		key := strings.ToUpper(k)
-		key = strings.Replace(key, "-", "_", -1)
-		w.Write([]byte(fmt.Sprintf(`%s="%s"`+"\n", key, doubleQuoteEscape(params[k]))))
+	// use top-level escapeSpecials variable to ensure that
+	// the dotenv format prints escaped values every time
+	escapeSpecials = true
+	out, err := buildEnvOutput(params)
+	if err != nil {
+		return err
 	}
+
+	for i := range out {
+		_, err := w.Write([]byte(fmt.Sprintln(out[i])))
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
-func exportAsTfvars(params map[string]string, w io.Writer) error {
+func exportAsTFvars(params map[string]string, w io.Writer) error {
 	// Terraform Variables is like dotenv, but removes the TF_VAR and keeps lowercase
 	for _, k := range sortedKeys(params) {
-		key := strings.TrimPrefix(k, "tf_var_")
+		key := sanitizeKey(strings.TrimPrefix(k, "tf_var_"))
+
 		w.Write([]byte(fmt.Sprintf(`%s = "%s"`+"\n", key, doubleQuoteEscape(params[k]))))
 	}
 	return nil
@@ -173,7 +185,7 @@ func exportAsCsv(params map[string]string, w io.Writer) error {
 	defer csvWriter.Flush()
 	for _, k := range sortedKeys(params) {
 		if err := csvWriter.Write([]string{k, params[k]}); err != nil {
-			return fmt.Errorf("Failed to write param %s to CSV file: %w", k, err)
+			return fmt.Errorf("Failed to write param %q to CSV file: %w", k, err)
 		}
 	}
 	return nil
@@ -181,35 +193,13 @@ func exportAsCsv(params map[string]string, w io.Writer) error {
 
 func exportAsTsv(params map[string]string, w io.Writer) error {
 	// TSV (Tab Separated Values) like:
+	tsvWriter := csv.NewWriter(w)
+	tsvWriter.Comma = '\t'
+	defer tsvWriter.Flush()
 	for _, k := range sortedKeys(params) {
-		if _, err := fmt.Fprintf(w, "%s\t%s\n", k, params[k]); err != nil {
-			return fmt.Errorf("Failed to write param %s to TSV file: %w", k, err)
+		if err := tsvWriter.Write([]string{k, params[k]}); err != nil {
+			return fmt.Errorf("Failed to write param %q to TSV file: %w", k, err)
 		}
 	}
 	return nil
-}
-
-func sortedKeys(params map[string]string) []string {
-	keys := make([]string, len(params))
-	i := 0
-	for k := range params {
-		keys[i] = k
-		i++
-	}
-	sort.Strings(keys)
-	return keys
-}
-
-func doubleQuoteEscape(line string) string {
-	for _, c := range doubleQuoteSpecialChars {
-		toReplace := "\\" + string(c)
-		if c == '\n' {
-			toReplace = `\n`
-		}
-		if c == '\r' {
-			toReplace = `\r`
-		}
-		line = strings.Replace(line, string(c), toReplace, -1)
-	}
-	return line
 }

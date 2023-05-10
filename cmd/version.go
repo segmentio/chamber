@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/spf13/cobra"
 	analytics "github.com/segmentio/analytics-go/v3"
+	"github.com/spf13/cobra"
 )
 
 // versionCmd represents the version command

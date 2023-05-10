@@ -1,6 +1,8 @@
 package utils
 
-import "strings"
+import (
+	"strings"
+)
 
 // NormalizeService normalizes a provided service to a common format
 func NormalizeService(service string) string {

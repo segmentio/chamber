@@ -1,14 +1,14 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
 
-	"github.com/pkg/errors"
+	analytics "github.com/segmentio/analytics-go/v3"
 	"github.com/segmentio/chamber/v2/environ"
 	"github.com/spf13/cobra"
-	analytics "github.com/segmentio/analytics-go/v3"
 )
 
 // When true, only use variables retrieved from the backend, do not inherit existing environment variables
@@ -33,10 +33,10 @@ var execCmd = &cobra.Command{
 			return errors.New("please separate services and command with '--'. See usage")
 		}
 		if err := cobra.MinimumNArgs(1)(cmd, args[:dashIx]); err != nil {
-			return errors.Wrap(err, "at least one service must be specified")
+			return fmt.Errorf("at least one service must be specified: %w", err)
 		}
 		if err := cobra.MinimumNArgs(1)(cmd, args[dashIx:]); err != nil {
-			return errors.Wrap(err, "must specify command to run. See usage")
+			return fmt.Errorf("must specify command to run. See usage: %w", err)
 		}
 		return nil
 	},
@@ -88,13 +88,13 @@ func execRun(cmd *cobra.Command, args []string) error {
 
 	for _, service := range services {
 		if err := validateServiceWithLabel(service); err != nil {
-			return errors.Wrap(err, "Failed to validate service")
+			return fmt.Errorf("Failed to validate service: %w", err)
 		}
 	}
 
 	secretStore, err := getSecretStore()
 	if err != nil {
-		return errors.Wrap(err, "Failed to get secret store")
+		return fmt.Errorf("Failed to get secret store: %w", err)
 	}
 	_, noPaths := os.LookupEnv("CHAMBER_NO_PATHS")
 
@@ -131,7 +131,7 @@ func execRun(cmd *cobra.Command, args []string) error {
 				err = env.Load(secretStore, service, &collisions)
 			}
 			if err != nil {
-				return errors.Wrap(err, "Failed to list store contents")
+				return fmt.Errorf("Failed to list store contents: %w", err)
 			}
 
 			for _, c := range collisions {

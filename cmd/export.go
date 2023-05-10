@@ -11,10 +11,10 @@ import (
 	"strings"
 
 	"github.com/magiconair/properties"
-	"github.com/pkg/errors"
+
+	analytics "github.com/segmentio/analytics-go/v3"
 	"github.com/segmentio/chamber/v2/utils"
 	"github.com/spf13/cobra"
-	analytics "github.com/segmentio/analytics-go/v3"
 	"gopkg.in/yaml.v3"
 )
 
@@ -62,12 +62,12 @@ func runExport(cmd *cobra.Command, args []string) error {
 	for _, service := range args {
 		service = utils.NormalizeService(service)
 		if err := validateService(service); err != nil {
-			return errors.Wrapf(err, "Failed to validate service %s", service)
+			return fmt.Errorf("Failed to validate service %s: %w", service, err)
 		}
 
 		rawSecrets, err := secretStore.ListRaw(service)
 		if err != nil {
-			return errors.Wrapf(err, "Failed to list store contents for service %s", service)
+			return fmt.Errorf("Failed to list store contents for service %s: %w", service, err)
 		}
 		for _, rawSecret := range rawSecrets {
 			k := key(rawSecret.Key)
@@ -81,7 +81,7 @@ func runExport(cmd *cobra.Command, args []string) error {
 	file := os.Stdout
 	if exportOutput != "" {
 		if file, err = os.OpenFile(exportOutput, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644); err != nil {
-			return errors.Wrap(err, "Failed to open output file for writing")
+			return fmt.Errorf("Failed to open output file for writing: %w", err)
 		}
 		defer file.Close()
 		defer file.Sync()
@@ -105,11 +105,11 @@ func runExport(cmd *cobra.Command, args []string) error {
 	case "tfvars":
 		err = exportAsTfvars(params, w)
 	default:
-		err = errors.Errorf("Unsupported export format: %s", exportFormat)
+		err = fmt.Errorf("Unsupported export format: %s", exportFormat)
 	}
 
 	if err != nil {
-		return errors.Wrap(err, "Unable to export parameters")
+		return fmt.Errorf("Unable to export parameters: %w", err)
 	}
 
 	return nil
@@ -173,7 +173,7 @@ func exportAsCsv(params map[string]string, w io.Writer) error {
 	defer csvWriter.Flush()
 	for _, k := range sortedKeys(params) {
 		if err := csvWriter.Write([]string{k, params[k]}); err != nil {
-			return errors.Wrapf(err, "Failed to write param %s to CSV file", k)
+			return fmt.Errorf("Failed to write param %s to CSV file: %w", k, err)
 		}
 	}
 	return nil
@@ -183,7 +183,7 @@ func exportAsTsv(params map[string]string, w io.Writer) error {
 	// TSV (Tab Separated Values) like:
 	for _, k := range sortedKeys(params) {
 		if _, err := fmt.Fprintf(w, "%s\t%s\n", k, params[k]); err != nil {
-			return errors.Wrapf(err, "Failed to write param %s to TSV file", k)
+			return fmt.Errorf("Failed to write param %s to TSV file: %w", k, err)
 		}
 	}
 	return nil

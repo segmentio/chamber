@@ -7,21 +7,22 @@ import (
 
 func Test_validateShellName(t *testing.T) {
 	tests := []struct {
-		name    string
-		str     string
-		wantErr bool
+		name       string
+		str        string
+		shouldFail bool
 	}{
-		{name: "strings with spaces should fail", str: "invalid strings", wantErr: true},
-		{name: "strings with only underscores should pass", str: "valid_string", wantErr: false},
-		{name: "strings with dashes should fail", str: "validish-string", wantErr: true},
-		{name: "strings that start with numbers should fail", str: "1invalidstring", wantErr: true},
-		{name: "strings that start with underscores should pass", str: "_1validstring", wantErr: false},
+		{name: "strings with spaces should fail", str: "invalid strings", shouldFail: true},
+		{name: "strings with only underscores should pass", str: "valid_string", shouldFail: false},
+		{name: "strings with dashes should fail", str: "validish-string", shouldFail: true},
+		{name: "strings that start with numbers should fail", str: "1invalidstring", shouldFail: true},
+		{name: "strings that start with underscores should pass", str: "_1validstring", shouldFail: false},
+		{name: "strings that contain periods should fail", str: "invalid.string", shouldFail: true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := validateShellName(tt.str); (err != nil) != tt.wantErr {
-				t.Errorf("validateShellName error: %v, expect wantErr %v", err, tt.wantErr)
+			if err := validateShellName(tt.str); (err != nil) != tt.shouldFail {
+				t.Errorf("validateShellName error: %v, expect wantErr %v", err, tt.shouldFail)
 			}
 		})
 	}
@@ -40,6 +41,7 @@ func Test_sanitizeKey(t *testing.T) {
 		// these strings should not be corrected, simply returned as-is
 		{givenName: "1invalidstring", expectedName: "1invalidstring"},
 		{givenName: "_1validstring", expectedName: "_1validstring"},
+		{givenName: "invalid.string", expectedName: "invalid_string"},
 	}
 
 	for _, tt := range tests {

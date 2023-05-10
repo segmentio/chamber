@@ -5,7 +5,7 @@ import (
 	"github.com/segmentio/chamber/v2/store"
 	"github.com/segmentio/chamber/v2/utils"
 	"github.com/spf13/cobra"
-	analytics "gopkg.in/segmentio/analytics-go.v3"
+	analytics "github.com/segmentio/analytics-go/v3"
 )
 
 // deleteCmd represents the delete command

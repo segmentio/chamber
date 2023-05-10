@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	analytics "gopkg.in/segmentio/analytics-go.v3"
+	analytics "github.com/segmentio/analytics-go/v3"
 )
 
 // versionCmd represents the version command

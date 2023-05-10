@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/segmentio/chamber/v2/environ"
 	"github.com/spf13/cobra"
-	analytics "gopkg.in/segmentio/analytics-go.v3"
+	analytics "github.com/segmentio/analytics-go/v3"
 )
 
 // When true, only use variables retrieved from the backend, do not inherit existing environment variables

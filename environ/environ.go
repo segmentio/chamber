@@ -176,13 +176,13 @@ func (e *Environ) loadStrictOne(rawSecrets []store.RawSecret, valueExpected stri
 		envVarKeysAdded[envVarKey] = struct{}{}
 		e.Set(envVarKey, rawSecret.Value)
 	}
-	for k, _ := range parentExpects {
+	for k := range parentExpects {
 		return ErrStoreMissingKey{Key: k, ValueExpected: valueExpected}
 	}
 
 	if pristine {
 		// unset all envvars that were in the parent env but not in store
-		for k, _ := range parentMap {
+		for k := range parentMap {
 			if _, ok := envVarKeysAdded[k]; !ok {
 				e.Unset(k)
 			}

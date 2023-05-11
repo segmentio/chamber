@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"regexp"
@@ -8,10 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
+	analytics "github.com/segmentio/analytics-go/v3"
 	"github.com/segmentio/chamber/v2/store"
 	"github.com/spf13/cobra"
-	analytics "github.com/segmentio/analytics-go/v3"
 )
 
 // Regex's used to validate service and key names

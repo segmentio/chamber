@@ -6,7 +6,6 @@ import (
 	"sort"
 	"text/tabwriter"
 
-	"github.com/pkg/errors"
 	"github.com/segmentio/chamber/v2/utils"
 	"github.com/spf13/cobra"
 )
@@ -37,11 +36,11 @@ func listServices(cmd *cobra.Command, args []string) error {
 	}
 	secretStore, err := getSecretStore()
 	if err != nil {
-		return errors.Wrap(err, "Failed to get secret store")
+		return fmt.Errorf("Failed to get secret store: %w", err)
 	}
 	secrets, err := secretStore.ListServices(service, includeSecretName)
 	if err != nil {
-		return errors.Wrap(err, "Failed to list store contents")
+		return fmt.Errorf("Failed to list store contents: %w", err)
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 8, 2, '\t', 0)

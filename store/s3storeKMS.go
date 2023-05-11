@@ -3,6 +3,7 @@ package store
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"strings"
@@ -13,7 +14,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/pkg/errors"
 )
 
 // latest is used to keep a single object in s3 with all of the
@@ -188,7 +188,7 @@ func (s *S3KMSStore) List(service string, includeValues bool) ([]Secret, error) 
 	return secrets, nil
 }
 
-// ListRaw returns RawSecrets by extracting them from the index file. It only ever uses the 
+// ListRaw returns RawSecrets by extracting them from the index file. It only ever uses the
 // index file; it never consults the actual secrets, so if the index file is out of sync, these
 // results will reflect that.
 func (s *S3KMSStore) ListRaw(service string) ([]RawSecret, error) {

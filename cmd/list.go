@@ -7,11 +7,10 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/pkg/errors"
+	analytics "github.com/segmentio/analytics-go/v3"
 	"github.com/segmentio/chamber/v2/store"
 	"github.com/segmentio/chamber/v2/utils"
 	"github.com/spf13/cobra"
-	analytics "github.com/segmentio/analytics-go/v3"
 )
 
 // listCmd represents the list command
@@ -40,7 +39,7 @@ func init() {
 func list(cmd *cobra.Command, args []string) error {
 	service := utils.NormalizeService(args[0])
 	if err := validateServiceWithLabel(service); err != nil {
-		return errors.Wrap(err, "Failed to validate service")
+		return fmt.Errorf("Failed to validate service: %w", err)
 	}
 
 	if analyticsEnabled && analyticsClient != nil {
@@ -57,11 +56,11 @@ func list(cmd *cobra.Command, args []string) error {
 
 	secretStore, err := getSecretStore()
 	if err != nil {
-		return errors.Wrap(err, "Failed to get secret store")
+		return fmt.Errorf("Failed to get secret store: %w", err)
 	}
 	secrets, err := secretStore.List(service, withValues)
 	if err != nil {
-		return errors.Wrap(err, "Failed to list store contents")
+		return fmt.Errorf("Failed to list store contents: %w", err)
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 8, 2, '\t', 0)

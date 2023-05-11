@@ -1,14 +1,13 @@
-// +build !linux,!darwin
+//go:build !linux && !darwin
 
 package cmd
 
 import (
+	"fmt"
 	"os"
 	osexec "os/exec"
 	"os/signal"
 	"syscall"
-
-	"github.com/pkg/errors"
 )
 
 // exec executes the given command, passing it args and setting its environment
@@ -25,7 +24,7 @@ func exec(command string, args []string, env []string) error {
 	signal.Notify(sigChan)
 
 	if err := ecmd.Start(); err != nil {
-		return errors.Wrap(err, "Failed to start command")
+		return fmt.Errorf("Failed to start command: %w", err)
 	}
 
 	go func() {
@@ -37,7 +36,7 @@ func exec(command string, args []string, env []string) error {
 
 	if err := ecmd.Wait(); err != nil {
 		ecmd.Process.Signal(os.Kill)
-		return errors.Wrap(err, "Failed to wait for command termination")
+		return fmt.Errorf("Failed to wait for command termination: %w", err)
 	}
 
 	waitStatus := ecmd.ProcessState.Sys().(syscall.WaitStatus)

@@ -5,11 +5,10 @@ import (
 	"io"
 	"os"
 
-	"github.com/pkg/errors"
+	analytics "github.com/segmentio/analytics-go/v3"
 	"github.com/segmentio/chamber/v2/store"
 	"github.com/segmentio/chamber/v2/utils"
 	"github.com/spf13/cobra"
-	analytics "github.com/segmentio/analytics-go/v3"
 	"gopkg.in/yaml.v3"
 )
 
@@ -31,7 +30,7 @@ func init() {
 func importRun(cmd *cobra.Command, args []string) error {
 	service := utils.NormalizeService(args[0])
 	if err := validateService(service); err != nil {
-		return errors.Wrap(err, "Failed to validate service")
+		return fmt.Errorf("Failed to validate service: %w", err)
 	}
 
 	var in io.Reader
@@ -43,7 +42,7 @@ func importRun(cmd *cobra.Command, args []string) error {
 	} else {
 		in, err = os.Open(file)
 		if err != nil {
-			return errors.Wrap(err, "Failed to open file")
+			return fmt.Errorf("Failed to open file: %w", err)
 		}
 	}
 
@@ -51,7 +50,7 @@ func importRun(cmd *cobra.Command, args []string) error {
 
 	decoder := yaml.NewDecoder(in)
 	if err := decoder.Decode(&toBeImported); err != nil {
-		return errors.Wrap(err, "Failed to decode input as json")
+		return fmt.Errorf("Failed to decode input as json: %w", err)
 	}
 
 	if analyticsEnabled && analyticsClient != nil {
@@ -68,7 +67,7 @@ func importRun(cmd *cobra.Command, args []string) error {
 
 	secretStore, err := getSecretStore()
 	if err != nil {
-		return errors.Wrap(err, "Failed to get secret store")
+		return fmt.Errorf("Failed to get secret store: %w", err)
 	}
 
 	for key, value := range toBeImported {
@@ -80,7 +79,7 @@ func importRun(cmd *cobra.Command, args []string) error {
 			Key:     key,
 		}
 		if err := secretStore.Write(secretId, value); err != nil {
-			return errors.Wrap(err, "Failed to write secret")
+			return fmt.Errorf("Failed to write secret: %w", err)
 		}
 	}
 

@@ -2,15 +2,15 @@ package cmd
 
 import (
 	"bufio"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"strings"
 
-	"github.com/pkg/errors"
+	analytics "github.com/segmentio/analytics-go/v3"
 	"github.com/segmentio/chamber/v2/store"
 	"github.com/segmentio/chamber/v2/utils"
 	"github.com/spf13/cobra"
-	analytics "github.com/segmentio/analytics-go/v3"
 )
 
 var (
@@ -35,12 +35,12 @@ func init() {
 func write(cmd *cobra.Command, args []string) error {
 	service := utils.NormalizeService(args[0])
 	if err := validateService(service); err != nil {
-		return errors.Wrap(err, "Failed to validate service")
+		return fmt.Errorf("Failed to validate service: %w", err)
 	}
 
 	key := utils.NormalizeKey(args[1])
 	if err := validateKey(key); err != nil {
-		return errors.Wrap(err, "Failed to validate key")
+		return fmt.Errorf("Failed to validate key: %w", err)
 	}
 
 	if analyticsEnabled && analyticsClient != nil {
@@ -77,7 +77,7 @@ func write(cmd *cobra.Command, args []string) error {
 
 	secretStore, err := getSecretStore()
 	if err != nil {
-		return errors.Wrap(err, "Failed to get secret store")
+		return fmt.Errorf("Failed to get secret store: %w", err)
 	}
 
 	secretId := store.SecretId{

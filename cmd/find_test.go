@@ -15,21 +15,9 @@ func TestFindFunctions(t *testing.T) {
 		params string
 		output string
 	}{
-		{
-			"service1",
-			"/service1/key_one",
-			"service1",
-		},
-		{
-			"service2",
-			"/service2/subService/key_two",
-			"service2/subService",
-		},
-		{
-			"service3",
-			"/service3/subService/subSubService/key_three",
-			"service3/subService/subSubService",
-		},
+		{name: "service1", params: "/service1/key_one", output: "service1"},
+		{name: "service2", params: "/service2/subService/key_two", output: "service2/subService"},
+		{name: "service3", params: "/service3/subService/subSubService/key_three", output: "service3/subService/subSubService"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -45,52 +33,40 @@ func TestFindFunctions(t *testing.T) {
 		output     []store.SecretId
 	}{
 		{
-			"findNoMatches",
-			[]string{"/service1/launch_darkly_key",
+			name: "findNoMatches",
+			services: []string{
+				"/service1/launch_darkly_key",
 				"/service2/s3_bucket_base",
 				"/service3/slack_token",
 			},
-			"s3_bucket",
-			[]store.SecretId{},
+			searchTerm: "s3_bucket",
+			output:     []store.SecretId{},
 		},
 		{
-			"findSomeMatches",
-			[]string{"/service1/s3_bucket",
+			name: "findSomeMatches",
+			services: []string{
+				"/service1/s3_bucket",
 				"/service2/s3_bucket_base",
 				"/service3/s3_bucket",
 			},
-			"s3_bucket",
-			[]store.SecretId{
-				{
-					"service1",
-					"s3_bucket",
-				},
-				{
-					"service3",
-					"s3_bucket",
-				},
+			searchTerm: "s3_bucket",
+			output: []store.SecretId{
+				{Service: "service1", Key: "s3_bucket"},
+				{Service: "service3", Key: "s3_bucket"},
 			},
 		},
 		{
-			"findEverythingMatches",
-			[]string{"/service1/s3_bucket",
+			name: "findEverythingMatches",
+			services: []string{
+				"/service1/s3_bucket",
 				"/service2/s3_bucket",
 				"/service3/s3_bucket",
 			},
-			"s3_bucket",
-			[]store.SecretId{
-				{
-					"service1",
-					"s3_bucket",
-				},
-				{
-					"service2",
-					"s3_bucket",
-				},
-				{
-					"service3",
-					"s3_bucket",
-				},
+			searchTerm: "s3_bucket",
+			output: []store.SecretId{
+				{Service: "service1", Key: "s3_bucket"},
+				{Service: "service2", Key: "s3_bucket"},
+				{Service: "service3", Key: "s3_bucket"},
 			},
 		},
 	}
@@ -115,126 +91,126 @@ func TestFindFunctions(t *testing.T) {
 		output     []store.SecretId
 	}{
 		{
-			"findNoMatches",
-			[]store.Secret{
-				store.Secret{
-					&valueDarklyToken,
-					store.SecretMetadata{
-						time.Now(),
-						"no one",
-						0,
-						"/service1/launch_darkly_key",
+			name: "findNoMatches",
+			secrets: []store.Secret{
+				{
+					Value: &valueDarklyToken,
+					Meta: store.SecretMetadata{
+						Created:   time.Now(),
+						CreatedBy: "no one",
+						Version:   0,
+						Key:       "/service1/launch_darkly_key",
 					},
 				},
-				store.Secret{
-					&valueSlackToken,
-					store.SecretMetadata{
-						time.Now(),
-						"no one",
-						0,
-						"/service1/slack_token",
+				{
+					Value: &valueSlackToken,
+					Meta: store.SecretMetadata{
+						Created:   time.Now(),
+						CreatedBy: "no one",
+						Version:   0,
+						Key:       "/service1/slack_token",
 					},
 				},
-				store.Secret{
-					&valueBadS3Bucket,
-					store.SecretMetadata{
-						time.Now(),
-						"no one",
-						0,
-						"/service1/s3_bucket",
+				{
+					Value: &valueBadS3Bucket,
+					Meta: store.SecretMetadata{
+						Created:   time.Now(),
+						CreatedBy: "no one",
+						Version:   0,
+						Key:       "/service1/s3_bucket",
 					},
 				},
 			},
-			"s3://this_bucket",
-			[]store.SecretId{},
+			searchTerm: "s3://this_bucket",
+			output:     []store.SecretId{},
 		},
 		{
 			"findSomeMatches",
 			[]store.Secret{
-				store.Secret{
-					&valueDarklyToken,
-					store.SecretMetadata{
-						time.Now(),
-						"no one",
-						0,
-						"/service1/launch_darkly_key",
+				{
+					Value: &valueDarklyToken,
+					Meta: store.SecretMetadata{
+						Created:   time.Now(),
+						CreatedBy: "no one",
+						Version:   0,
+						Key:       "/service1/launch_darkly_key",
 					},
 				},
-				store.Secret{
-					&valueGoodS3Bucket,
-					store.SecretMetadata{
-						time.Now(),
-						"no one",
-						0,
-						"/service1/s3_bucket_name",
+				{
+					Value: &valueGoodS3Bucket,
+					Meta: store.SecretMetadata{
+						Created:   time.Now(),
+						CreatedBy: "no one",
+						Version:   0,
+						Key:       "/service1/s3_bucket_name",
 					},
 				},
-				store.Secret{
-					&valueGoodS3Bucket,
-					store.SecretMetadata{
-						time.Now(),
-						"no one",
-						0,
-						"/service1/s3_bucket",
+				{
+					Value: &valueGoodS3Bucket,
+					Meta: store.SecretMetadata{
+						Created:   time.Now(),
+						CreatedBy: "no one",
+						Version:   0,
+						Key:       "/service1/s3_bucket",
 					},
 				},
 			},
 			"s3://this_bucket",
 			[]store.SecretId{
 				{
-					"service1",
-					"s3_bucket_name",
+					Service: "service1",
+					Key:     "s3_bucket_name",
 				},
 				{
-					"service1",
-					"s3_bucket",
+					Service: "service1",
+					Key:     "s3_bucket",
 				},
 			},
 		},
 		{
 			"findEverythingMatches",
 			[]store.Secret{
-				store.Secret{
-					&valueGoodS3Bucket,
-					store.SecretMetadata{
-						time.Now(),
-						"no one",
-						0,
-						"/service1/s3_bucket_base",
+				{
+					Value: &valueGoodS3Bucket,
+					Meta: store.SecretMetadata{
+						Created:   time.Now(),
+						CreatedBy: "no one",
+						Version:   0,
+						Key:       "/service1/s3_bucket_base",
 					},
 				},
-				store.Secret{
-					&valueGoodS3Bucket,
-					store.SecretMetadata{
-						time.Now(),
-						"no one",
-						0,
-						"/service1/s3_bucket_name",
+				{
+					Value: &valueGoodS3Bucket,
+					Meta: store.SecretMetadata{
+						Created:   time.Now(),
+						CreatedBy: "no one",
+						Version:   0,
+						Key:       "/service1/s3_bucket_name",
 					},
 				},
-				store.Secret{
-					&valueGoodS3Bucket,
-					store.SecretMetadata{
-						time.Now(),
-						"no one",
-						0,
-						"/service1/s3_bucket",
+				{
+					Value: &valueGoodS3Bucket,
+					Meta: store.SecretMetadata{
+						Created:   time.Now(),
+						CreatedBy: "no one",
+						Version:   0,
+						Key:       "/service1/s3_bucket",
 					},
 				},
 			},
 			"s3://this_bucket",
 			[]store.SecretId{
 				{
-					"service1",
-					"s3_bucket_base",
+					Service: "service1",
+					Key:     "s3_bucket_base",
 				},
 				{
-					"service1",
-					"s3_bucket_name",
+					Service: "service1",
+					Key:     "s3_bucket_name",
 				},
 				{
-					"service1",
-					"s3_bucket",
+					Service: "service1",
+					Key:     "s3_bucket",
 				},
 			},
 		},

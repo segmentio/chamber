@@ -46,7 +46,7 @@ func Test_sanitizeKey(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run("test sanitizing key names", func(t *testing.T) {
-			if got := sanitizeKey(tt.given); got == tt.expected {
+			if got := sanitizeKey(tt.given); got != tt.expected {
 				t.Errorf("shellName error: want %q, got %q", tt.expected, got)
 			}
 		})

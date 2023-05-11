@@ -192,7 +192,7 @@ func doubleQuoteEscape(line string) string {
 // []string{"A", "Dog", "b", "cat", "dog"}. That doesn't
 // really matter here but it may lead to surprises.
 func sortedKeys(params map[string]string) []string {
-	keys := make([]string, len(params))
+	keys := []string{}
 
 	for key := range params {
 		keys = append(keys, key)

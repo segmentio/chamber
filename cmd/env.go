@@ -186,12 +186,16 @@ func doubleQuoteEscape(line string) string {
 	return line
 }
 
+// return the keys from params, sorted by keyname.
+// note that sort.Strings() is not case insensitive.
+// e.g. []string{"A", "b", "cat", "Dog", "dog"} will sort as:
+// []string{"A", "Dog", "b", "cat", "dog"}. That doesn't
+// really matter here but it may lead to surprises.
 func sortedKeys(params map[string]string) []string {
 	keys := make([]string, len(params))
-	i := 0
-	for k := range params {
-		keys[i] = k
-		i++
+
+	for key := range params {
+		keys = append(keys, key)
 	}
 	sort.Strings(keys)
 	return keys

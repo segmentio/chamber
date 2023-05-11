@@ -30,24 +30,24 @@ func Test_validateShellName(t *testing.T) {
 
 func Test_sanitizeKey(t *testing.T) {
 	tests := []struct {
-		givenName    string
-		expectedName string
+		given    string
+		expected string
 	}{
-		{givenName: "invalid strings", expectedName: "invalid_strings"},
-		{givenName: "extremely  invalid  strings", expectedName: "extremely__invalid__strings"},
-		{givenName: fmt.Sprintf("\nunbelievably\tinvalid\tstrings\n"), expectedName: "unbelievably_invalid_strings"},
-		{givenName: "valid_string", expectedName: "valid_string"},
-		{givenName: "validish-string", expectedName: "validish_string"},
-		// these strings should not be corrected, simply returned as-is
-		{givenName: "1invalidstring", expectedName: "1invalidstring"},
-		{givenName: "_1validstring", expectedName: "_1validstring"},
-		{givenName: "invalid.string", expectedName: "invalid_string"},
+		{given: "invalid strings", expected: "invalid_strings"},
+		{given: "extremely  invalid  strings", expected: "extremely__invalid__strings"},
+		{given: fmt.Sprintf("\nunbelievably\tinvalid\tstrings\n"), expected: "unbelievably_invalid_strings"},
+		{given: "valid_string", expected: "valid_string"},
+		{given: "validish-string", expected: "validish_string"},
+		{given: "valid.string", expected: "valid_string"},
+		// the following two strings should not be corrected, simply returned as-is.
+		{given: "1invalidstring", expected: "1invalidstring"},
+		{given: "_1validstring", expected: "_1validstring"},
 	}
 
 	for _, tt := range tests {
 		t.Run("test sanitizing key names", func(t *testing.T) {
-			if got := sanitizeKey(tt.givenName); got != tt.expectedName {
-				t.Errorf("shellName error: want %q, got %q", tt.expectedName, got)
+			if got := sanitizeKey(tt.given); got == tt.expected {
+				t.Errorf("shellName error: want %q, got %q", tt.expected, got)
 			}
 		})
 	}

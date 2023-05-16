@@ -411,7 +411,7 @@ The highlights of SSE-KMS are:
 - The security controls in AWS KMS can help you meet encryption-related compliance
   requirements.
 
-Source:[Protecting data using server-side encryption with AWS Key Management Service keys (SSE-KMS)](https://docs.aws.amazon.com/AmazonS3/latest/dev/UsingKMSEncryption.html)
+Source: [Protecting data using server-side encryption with AWS Key Management Service keys (SSE-KMS)](https://docs.aws.amazon.com/AmazonS3/latest/dev/UsingKMSEncryption.html)
 
 To configure chamber to use the S3 KMS backend, use
 `chamber -b s3-kms --backend-s3-bucket=mybucket --kms-key-alias=alias/keyname`.

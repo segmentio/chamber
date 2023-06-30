@@ -357,6 +357,15 @@ $ chamber find value --by-value
 Passing `--by-value` or `-v` will search the values of all secrets and return
 the services and keys which match.
 
+### Listing Services
+
+```bash
+$ chamber list-services [<prefix>]
+```
+
+`list-services` lists the available services. You can provide a prefix to limit
+the results.
+
 ### AWS Region
 
 Chamber uses [AWS SDK for Go](https://github.com/aws/aws-sdk-go). To use a

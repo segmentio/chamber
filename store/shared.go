@@ -1,12 +1,15 @@
 package store
 
 import (
+	"context"
 	"os"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/kevinburke/isec2"
 )
 
 const (
@@ -47,10 +50,15 @@ func getSession(numRetries int) (*session.Session, *string, error) {
 
 	// If region is still not set, attempt to determine it via ec2 metadata API
 	if aws.StringValue(retSession.Config.Region) == "" {
-		session := session.New()
-		ec2metadataSvc := ec2metadata.New(session)
-		if regionOverride, err := ec2metadataSvc.Region(); err == nil {
-			region = aws.String(regionOverride)
+		ec2ctx, ec2cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
+		runningEC2, ec2err := isec2.IsEC2(ec2ctx)
+		ec2cancel()
+		if ec2err == nil && runningEC2 {
+			session := session.New()
+			ec2metadataSvc := ec2metadata.New(session)
+			if regionOverride, err := ec2metadataSvc.Region(); err == nil {
+				region = aws.String(regionOverride)
+			}
 		}
 	}
 

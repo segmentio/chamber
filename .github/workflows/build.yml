@@ -10,12 +10,12 @@ jobs:
   install-go-modules:
     strategy:
       matrix:
-        go: ["1.20.x", "1.19.x"]
+        go: ["1.21.x", "1.20.x", "1.19.x"]
 
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Go ${{ matrix.go }}
         uses: actions/setup-go@v4
@@ -28,11 +28,11 @@ jobs:
   test:
     strategy:
       matrix:
-        go: ["1.20.x", "1.19.x"]
+        go: ["1.21.x", "1.20.x", "1.19.x"]
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Go
         uses: actions/setup-go@v4
@@ -56,12 +56,12 @@ jobs:
   dist:
     strategy:
       matrix:
-        go: ["1.20.x", "1.19.x"]
+        go: ["1.21.x", "1.20.x", "1.19.x"]
     runs-on: ubuntu-latest
     needs: test
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Go
         uses: actions/setup-go@v4

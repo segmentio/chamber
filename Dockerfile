@@ -1,4 +1,4 @@
-FROM golang:1.21.5-alpine AS build
+FROM golang:1.21.6-alpine AS build
 
 WORKDIR /go/src/github.com/segmentio/chamber
 COPY . .

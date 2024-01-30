@@ -6,7 +6,7 @@ require (
 	github.com/alessio/shellescape v1.4.1
 	github.com/aws/aws-sdk-go v1.44.312
 	github.com/magiconair/properties v1.8.7
-	github.com/segmentio/analytics-go/v3 v3.2.1
+	github.com/segmentio/analytics-go/v3 v3.3.0
 	github.com/spf13/cobra v1.7.0
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/sys v0.13.0

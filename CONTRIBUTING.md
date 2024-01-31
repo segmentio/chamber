@@ -1,6 +1,6 @@
 Thanks for thinking about contributing to Chamber!
 
-Chamber is an open-source project run with ❤️ by Segment. We've made it open source in the hope that other folks will find it useful. That said, making open source software takes a lot of work, so we try to keep Chamber focused on its goals. That means first and foremost supporting the use cases we have at Segment, but any other reasonable additions will be accepted with gratitude.
+Chamber is an open-source project run with ❤️ by Twilio Segment. We've made it open source in the hope that other folks will find it useful. That said, making open source software takes a lot of work, so we try to keep Chamber focused on its goals. That means first and foremost supporting the use cases we have at Segment, but any other reasonable additions will be accepted with gratitude.
 
 The purpose of these guidelines is all about setting expectations.
 
@@ -46,7 +46,11 @@ Stale issues get the `stale` label.
 
 # Commit messages
 
-We use [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0-beta.3/) to help generate changelogs and do semver releases. We usually do Squash and Merge to PRs, so PR authors are recommended to use the Conventional Commits format in their PR title.
+We use [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) to help generate changelogs and do semver releases. We usually do Squash and Merge to PRs, so PR authors are recommended to use the Conventional Commits format in their PR title.
+
+# Licensing
+
+We do not require contributors outside of Segment to execute a contributor license agreement. Instead, we accept contributions under Chamber's [license](LICENSE). In legal terms: _All third party contributors acknowledge that any contributions they provide will be made under the same open source license that Chamber is provided under._
 
 # Anti-contribution
 

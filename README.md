@@ -458,3 +458,9 @@ public github releases.
 To cut a new release, just push a tag named `v<semver>` where `<semver>` is a
 valid semver version. This tag will be used by Github Actions to automatically publish
 a github release.
+
+---
+
+<div align="center">
+THE CHAMBER OF SECRETS HAS BEEN OPENED
+</div>

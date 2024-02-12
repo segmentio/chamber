@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/alessio/shellescape v1.4.2
-	github.com/aws/aws-sdk-go v1.50.10
+	github.com/aws/aws-sdk-go v1.50.15
 	github.com/magiconair/properties v1.8.7
 	github.com/segmentio/analytics-go/v3 v3.3.0
 	github.com/spf13/cobra v1.8.0

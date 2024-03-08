@@ -10,7 +10,7 @@ jobs:
   install-go-modules:
     strategy:
       matrix:
-        go: ["1.22.x", 1.21.x", "1.20.x"]
+        go: ["1.22.x", "1.21.x", "1.20.x"]
 
     runs-on: ubuntu-latest
 
@@ -28,7 +28,7 @@ jobs:
   test:
     strategy:
       matrix:
-        go: ["1.22.x", 1.21.x", "1.20.x"]
+        go: ["1.22.x", "1.21.x", "1.20.x"]
     runs-on: ubuntu-latest
 
     steps:

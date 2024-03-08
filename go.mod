@@ -1,6 +1,6 @@
 module github.com/segmentio/chamber/v2
 
-go 1.19
+go 1.20
 
 require (
 	github.com/alessio/shellescape v1.4.2

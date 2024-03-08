@@ -15,7 +15,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
-          go-version: 1.21.x
+          go-version: 1.22.x
 
       - name: Install nfpm, rpmbuild
         run: sudo make -f Makefile.tools nfpm-debian rpmbuild-debian
@@ -65,7 +65,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
-          go-version: 1.21.x
+          go-version: 1.22.x
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2

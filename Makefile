@@ -18,9 +18,20 @@ VERSION_MAJOR_MINOR := $(shell echo "$(VERSION)" | sed 's/^v\([0-9]*.[0-9]*\).*/
 VERSION_MAJOR := $(shell echo "$(VERSION)" | sed 's/^v\([0-9]*\).*/\1/')
 ANALYTICS_WRITE_KEY ?=
 LDFLAGS := -ldflags='-X "main.Version=$(VERSION)" -X "main.AnalyticsWriteKey=$(ANALYTICS_WRITE_KEY)"'
+MOQ := $(shell command -v moq 2> /dev/null)
+SRC := $(shell find . -name '*.go')
 
-test:
+test: store/awsapi_mock.go
 	go test -v ./...
+
+store/awsapi_mock.go: store/awsapi.go
+ifdef MOQ
+	rm -f $@
+	go generate ./...
+else
+	@echo "Unable to generate mocks"
+	@echo "Please install moq: go install github.com/matryer/moq@latest"
+endif
 
 all: dist/chamber-$(VERSION)-darwin-amd64 dist/chamber-$(VERSION)-linux-amd64 dist/chamber-$(VERSION)-windows-amd64.exe
 
@@ -32,7 +43,7 @@ dist/:
 
 build: chamber
 
-chamber:
+chamber: $(SRC)
 	CGO_ENABLED=0 go build -trimpath $(LDFLAGS) -o $@
 
 dist/chamber-$(VERSION)-darwin-amd64: | dist/

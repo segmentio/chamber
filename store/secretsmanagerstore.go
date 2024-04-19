@@ -2,19 +2,19 @@
 package store
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 	"sort"
 	"strconv"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/service/secretsmanager"
-	"github.com/aws/aws-sdk-go/service/secretsmanager/secretsmanageriface"
-	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/aws/aws-sdk-go/service/sts/stsiface"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager/types"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 )
 
 // We store all Chamber metadata in a stringified JSON format,
@@ -74,30 +74,26 @@ var _ Store = &SecretsManagerStore{}
 // SecretsManagerStore implements the Store interface for storing secrets in SSM Parameter
 // Store
 type SecretsManagerStore struct {
-	svc    secretsmanageriface.SecretsManagerAPI
-	stsSvc stsiface.STSAPI
+	svc    apiSecretsManager
+	stsSvc apiSTS
+	config aws.Config
 }
 
 // NewSecretsManagerStore creates a new SecretsManagerStore
 func NewSecretsManagerStore(numRetries int) (*SecretsManagerStore, error) {
-	session, region, err := getSession(numRetries)
+	cfg, _, err := getConfig(numRetries)
 	if err != nil {
 		return nil, err
 	}
 
-	svc := secretsmanager.New(session, &aws.Config{
-		MaxRetries: aws.Int(numRetries),
-		Region:     region,
-	})
+	svc := secretsmanager.NewFromConfig(cfg)
 
-	stsSvc := sts.New(session, &aws.Config{
-		MaxRetries: aws.Int(numRetries),
-		Region:     region,
-	})
+	stsSvc := sts.NewFromConfig(cfg)
 
 	return &SecretsManagerStore{
 		svc:    svc,
 		stsSvc: stsSvc,
+		config: cfg,
 	}, nil
 }
 
@@ -121,12 +117,9 @@ func (s *SecretsManagerStore) Write(id SecretId, value string) error {
 			return err
 		}
 		if err != ErrSecretNotFound {
-			if awsErr, ok := err.(awserr.Error); ok {
-				if awsErr.Code() == secretsmanager.ErrCodeResourceNotFoundException {
-					mustCreate = true
-				} else {
-					return err
-				}
+			var rnfe *types.ResourceNotFoundException
+			if errors.As(err, &rnfe) {
+				mustCreate = true
 			} else {
 				return err
 			}
@@ -192,7 +185,7 @@ func (s *SecretsManagerStore) Write(id SecretId, value string) error {
 			Name:         aws.String(id.Service),
 			SecretString: aws.String(string(contents)),
 		}
-		_, err = s.svc.CreateSecret(createSecretValueInput)
+		_, err = s.svc.CreateSecret(context.TODO(), createSecretValueInput)
 		if err != nil {
 			return err
 		}
@@ -202,20 +195,20 @@ func (s *SecretsManagerStore) Write(id SecretId, value string) error {
 		describeSecretInput := &secretsmanager.DescribeSecretInput{
 			SecretId: aws.String(id.Service),
 		}
-		details, err := s.svc.DescribeSecret(describeSecretInput)
+		details, err := s.svc.DescribeSecret(context.TODO(), describeSecretInput)
 		if err != nil {
 			return err
 		}
-		if aws.BoolValue(details.RotationEnabled) {
+		if details.RotationEnabled != nil && *details.RotationEnabled {
 			return fmt.Errorf("Cannot write to a secret with rotation enabled")
 		}
 
 		putSecretValueInput := &secretsmanager.PutSecretValueInput{
 			SecretId:      aws.String(id.Service),
 			SecretString:  aws.String(string(contents)),
-			VersionStages: []*string{aws.String("AWSCURRENT"), aws.String("CHAMBER" + fmt.Sprint(version))},
+			VersionStages: []string{"AWSCURRENT", "CHAMBER" + fmt.Sprint(version)},
 		}
-		_, err = s.svc.PutSecretValue(putSecretValueInput)
+		_, err = s.svc.PutSecretValue(context.TODO(), putSecretValueInput)
 		if err != nil {
 			return err
 		}
@@ -270,7 +263,7 @@ func (s *SecretsManagerStore) readVersion(id SecretId, version int) (Secret, err
 	}
 
 	var result Secret
-	resp, err := s.svc.ListSecretVersionIds(listSecretVersionIdsInput)
+	resp, err := s.svc.ListSecretVersionIds(context.TODO(), listSecretVersionIdsInput)
 	if err != nil {
 		return Secret{}, err
 	}
@@ -284,7 +277,7 @@ func (s *SecretsManagerStore) readVersion(id SecretId, version int) (Secret, err
 			VersionId: h.VersionId,
 		}
 
-		resp, err := s.svc.GetSecretValue(getSecretValueInput)
+		resp, err := s.svc.GetSecretValue(context.TODO(), getSecretValueInput)
 
 		if err != nil {
 			return Secret{}, err
@@ -336,7 +329,7 @@ func (s *SecretsManagerStore) readLatest(service string) (secretValueObject, err
 		SecretId: aws.String(service),
 	}
 
-	resp, err := s.svc.GetSecretValue(getSecretValueInput)
+	resp, err := s.svc.GetSecretValue(context.TODO(), getSecretValueInput)
 
 	if err != nil {
 		return secretValueObject{}, err
@@ -435,7 +428,7 @@ func (s *SecretsManagerStore) History(id SecretId) ([]ChangeEvent, error) {
 		IncludeDeprecated: aws.Bool(false),
 	}
 
-	resp, err := s.svc.ListSecretVersionIds(listSecretVersionIdsInput)
+	resp, err := s.svc.ListSecretVersionIds(context.TODO(), listSecretVersionIdsInput)
 	if err != nil {
 		return events, err
 	}
@@ -452,7 +445,7 @@ func (s *SecretsManagerStore) History(id SecretId) ([]ChangeEvent, error) {
 			VersionId: h.VersionId,
 		}
 
-		resp, err := s.svc.GetSecretValue(getSecretValueInput)
+		resp, err := s.svc.GetSecretValue(context.TODO(), getSecretValueInput)
 
 		if err != nil {
 			return events, err
@@ -506,7 +499,7 @@ func (s *SecretsManagerStore) History(id SecretId) ([]ChangeEvent, error) {
 }
 
 func (s *SecretsManagerStore) getCurrentUser() (string, error) {
-	resp, err := s.stsSvc.GetCallerIdentity(&sts.GetCallerIdentityInput{})
+	resp, err := s.stsSvc.GetCallerIdentity(context.TODO(), &sts.GetCallerIdentityInput{})
 	if err != nil {
 		return "", err
 	}

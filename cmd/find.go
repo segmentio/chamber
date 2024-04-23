@@ -108,11 +108,7 @@ func findValueMatch(secrets []store.Secret, searchTerm string) []store.SecretId 
 }
 
 func path(s string) string {
-	_, noPaths := os.LookupEnv("CHAMBER_NO_PATHS")
 	sep := "/"
-	if noPaths {
-		sep = "."
-	}
 
 	tokens := strings.Split(s, sep)
 	secretPath := strings.Join(tokens[1:len(tokens)-1], "/")

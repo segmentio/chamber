@@ -18,9 +18,7 @@ import (
 // Regex's used to validate service and key names
 var (
 	validKeyFormat                  = regexp.MustCompile(`^[\w\-\.]+$`)
-	validServiceFormat              = regexp.MustCompile(`^[\w\-\.]+$`)
 	validServicePathFormat          = regexp.MustCompile(`^[\w\-\.]+(\/[\w\-\.]+)*$`)
-	validServiceFormatWithLabel     = regexp.MustCompile(`^[\w\-\.\:]+$`)
 	validServicePathFormatWithLabel = regexp.MustCompile(`^[\w\-\.]+((\/[\w\-\.]+)+(\:[\w\-\.]+)*)?$`)
 
 	verbose    bool
@@ -113,30 +111,16 @@ func Execute(vers string, writeKey string) {
 }
 
 func validateService(service string) error {
-	_, noPaths := os.LookupEnv("CHAMBER_NO_PATHS")
-	if noPaths {
-		if !validServiceFormat.MatchString(service) {
-			return fmt.Errorf("Failed to validate service name '%s'. Only alphanumeric, dashes, full stops and underscores are allowed for service names", service)
-		}
-	} else {
-		if !validServicePathFormat.MatchString(service) {
-			return fmt.Errorf("Failed to validate service name '%s'. Only alphanumeric, dashes, forward slashes, full stops and underscores are allowed for service names. Service names must not start or end with a forward slash", service)
-		}
+	if !validServicePathFormat.MatchString(service) {
+		return fmt.Errorf("Failed to validate service name '%s'. Only alphanumeric, dashes, forward slashes, full stops and underscores are allowed for service names. Service names must not start or end with a forward slash", service)
 	}
 
 	return nil
 }
 
 func validateServiceWithLabel(service string) error {
-	_, noPaths := os.LookupEnv("CHAMBER_NO_PATHS")
-	if noPaths {
-		if !validServiceFormatWithLabel.MatchString(service) {
-			return fmt.Errorf("Failed to validate service name '%s'. Only alphanumeric, dashes, full stops and underscores are allowed for service names, and colon followed by a label name", service)
-		}
-	} else {
-		if !validServicePathFormatWithLabel.MatchString(service) {
-			return fmt.Errorf("Failed to validate service name '%s'. Only alphanumeric, dashes, forward slashes, full stops and underscores are allowed for service names, and colon followed by a label name. Service names must not start or end with a forward slash or colon", service)
-		}
+	if !validServicePathFormatWithLabel.MatchString(service) {
+		return fmt.Errorf("Failed to validate service name '%s'. Only alphanumeric, dashes, forward slashes, full stops and underscores are allowed for service names, and colon followed by a label name. Service names must not start or end with a forward slash or colon", service)
 	}
 
 	return nil

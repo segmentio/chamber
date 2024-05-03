@@ -1,2 +1,2 @@
-go.sum linguist-generated=true
-store/awsapi_mock.go linguist-generated=true
+/go.sum linguist-generated=true
+/store/awsapi_mock.go linguist-generated=true

@@ -2,18 +2,19 @@ package store
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"sort"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3iface"
-	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 )
 
 const (
@@ -52,8 +53,8 @@ type latest struct {
 var _ Store = &S3Store{}
 
 type S3Store struct {
-	svc    s3iface.S3API
-	stsSvc *sts.STS
+	svc    apiS3
+	stsSvc apiSTS
 	bucket string
 }
 
@@ -68,20 +69,14 @@ func NewS3Store(numRetries int) (*S3Store, error) {
 }
 
 func NewS3StoreWithBucket(numRetries int, bucket string) (*S3Store, error) {
-	session, region, err := getSession(numRetries)
+	config, _, err := getConfig(numRetries)
 	if err != nil {
 		return nil, err
 	}
 
-	svc := s3.New(session, &aws.Config{
-		MaxRetries: aws.Int(numRetries),
-		Region:     region,
-	})
+	svc := s3.NewFromConfig(config)
 
-	stsSvc := sts.New(session, &aws.Config{
-		MaxRetries: aws.Int(numRetries),
-		Region:     region,
-	})
+	stsSvc := sts.NewFromConfig(config)
 
 	return &S3Store{
 		svc:    svc,
@@ -134,12 +129,12 @@ func (s *S3Store) Write(id SecretId, value string) error {
 
 	putObjectInput := &s3.PutObjectInput{
 		Bucket:               aws.String(s.bucket),
-		ServerSideEncryption: aws.String(s3.ServerSideEncryptionAes256),
+		ServerSideEncryption: types.ServerSideEncryptionAes256,
 		Key:                  aws.String(objPath),
 		Body:                 bytes.NewReader(contents),
 	}
 
-	_, err = s.svc.PutObject(putObjectInput)
+	_, err = s.svc.PutObject(context.TODO(), putObjectInput)
 	if err != nil {
 		// TODO: catch specific awserr
 		return err
@@ -291,7 +286,7 @@ func (s *S3Store) Delete(id SecretId) error {
 // so that secret value changes can be correctly attributed to the right
 // aws user/role
 func (s *S3Store) getCurrentUser() (string, error) {
-	resp, err := s.stsSvc.GetCallerIdentity(&sts.GetCallerIdentityInput{})
+	resp, err := s.stsSvc.GetCallerIdentity(context.TODO(), &sts.GetCallerIdentityInput{})
 	if err != nil {
 		return "", err
 	}
@@ -310,7 +305,7 @@ func (s *S3Store) deleteObject(path string) error {
 		Key:    aws.String(path),
 	}
 
-	_, err := s.svc.DeleteObject(deleteObjectInput)
+	_, err := s.svc.DeleteObject(context.TODO(), deleteObjectInput)
 	return err
 }
 
@@ -320,18 +315,16 @@ func (s *S3Store) readObject(path string) (secretObject, bool, error) {
 		Key:    aws.String(path),
 	}
 
-	resp, err := s.svc.GetObject(getObjectInput)
+	resp, err := s.svc.GetObject(context.TODO(), getObjectInput)
 	if err != nil {
-		// handle aws errors
-		if aerr, ok := err.(awserr.Error); ok {
-			switch aerr.Code() {
-			case s3.ErrCodeNoSuchBucket:
-				return secretObject{}, false, err
-			case s3.ErrCodeNoSuchKey:
-				return secretObject{}, false, nil
-			default:
-				return secretObject{}, false, err
-			}
+		// handle specific AWS errors
+		var nsb *types.NoSuchBucket
+		if errors.As(err, &nsb) {
+			return secretObject{}, false, err
+		}
+		var nsk *types.NoSuchKey
+		if errors.As(err, &nsk) {
+			return secretObject{}, false, nil
 		}
 		// generic errors
 		return secretObject{}, false, err
@@ -359,12 +352,12 @@ func (s *S3Store) readObjectById(id SecretId) (secretObject, bool, error) {
 func (s *S3Store) puts3raw(path string, contents []byte) error {
 	putObjectInput := &s3.PutObjectInput{
 		Bucket:               aws.String(s.bucket),
-		ServerSideEncryption: aws.String(s3.ServerSideEncryptionAes256),
+		ServerSideEncryption: types.ServerSideEncryptionAes256,
 		Key:                  aws.String(path),
 		Body:                 bytes.NewReader(contents),
 	}
 
-	_, err := s.svc.PutObject(putObjectInput)
+	_, err := s.svc.PutObject(context.TODO(), putObjectInput)
 	return err
 }
 
@@ -376,13 +369,12 @@ func (s *S3Store) readLatest(service string) (latest, error) {
 		Key:    aws.String(path),
 	}
 
-	resp, err := s.svc.GetObject(getObjectInput)
+	resp, err := s.svc.GetObject(context.TODO(), getObjectInput)
 	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
-			if aerr.Code() == s3.ErrCodeNoSuchKey {
-				// Index doesn't exist yet, return an empty index
-				return latest{Latest: map[string]string{}}, nil
-			}
+		var nsk *types.NoSuchKey
+		if errors.As(err, &nsk) {
+			// Index doesn't exist yet, return an empty index
+			return latest{Latest: map[string]string{}}, nil
 		}
 		return latest{}, err
 	}

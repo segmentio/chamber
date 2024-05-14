@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
@@ -9,29 +10,20 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/endpoints"
-	"github.com/aws/aws-sdk-go/service/secretsmanager"
-	"github.com/aws/aws-sdk-go/service/secretsmanager/secretsmanageriface"
-	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/aws/aws-sdk-go/service/sts/stsiface"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager/types"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/stretchr/testify/assert"
 )
-
-type mockSecretsManagerClient struct {
-	secretsmanageriface.SecretsManagerAPI
-	secrets map[string]mockSecret
-	outputs map[string]secretsmanager.DescribeSecretOutput
-}
 
 type mockSecret struct {
 	currentSecret *secretValueObject
 	history       map[string]*secretValueObject
 }
 
-func (m *mockSecretsManagerClient) PutSecretValue(i *secretsmanager.PutSecretValueInput) (*secretsmanager.PutSecretValueOutput, error) {
-	current, ok := m.secrets[*i.SecretId]
+func mockPutSecretValue(i *secretsmanager.PutSecretValueInput, secrets map[string]mockSecret) (*secretsmanager.PutSecretValueOutput, error) {
+	current, ok := secrets[*i.SecretId]
 	if !ok {
 		return &secretsmanager.PutSecretValueOutput{}, ErrSecretNotFound
 	}
@@ -44,12 +36,12 @@ func (m *mockSecretsManagerClient) PutSecretValue(i *secretsmanager.PutSecretVal
 	current.currentSecret = &secret
 	current.history[uniqueID()] = &secret
 
-	m.secrets[*i.SecretId] = current
+	secrets[*i.SecretId] = current
 
 	return &secretsmanager.PutSecretValueOutput{}, nil
 }
 
-func (m *mockSecretsManagerClient) CreateSecret(i *secretsmanager.CreateSecretInput) (*secretsmanager.CreateSecretOutput, error) {
+func mockCreateSecret(i *secretsmanager.CreateSecretInput, secrets map[string]mockSecret) (*secretsmanager.CreateSecretOutput, error) {
 	secret, err := jsonToSecretValueObject(*i.SecretString)
 	if err != nil {
 		return &secretsmanager.CreateSecretOutput{}, err
@@ -61,24 +53,30 @@ func (m *mockSecretsManagerClient) CreateSecret(i *secretsmanager.CreateSecretIn
 	}
 	current.history[uniqueID()] = &secret
 
-	m.secrets[*i.Name] = current
+	secrets[*i.Name] = current
 
 	return &secretsmanager.CreateSecretOutput{}, nil
 }
 
-func (m *mockSecretsManagerClient) GetSecretValue(i *secretsmanager.GetSecretValueInput) (*secretsmanager.GetSecretValueOutput, error) {
+func mockGetSecretValue(i *secretsmanager.GetSecretValueInput, secrets map[string]mockSecret) (*secretsmanager.GetSecretValueOutput, error) {
 	var version *secretValueObject
 
 	if i.VersionId != nil {
-		historyItem, ok := m.secrets[*i.SecretId].history[*i.VersionId]
+		historyItem, ok := secrets[*i.SecretId].history[*i.VersionId]
 		if !ok {
-			return &secretsmanager.GetSecretValueOutput{}, awserr.New(secretsmanager.ErrCodeResourceNotFoundException, secretsmanager.ErrCodeResourceNotFoundException, ErrSecretNotFound)
+			return &secretsmanager.GetSecretValueOutput{},
+				&types.ResourceNotFoundException{
+					Message: aws.String("ResourceNotFoundException"),
+				}
 		}
 		version = historyItem
 	} else {
-		current, ok := m.secrets[*i.SecretId]
+		current, ok := secrets[*i.SecretId]
 		if !ok {
-			return &secretsmanager.GetSecretValueOutput{}, awserr.New(secretsmanager.ErrCodeResourceNotFoundException, secretsmanager.ErrCodeResourceNotFoundException, ErrSecretNotFound)
+			return &secretsmanager.GetSecretValueOutput{},
+				&types.ResourceNotFoundException{
+					Message: aws.String("ResourceNotFoundException"),
+				}
 		}
 		version = current.currentSecret
 	}
@@ -93,43 +91,58 @@ func (m *mockSecretsManagerClient) GetSecretValue(i *secretsmanager.GetSecretVal
 	}, nil
 }
 
-func (m *mockSecretsManagerClient) ListSecretVersionIds(i *secretsmanager.ListSecretVersionIdsInput) (*secretsmanager.ListSecretVersionIdsOutput, error) {
-	service, ok := m.secrets[*i.SecretId]
+func mockListSecretVersionIds(i *secretsmanager.ListSecretVersionIdsInput, secrets map[string]mockSecret) (*secretsmanager.ListSecretVersionIdsOutput, error) {
+	service, ok := secrets[*i.SecretId]
 	if !ok || len(service.history) == 0 {
 		return &secretsmanager.ListSecretVersionIdsOutput{}, ErrSecretNotFound
 	}
 
-	Versions := make([]*secretsmanager.SecretVersionsListEntry, 0)
+	versions := make([]types.SecretVersionsListEntry, 0)
 	for v := range service.history {
-		Versions = append(Versions, &secretsmanager.SecretVersionsListEntry{VersionId: aws.String(v)})
+		versions = append(versions, types.SecretVersionsListEntry{VersionId: aws.String(v)})
 	}
 
-	return &secretsmanager.ListSecretVersionIdsOutput{Versions: Versions}, nil
+	return &secretsmanager.ListSecretVersionIdsOutput{Versions: versions}, nil
 }
 
-func (m *mockSecretsManagerClient) DescribeSecret(i *secretsmanager.DescribeSecretInput) (*secretsmanager.DescribeSecretOutput, error) {
-	output, ok := m.outputs[*i.SecretId]
+func mockDescribeSecret(i *secretsmanager.DescribeSecretInput, outputs map[string]secretsmanager.DescribeSecretOutput) (*secretsmanager.DescribeSecretOutput, error) {
+	output, ok := outputs[*i.SecretId]
 	if !ok {
 		return &secretsmanager.DescribeSecretOutput{RotationEnabled: aws.Bool(false)}, nil
 	}
 	return &output, nil
 }
 
-type mockSTSClient struct {
-	stsiface.STSAPI
-}
-
-func (s *mockSTSClient) GetCallerIdentity(_ *sts.GetCallerIdentityInput) (*sts.GetCallerIdentityOutput, error) {
+func mockGetCallerIdentity(_ *sts.GetCallerIdentityInput) (*sts.GetCallerIdentityOutput, error) {
 	return &sts.GetCallerIdentityOutput{
 		Arn: aws.String("currentuser"),
 	}, nil
 }
 
-func NewTestSecretsManagerStore(mock secretsmanageriface.SecretsManagerAPI) *SecretsManagerStore {
-	stsSvc := &mockSTSClient{}
+func NewTestSecretsManagerStore(secrets map[string]mockSecret, outputs map[string]secretsmanager.DescribeSecretOutput) *SecretsManagerStore {
 	return &SecretsManagerStore{
-		svc:    mock,
-		stsSvc: stsSvc,
+		svc:    &apiSecretsManagerMock{
+			CreateSecretFunc: func(ctx context.Context, params *secretsmanager.CreateSecretInput, optFns ...func(*secretsmanager.Options)) (*secretsmanager.CreateSecretOutput, error) {
+				return mockCreateSecret(params, secrets)
+			},
+			DescribeSecretFunc: func(ctx context.Context, params *secretsmanager.DescribeSecretInput, optFns ...func(*secretsmanager.Options)) (*secretsmanager.DescribeSecretOutput, error) {
+				return mockDescribeSecret(params, outputs)
+			},
+			GetSecretValueFunc: func(ctx context.Context, params *secretsmanager.GetSecretValueInput, optFns ...func(*secretsmanager.Options)) (*secretsmanager.GetSecretValueOutput, error) {
+				return mockGetSecretValue(params, secrets)
+			},
+			ListSecretVersionIdsFunc: func(ctx context.Context, params *secretsmanager.ListSecretVersionIdsInput, optFns ...func(*secretsmanager.Options)) (*secretsmanager.ListSecretVersionIdsOutput, error) {
+				return mockListSecretVersionIds(params, secrets)
+			},
+			PutSecretValueFunc: func(ctx context.Context, params *secretsmanager.PutSecretValueInput, optFns ...func(*secretsmanager.Options)) (*secretsmanager.PutSecretValueOutput, error) {
+				return mockPutSecretValue(params, secrets)
+			},
+		},
+		stsSvc: &apiSTSMock{
+			GetCallerIdentityFunc: func(ctx context.Context, params *sts.GetCallerIdentityInput, optFns ...func(*sts.Options)) (*sts.GetCallerIdentityOutput, error) {
+				return mockGetCallerIdentity(params)
+			},
+		},
 	}
 }
 
@@ -161,63 +174,62 @@ func TestSecretValueObjectUnmarshalling(t *testing.T) {
 func TestNewSecretsManagerStore(t *testing.T) {
 	t.Run("Using region override should take precedence over other settings", func(t *testing.T) {
 		os.Setenv("CHAMBER_AWS_REGION", "us-east-1")
+		defer os.Unsetenv("CHAMBER_AWS_REGION")
 		os.Setenv("AWS_REGION", "us-west-1")
+		defer os.Unsetenv("AWS_REGION")
 		os.Setenv("AWS_DEFAULT_REGION", "us-west-2")
+		defer os.Unsetenv("AWS_DEFAULT_REGION")
 
 		s, err := NewSecretsManagerStore(1)
 		assert.Nil(t, err)
-		assert.Equal(t, "us-east-1", aws.StringValue(s.svc.(*secretsmanager.SecretsManager).Config.Region))
-		os.Unsetenv("CHAMBER_AWS_REGION")
-		os.Unsetenv("AWS_REGION")
-		os.Unsetenv("AWS_DEFAULT_REGION")
+		assert.Equal(t, "us-east-1", s.config.Region)
 	})
 
 	t.Run("Should use AWS_REGION if it is set", func(t *testing.T) {
 		os.Setenv("AWS_REGION", "us-west-1")
+		defer os.Unsetenv("AWS_REGION")
 
 		s, err := NewSecretsManagerStore(1)
 		assert.Nil(t, err)
-		assert.Equal(t, "us-west-1", aws.StringValue(s.svc.(*secretsmanager.SecretsManager).Config.Region))
-
-		os.Unsetenv("AWS_REGION")
+		assert.Equal(t, "us-west-1", s.config.Region)
 	})
 
 	t.Run("Should use CHAMBER_AWS_SSM_ENDPOINT if set", func(t *testing.T) {
 		os.Setenv("CHAMBER_AWS_SSM_ENDPOINT", "mycustomendpoint")
+		defer os.Unsetenv("CHAMBER_AWS_SSM_ENDPOINT")
 
 		s, err := NewSecretsManagerStore(1)
 		assert.Nil(t, err)
-		endpoint, err := s.svc.(*secretsmanager.SecretsManager).Config.EndpointResolver.EndpointFor(endpoints.SecretsmanagerServiceID, endpoints.UsWest2RegionID)
+		endpoint, err := s.config.EndpointResolverWithOptions.ResolveEndpoint(secretsmanager.ServiceID, "us-west-2")
 		assert.Nil(t, err)
 		assert.Equal(t, "mycustomendpoint", endpoint.URL)
-
-		os.Unsetenv("CHAMBER_AWS_SSM_ENDPOINT")
 	})
 
 	t.Run("Should use default AWS SSM endpoint if CHAMBER_AWS_SSM_ENDPOINT not set", func(t *testing.T) {
 		s, err := NewSecretsManagerStore(1)
 		assert.Nil(t, err)
-		endpoint, err := s.svc.(*secretsmanager.SecretsManager).Config.EndpointResolver.EndpointFor(endpoints.SecretsmanagerServiceID, endpoints.UsWest2RegionID)
-		assert.Nil(t, err)
-		assert.Equal(t, "https://secretsmanager.us-west-2.amazonaws.com", endpoint.URL)
+		_, err = s.config.EndpointResolverWithOptions.ResolveEndpoint(secretsmanager.ServiceID, "us-west-2")
+		var notFoundError *aws.EndpointNotFoundError
+		assert.ErrorAs(t, err, &notFoundError)
 	})
 }
 
 func TestSecretsManagerWrite(t *testing.T) {
-	mock := &mockSecretsManagerClient{secrets: map[string]mockSecret{}, outputs: map[string]secretsmanager.DescribeSecretOutput{}}
-	store := NewTestSecretsManagerStore(mock)
+	secrets := make(map[string]mockSecret)
+	outputs := make(map[string]secretsmanager.DescribeSecretOutput)
+	store := NewTestSecretsManagerStore(secrets, outputs)
 
 	t.Run("Setting a new key should work", func(t *testing.T) {
 		key := "mykey"
 		secretId := SecretId{Service: "test", Key: key}
 		err := store.Write(secretId, "value")
 		assert.Nil(t, err)
-		assert.Contains(t, mock.secrets, secretId.Service)
-		assert.Equal(t, "value", (*mock.secrets[secretId.Service].currentSecret)[key])
-		keyMetadata, err := getHydratedKeyMetadata(mock.secrets[secretId.Service].currentSecret, &key)
+		assert.Contains(t, secrets, secretId.Service)
+		assert.Equal(t, "value", (*secrets[secretId.Service].currentSecret)[key])
+		keyMetadata, err := getHydratedKeyMetadata(secrets[secretId.Service].currentSecret, &key)
 		assert.Nil(t, err)
 		assert.Equal(t, 1, keyMetadata.Version)
-		assert.Equal(t, 1, len(mock.secrets[secretId.Service].history))
+		assert.Equal(t, 1, len(secrets[secretId.Service].history))
 	})
 
 	t.Run("Setting a key twice should create a new version", func(t *testing.T) {
@@ -225,27 +237,27 @@ func TestSecretsManagerWrite(t *testing.T) {
 		secretId := SecretId{Service: "test", Key: key}
 		err := store.Write(secretId, "value")
 		assert.Nil(t, err)
-		assert.Contains(t, mock.secrets, secretId.Service)
-		assert.Equal(t, "value", (*mock.secrets[secretId.Service].currentSecret)[key])
-		keyMetadata, err := getHydratedKeyMetadata(mock.secrets[secretId.Service].currentSecret, &key)
+		assert.Contains(t, secrets, secretId.Service)
+		assert.Equal(t, "value", (*secrets[secretId.Service].currentSecret)[key])
+		keyMetadata, err := getHydratedKeyMetadata(secrets[secretId.Service].currentSecret, &key)
 		assert.Nil(t, err)
 		assert.Equal(t, 1, keyMetadata.Version)
-		assert.Equal(t, 2, len(mock.secrets[secretId.Service].history))
+		assert.Equal(t, 2, len(secrets[secretId.Service].history))
 
 		err = store.Write(secretId, "newvalue")
 		assert.Nil(t, err)
-		assert.Contains(t, mock.secrets, secretId.Service)
-		assert.Equal(t, "newvalue", (*mock.secrets[secretId.Service].currentSecret)[key])
-		keyMetadata, err = getHydratedKeyMetadata(mock.secrets[secretId.Service].currentSecret, &key)
+		assert.Contains(t, secrets, secretId.Service)
+		assert.Equal(t, "newvalue", (*secrets[secretId.Service].currentSecret)[key])
+		keyMetadata, err = getHydratedKeyMetadata(secrets[secretId.Service].currentSecret, &key)
 		assert.Nil(t, err)
 		assert.Equal(t, 2, keyMetadata.Version)
-		assert.Equal(t, 3, len(mock.secrets[secretId.Service].history))
+		assert.Equal(t, 3, len(secrets[secretId.Service].history))
 	})
 
 	t.Run("Setting a key on a secret with rotation enabled should fail", func(t *testing.T) {
 		service := "rotationtest"
-		mock.secrets[service] = mockSecret{}
-		mock.outputs[service] = secretsmanager.DescribeSecretOutput{RotationEnabled: aws.Bool(true)}
+		secrets[service] = mockSecret{}
+		outputs[service] = secretsmanager.DescribeSecretOutput{RotationEnabled: aws.Bool(true)}
 		secretId := SecretId{Service: service, Key: "doesnotmatter"}
 		err := store.Write(secretId, "value")
 		assert.EqualError(t, err, "Cannot write to a secret with rotation enabled")
@@ -253,8 +265,9 @@ func TestSecretsManagerWrite(t *testing.T) {
 }
 
 func TestSecretsManagerRead(t *testing.T) {
-	mock := &mockSecretsManagerClient{secrets: map[string]mockSecret{}}
-	store := NewTestSecretsManagerStore(mock)
+	secrets := make(map[string]mockSecret)
+	outputs := make(map[string]secretsmanager.DescribeSecretOutput)
+	store := NewTestSecretsManagerStore(secrets, outputs)
 	secretId := SecretId{Service: "test", Key: "key"}
 	store.Write(secretId, "value")
 	store.Write(secretId, "second value")
@@ -292,15 +305,16 @@ func TestSecretsManagerRead(t *testing.T) {
 }
 
 func TestSecretsManagerList(t *testing.T) {
-	mock := &mockSecretsManagerClient{secrets: map[string]mockSecret{}}
-	store := NewTestSecretsManagerStore(mock)
+	secrets := make(map[string]mockSecret)
+	outputs := make(map[string]secretsmanager.DescribeSecretOutput)
+	store := NewTestSecretsManagerStore(secrets, outputs)
 
-	secrets := []SecretId{
+	testSecrets := []SecretId{
 		{Service: "test", Key: "a"},
 		{Service: "test", Key: "b"},
 		{Service: "test", Key: "c"},
 	}
-	for _, secret := range secrets {
+	for _, secret := range testSecrets {
 		store.Write(secret, "value")
 	}
 
@@ -342,15 +356,16 @@ func TestSecretsManagerList(t *testing.T) {
 }
 
 func TestSecretsManagerListRaw(t *testing.T) {
-	mock := &mockSecretsManagerClient{secrets: map[string]mockSecret{}}
-	store := NewTestSecretsManagerStore(mock)
+	secrets := make(map[string]mockSecret)
+	outputs := make(map[string]secretsmanager.DescribeSecretOutput)
+	store := NewTestSecretsManagerStore(secrets, outputs)
 
-	secrets := []SecretId{
+	testSecrets := []SecretId{
 		{Service: "test", Key: "a"},
 		{Service: "test", Key: "b"},
 		{Service: "test", Key: "c"},
 	}
-	for _, secret := range secrets {
+	for _, secret := range testSecrets {
 		store.Write(secret, "value")
 	}
 
@@ -383,17 +398,18 @@ func TestSecretsManagerListRaw(t *testing.T) {
 }
 
 func TestSecretsManagerHistory(t *testing.T) {
-	mock := &mockSecretsManagerClient{secrets: map[string]mockSecret{}}
-	store := NewTestSecretsManagerStore(mock)
+	secrets := make(map[string]mockSecret)
+	outputs := make(map[string]secretsmanager.DescribeSecretOutput)
+	store := NewTestSecretsManagerStore(secrets, outputs)
 
-	secrets := []SecretId{
+	testSecrets := []SecretId{
 		{Service: "test", Key: "new"},
 		{Service: "test", Key: "update"},
 		{Service: "test", Key: "update"},
 		{Service: "test", Key: "update"},
 	}
 
-	for _, s := range secrets {
+	for _, s := range testSecrets {
 		store.Write(s, "value")
 	}
 
@@ -420,8 +436,9 @@ func TestSecretsManagerHistory(t *testing.T) {
 }
 
 func TestSecretsManagerDelete(t *testing.T) {
-	mock := &mockSecretsManagerClient{secrets: map[string]mockSecret{}}
-	store := NewTestSecretsManagerStore(mock)
+	secrets := make(map[string]mockSecret)
+	outputs := make(map[string]secretsmanager.DescribeSecretOutput)
+	store := NewTestSecretsManagerStore(secrets, outputs)
 
 	secretId := SecretId{Service: "test", Key: "key"}
 	store.Write(secretId, "value")

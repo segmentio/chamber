@@ -2,6 +2,7 @@ package store
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,11 +10,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3iface"
-	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
+	"github.com/aws/smithy-go"
 )
 
 // latest is used to keep a single object in s3 with all of the
@@ -34,27 +35,21 @@ var _ Store = &S3KMSStore{}
 
 type S3KMSStore struct {
 	S3Store
-	svc         s3iface.S3API
-	stsSvc      *sts.STS
+	svc         apiS3
+	stsSvc      apiSTS
 	bucket      string
 	kmsKeyAlias string
 }
 
 func NewS3KMSStore(numRetries int, bucket string, kmsKeyAlias string) (*S3KMSStore, error) {
-	session, region, err := getSession(numRetries)
+	config, _, err := getConfig(numRetries)
 	if err != nil {
 		return nil, err
 	}
 
-	svc := s3.New(session, &aws.Config{
-		MaxRetries: aws.Int(numRetries),
-		Region:     region,
-	})
+	svc := s3.NewFromConfig(config)
 
-	stsSvc := sts.New(session, &aws.Config{
-		MaxRetries: aws.Int(numRetries),
-		Region:     region,
-	})
+	stsSvc := sts.NewFromConfig(config)
 
 	if kmsKeyAlias == "" {
 		kmsKeyAlias = DefaultKeyID
@@ -123,13 +118,13 @@ func (s *S3KMSStore) Write(id SecretId, value string) error {
 
 	putObjectInput := &s3.PutObjectInput{
 		Bucket:               aws.String(s.bucket),
-		ServerSideEncryption: aws.String(s3.ServerSideEncryptionAwsKms),
+		ServerSideEncryption: types.ServerSideEncryptionAwsKms,
 		SSEKMSKeyId:          aws.String(s.kmsKeyAlias),
 		Key:                  aws.String(objPath),
 		Body:                 bytes.NewReader(contents),
 	}
 
-	_, err = s.svc.PutObject(putObjectInput)
+	_, err = s.svc.PutObject(context.TODO(), putObjectInput)
 	if err != nil {
 		// TODO: catch specific awserr
 		return err
@@ -237,18 +232,16 @@ func (s *S3KMSStore) readObject(path string) (secretObject, bool, error) {
 		Key:    aws.String(path),
 	}
 
-	resp, err := s.svc.GetObject(getObjectInput)
+	resp, err := s.svc.GetObject(context.TODO(), getObjectInput)
 	if err != nil {
-		// handle aws errors
-		if aerr, ok := err.(awserr.Error); ok {
-			switch aerr.Code() {
-			case s3.ErrCodeNoSuchBucket:
-				return secretObject{}, false, err
-			case s3.ErrCodeNoSuchKey:
-				return secretObject{}, false, nil
-			default:
-				return secretObject{}, false, err
-			}
+		// handle specific AWS  errors
+		var nsb *types.NoSuchBucket
+		if errors.As(err, &nsb) {
+			return secretObject{}, false, err
+		}
+		var nsk *types.NoSuchKey
+		if errors.As(err, &nsk) {
+			return secretObject{}, false, nil
 		}
 		// generic errors
 		return secretObject{}, false, err
@@ -271,13 +264,13 @@ func (s *S3KMSStore) readObject(path string) (secretObject, bool, error) {
 func (s *S3KMSStore) puts3raw(path string, contents []byte) error {
 	putObjectInput := &s3.PutObjectInput{
 		Bucket:               aws.String(s.bucket),
-		ServerSideEncryption: aws.String(s3.ServerSideEncryptionAwsKms),
+		ServerSideEncryption: types.ServerSideEncryptionAwsKms,
 		SSEKMSKeyId:          aws.String(s.kmsKeyAlias),
 		Key:                  aws.String(path),
 		Body:                 bytes.NewReader(contents),
 	}
 
-	_, err := s.svc.PutObject(putObjectInput)
+	_, err := s.svc.PutObject(context.TODO(), putObjectInput)
 	return err
 }
 
@@ -287,18 +280,19 @@ func (s *S3KMSStore) readLatestFile(path string) (LatestIndexFile, error) {
 		Key:    aws.String(path),
 	}
 
-	resp, err := s.svc.GetObject(getObjectInput)
+	resp, err := s.svc.GetObject(context.TODO(), getObjectInput)
 
 	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
-			if aerr.Code() == "AccessDenied" {
+		var nsk *types.NoSuchKey
+		if errors.As(err, &nsk) {
+			// Index doesn't exist yet, return an empty index
+			return LatestIndexFile{Latest: map[string]LatestValue{}}, nil
+		}
+		var apiErr smithy.APIError
+		if errors.As(err, &apiErr) {
+			if apiErr.ErrorCode() == "AccessDenied" {
 				// If we're not able to read the latest index for a KMS Key then proceed like it doesn't exist.
 				// We do this because in a chamber secret folder there might be other secrets written with a KMS Key that you don't have access to.
-				return LatestIndexFile{Latest: map[string]LatestValue{}}, nil
-			}
-
-			if aerr.Code() == s3.ErrCodeNoSuchKey {
-				// Index doesn't exist yet, return an empty index
 				return LatestIndexFile{Latest: map[string]LatestValue{}}, nil
 			}
 		}
@@ -323,21 +317,26 @@ func (s *S3KMSStore) readLatest(service string) (LatestIndexFile, error) {
 	latestResult := LatestIndexFile{Latest: map[string]LatestValue{}}
 
 	// List all the files that are prefixed with kms and use them as latest.json files for that KMS Key.
-	params := &s3.ListObjectsInput{
+	params := &s3.ListObjectsV2Input{
 		Bucket: aws.String(s.bucket),
 		Prefix: aws.String(fmt.Sprintf("%s/__kms", service)),
 	}
 
 	var paginationError error
+	paginator := s3.NewListObjectsV2Paginator(s.svc, params)
+	for paginator.HasMorePages() {
+		page, err := paginator.NextPage(context.TODO())
+		if err != nil {
+			return latestResult, err
+		}
 
-	err := s.svc.ListObjectsPages(params, func(page *s3.ListObjectsOutput, lastPage bool) bool {
 		for index := range page.Contents {
 			key_name := *page.Contents[index].Key
 			result, err := s.readLatestFile(key_name)
 
 			if err != nil {
 				paginationError = errors.New(fmt.Sprintf("Error reading latest index for KMS Key (%s): %s", key_name, err))
-				return false
+				break
 			}
 
 			// Check if the chamber key already exists in the index.Latest map.
@@ -354,16 +353,10 @@ func (s *S3KMSStore) readLatest(service string) (LatestIndexFile, error) {
 				}
 			}
 		}
-
-		return !lastPage
-	})
+	}
 
 	if paginationError != nil {
 		return latestResult, paginationError
-	}
-
-	if err != nil {
-		return latestResult, err
 	}
 
 	return latestResult, nil

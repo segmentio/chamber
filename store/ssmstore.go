@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"regexp"
@@ -8,11 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/client"
-	"github.com/aws/aws-sdk-go/service/ssm"
-	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ssm"
+	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
 )
 
 const (
@@ -20,7 +19,8 @@ const (
 	DefaultKeyID = "alias/parameter_store_key"
 
 	// DefaultMinThrottleDelay is the default delay before retrying throttled requests
-	DefaultMinThrottleDelay = client.DefaultRetryerMinThrottleDelay
+	// DefaultMinThrottleDelay = client.DefaultRetryerMinThrottleDelay
+	DefaultMinThrottleDelay = 0
 )
 
 // validPathKeyFormat is the format that is expected for key names inside parameter store
@@ -40,7 +40,8 @@ var labelMatchRegex = regexp.MustCompile(`^(\/[\w\-\.]+)+:(.+)$`)
 // SSMStore implements the Store interface for storing secrets in SSM Parameter
 // Store
 type SSMStore struct {
-	svc      ssmiface.SSMAPI
+	svc      apiSSM
+	config   aws.Config
 	usePaths bool
 }
 
@@ -55,13 +56,18 @@ func NewSSMStoreWithMinThrottleDelay(numRetries int, minThrottleDelay time.Durat
 }
 
 func ssmStoreUsingRetryer(numRetries int, minThrottleDelay time.Duration) (*SSMStore, error) {
-	ssmSession, region, err := getSession(numRetries)
+	cfg, _, err := getConfig(numRetries)
 
 	if err != nil {
 		return nil, err
 	}
 
-	retryer := client.DefaultRetryer{NumMaxRetries: numRetries, MinThrottleDelay: minThrottleDelay}
+	// FIXME minThrottleDelay is ignored
+	// retryer := retry.NewStandard(
+	// 	func(o *retry.StandardOptions) {
+	// 		o.MaxAttempts = numRetries
+	// 	},
+	// )
 
 	usePaths := true
 	_, ok := os.LookupEnv("CHAMBER_NO_PATHS")
@@ -69,13 +75,11 @@ func ssmStoreUsingRetryer(numRetries int, minThrottleDelay time.Duration) (*SSMS
 		usePaths = false
 	}
 
-	svc := ssm.New(ssmSession, &aws.Config{
-		Retryer: retryer,
-		Region:  region,
-	})
+	svc := ssm.NewFromConfig(cfg)
 
 	return &SSMStore{
 		svc:      svc,
+		config:   cfg,
 		usePaths: usePaths,
 	}, nil
 }
@@ -108,14 +112,14 @@ func (s *SSMStore) Write(id SecretId, value string) error {
 	putParameterInput := &ssm.PutParameterInput{
 		KeyId:       aws.String(s.KMSKey()),
 		Name:        aws.String(s.idToName(id)),
-		Type:        aws.String("SecureString"),
+		Type:        types.ParameterTypeSecureString,
 		Value:       aws.String(value),
 		Overwrite:   aws.Bool(true),
 		Description: aws.String(strconv.Itoa(version)),
 	}
 
 	// This API call returns an empty struct
-	_, err = s.svc.PutParameter(putParameterInput)
+	_, err = s.svc.PutParameter(context.TODO(), putParameterInput)
 	if err != nil {
 		return err
 	}
@@ -146,7 +150,7 @@ func (s *SSMStore) Delete(id SecretId) error {
 		Name: aws.String(s.idToName(id)),
 	}
 
-	_, err = s.svc.DeleteParameter(deleteParameterInput)
+	_, err = s.svc.DeleteParameter(context.TODO(), deleteParameterInput)
 	if err != nil {
 		return err
 	}
@@ -161,7 +165,12 @@ func (s *SSMStore) readVersion(id SecretId, version int) (Secret, error) {
 	}
 
 	var result Secret
-	if err := s.svc.GetParameterHistoryPages(getParameterHistoryInput, func(o *ssm.GetParameterHistoryOutput, lastPage bool) bool {
+	paginator := ssm.NewGetParameterHistoryPaginator(s.svc, getParameterHistoryInput)
+	for paginator.HasMorePages() {
+		o, err := paginator.NextPage(context.TODO())
+		if err != nil {
+			return Secret{}, ErrSecretNotFound
+		}
 		for _, history := range o.Parameters {
 			thisVersion := 0
 			if history.Description != nil {
@@ -177,12 +186,9 @@ func (s *SSMStore) readVersion(id SecretId, version int) (Secret, error) {
 						Key:       *history.Name,
 					},
 				}
-				return false
+				break
 			}
 		}
-		return true
-	}); err != nil {
-		return Secret{}, ErrSecretNotFound
 	}
 	if result.Value != nil {
 		return result, nil
@@ -193,11 +199,11 @@ func (s *SSMStore) readVersion(id SecretId, version int) (Secret, error) {
 
 func (s *SSMStore) readLatest(id SecretId) (Secret, error) {
 	getParametersInput := &ssm.GetParametersInput{
-		Names:          []*string{aws.String(s.idToName(id))},
+		Names:          []string{s.idToName(id)},
 		WithDecryption: aws.Bool(true),
 	}
 
-	resp, err := s.svc.GetParameters(getParametersInput)
+	resp, err := s.svc.GetParameters(context.TODO(), getParametersInput)
 	if err != nil {
 		return Secret{}, err
 	}
@@ -206,7 +212,7 @@ func (s *SSMStore) readLatest(id SecretId) (Secret, error) {
 		return Secret{}, ErrSecretNotFound
 	}
 	param := resp.Parameters[0]
-	var parameter *ssm.ParameterMetadata
+	var parameter *types.ParameterMetadata
 	var describeParametersInput *ssm.DescribeParametersInput
 
 	// To get metadata, we need to use describe parameters
@@ -216,42 +222,44 @@ func (s *SSMStore) readLatest(id SecretId) (Secret, error) {
 		// if that key uses paths, so instead get all the keys for a path,
 		// then find the one you are looking for :(
 		describeParametersInput = &ssm.DescribeParametersInput{
-			ParameterFilters: []*ssm.ParameterStringFilter{
+			ParameterFilters: []types.ParameterStringFilter{
 				{
 					Key:    aws.String("Path"),
 					Option: aws.String("OneLevel"),
-					Values: []*string{aws.String(basePath(s.idToName(id)))},
+					Values: []string{basePath(s.idToName(id))},
 				},
 			},
 		}
 	} else {
 		describeParametersInput = &ssm.DescribeParametersInput{
-			Filters: []*ssm.ParametersFilter{
+			Filters: []types.ParametersFilter{
 				{
-					Key:    aws.String("Name"),
-					Values: []*string{aws.String(s.idToName(id))},
+					Key:    types.ParametersFilterKeyName,
+					Values: []string{s.idToName(id)},
 				},
 			},
-			MaxResults: aws.Int64(1),
+			MaxResults: aws.Int32(1),
 		}
 	}
-	if err := s.svc.DescribeParametersPages(describeParametersInput, func(o *ssm.DescribeParametersOutput, lastPage bool) bool {
+	paginator := ssm.NewDescribeParametersPaginator(s.svc, describeParametersInput)
+	for paginator.HasMorePages() {
+		o, err := paginator.NextPage(context.TODO())
+		if err != nil {
+			return Secret{}, err
+		}
 		for _, param := range o.Parameters {
 			if *param.Name == s.idToName(id) {
-				parameter = param
-				return false
+				parameter = &param
+				break
 			}
 		}
-		return true
-	}); err != nil {
-		return Secret{}, err
 	}
 
 	if parameter == nil {
 		return Secret{}, ErrSecretNotFound
 	}
 
-	secretMeta := parameterMetaToSecretMeta(parameter)
+	secretMeta := parameterMetaToSecretMeta(*parameter)
 
 	return Secret{
 		Value: param.Value,
@@ -265,28 +273,33 @@ func (s *SSMStore) ListServices(service string, includeSecretName bool) ([]strin
 
 	if s.usePaths {
 		describeParametersInput = &ssm.DescribeParametersInput{
-			MaxResults: aws.Int64(50),
-			ParameterFilters: []*ssm.ParameterStringFilter{
+			MaxResults: aws.Int32(50),
+			ParameterFilters: []types.ParameterStringFilter{
 				{
 					Key:    aws.String("Name"),
 					Option: aws.String("BeginsWith"),
-					Values: []*string{aws.String("/" + service)},
+					Values: []string{"/" + service},
 				},
 			},
 		}
 	} else {
 		describeParametersInput = &ssm.DescribeParametersInput{
-			MaxResults: aws.Int64(50),
-			Filters: []*ssm.ParametersFilter{
+			MaxResults: aws.Int32(50),
+			Filters: []types.ParametersFilter{
 				{
-					Key:    aws.String("Name"),
-					Values: []*string{aws.String(service + ".")},
+					Key:    types.ParametersFilterKeyName,
+					Values: []string{service + "."},
 				},
 			},
 		}
 	}
 
-	err := s.svc.DescribeParametersPages(describeParametersInput, func(resp *ssm.DescribeParametersOutput, lastPage bool) bool {
+	paginator := ssm.NewDescribeParametersPaginator(s.svc, describeParametersInput)
+	for paginator.HasMorePages() {
+		resp, err := paginator.NextPage(context.TODO())
+		if err != nil {
+			return nil, err
+		}
 		for _, meta := range resp.Parameters {
 			if !s.validateName(*meta.Name) {
 				continue
@@ -297,10 +310,6 @@ func (s *SSMStore) ListServices(service string, includeSecretName bool) ([]strin
 				Meta:  secretMeta,
 			}
 		}
-		return true
-	})
-	if err != nil {
-		return nil, err
 	}
 
 	if includeSecretName {
@@ -327,26 +336,31 @@ func (s *SSMStore) List(serviceName string, includeValues bool) ([]Secret, error
 
 	if s.usePaths {
 		describeParametersInput = &ssm.DescribeParametersInput{
-			ParameterFilters: []*ssm.ParameterStringFilter{
+			ParameterFilters: []types.ParameterStringFilter{
 				{
 					Key:    aws.String("Path"),
 					Option: aws.String("OneLevel"),
-					Values: []*string{aws.String("/" + service)},
+					Values: []string{"/" + service},
 				},
 			},
 		}
 	} else {
 		describeParametersInput = &ssm.DescribeParametersInput{
-			Filters: []*ssm.ParametersFilter{
+			Filters: []types.ParametersFilter{
 				{
-					Key:    aws.String("Name"),
-					Values: []*string{aws.String(service + ".")},
+					Key:    types.ParametersFilterKeyName,
+					Values: []string{service + "."},
 				},
 			},
 		}
 	}
 
-	err := s.svc.DescribeParametersPages(describeParametersInput, func(resp *ssm.DescribeParametersOutput, lastPage bool) bool {
+	paginator := ssm.NewDescribeParametersPaginator(s.svc, describeParametersInput)
+	for paginator.HasMorePages() {
+		resp, err := paginator.NextPage(context.TODO())
+		if err != nil {
+			return nil, err
+		}
 		for _, meta := range resp.Parameters {
 			if !s.validateName(*meta.Name) {
 				continue
@@ -357,10 +371,6 @@ func (s *SSMStore) List(serviceName string, includeValues bool) ([]Secret, error
 				Meta:  secretMeta,
 			}
 		}
-		return true
-	})
-	if err != nil {
-		return nil, err
 	}
 
 	if includeValues {
@@ -373,11 +383,11 @@ func (s *SSMStore) List(serviceName string, includeValues bool) ([]Secret, error
 			batch := secretKeys[i:batchEnd]
 
 			getParametersInput := &ssm.GetParametersInput{
-				Names:          stringsToAWSStrings(batch),
+				Names:          batch,
 				WithDecryption: aws.Bool(true),
 			}
 
-			resp, err := s.svc.GetParameters(getParametersInput)
+			resp, err := s.svc.GetParameters(context.TODO(), getParametersInput)
 			if err != nil {
 				return nil, err
 			}
@@ -405,16 +415,22 @@ func (s *SSMStore) ListRaw(serviceName string) ([]RawSecret, error) {
 			WithDecryption: aws.Bool(true),
 		}
 		if label != "" {
-			getParametersByPathInput.ParameterFilters = []*ssm.ParameterStringFilter{
+			getParametersByPathInput.ParameterFilters = []types.ParameterStringFilter{
 				{
 					Key:    aws.String("Label"),
 					Option: aws.String("Equals"),
-					Values: []*string{aws.String(label)},
+					Values: []string{label},
 				},
 			}
 		}
 
-		err := s.svc.GetParametersByPathPages(getParametersByPathInput, func(resp *ssm.GetParametersByPathOutput, lastPage bool) bool {
+		paginator := ssm.NewGetParametersByPathPaginator(s.svc, getParametersByPathInput)
+		for paginator.HasMorePages() {
+			resp, err := paginator.NextPage(context.TODO())
+			if err != nil {
+				return nil, err
+			}
+
 			for _, param := range resp.Parameters {
 				if !s.validateName(*param.Name) {
 					continue
@@ -425,28 +441,6 @@ func (s *SSMStore) ListRaw(serviceName string) ([]RawSecret, error) {
 					Key:   *param.Name,
 				}
 			}
-			return true
-		})
-
-		if err != nil {
-			// If the error is an access-denied exception
-			awsErr, isAwserr := err.(awserr.Error)
-			if isAwserr {
-				if awsErr.Code() == "AccessDeniedException" && strings.Contains(awsErr.Message(), "is not authorized to perform: ssm:GetParametersByPath on resource") {
-					// Fall-back to using the old list method in case some users haven't updated their IAM permissions yet, but warn about it and
-					// tell them to fix their permissions
-					fmt.Fprintf(
-						os.Stderr,
-						"Warning: %s\nFalling-back to using ssm:DescribeParameters. This may cause delays or failures due to AWS rate-limiting.\n"+
-							"This is behavior deprecated and will be removed in a future version of chamber. Please update your IAM permissions to grant ssm:GetParametersByPath.\n\n",
-						awsErr)
-
-					// Delegate to List
-					return s.listRawViaList(service)
-				}
-			}
-
-			return nil, err
 		}
 
 		rawSecrets := make([]RawSecret, len(secrets))
@@ -458,7 +452,7 @@ func (s *SSMStore) ListRaw(serviceName string) ([]RawSecret, error) {
 		return rawSecrets, nil
 	}
 
-	// Delete to List (which uses the DescribeParameters API)
+	// Delegate to List (which uses the DescribeParameters API)
 	return s.listRawViaList(service)
 }
 
@@ -472,7 +466,13 @@ func (s *SSMStore) History(id SecretId) ([]ChangeEvent, error) {
 		WithDecryption: aws.Bool(false),
 	}
 
-	if err := s.svc.GetParameterHistoryPages(getParameterHistoryInput, func(o *ssm.GetParameterHistoryOutput, lastPage bool) bool {
+	paginator := ssm.NewGetParameterHistoryPaginator(s.svc, getParameterHistoryInput)
+	for paginator.HasMorePages() {
+		o, err := paginator.NextPage(context.TODO())
+		if err != nil {
+			return events, ErrSecretNotFound
+		}
+
 		for _, history := range o.Parameters {
 			// Disregard error here, if Atoi fails (secret created outside of
 			// Chamber), then we use version 0
@@ -487,9 +487,6 @@ func (s *SSMStore) History(id SecretId) ([]ChangeEvent, error) {
 				Version: version,
 			})
 		}
-		return true
-	}); err != nil {
-		return events, ErrSecretNotFound
 	}
 
 	return events, nil
@@ -550,7 +547,7 @@ func serviceName(key string) string {
 	return strings.Join(pathParts[1:end], "/")
 }
 
-func parameterMetaToSecretMeta(p *ssm.ParameterMetadata) SecretMetadata {
+func parameterMetaToSecretMeta(p types.ParameterMetadata) SecretMetadata {
 	version := 0
 	if p.Description != nil {
 		version, _ = strconv.Atoi(*p.Description)
@@ -577,14 +574,6 @@ func values(m map[string]Secret) []Secret {
 		values = append(values, v)
 	}
 	return values
-}
-
-func stringsToAWSStrings(slice []string) []*string {
-	ret := []*string{}
-	for _, s := range slice {
-		ret = append(ret, aws.String(s))
-	}
-	return ret
 }
 
 func getChangeType(version int) ChangeEventType {

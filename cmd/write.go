@@ -75,7 +75,7 @@ func write(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	secretStore, err := getSecretStore()
+	secretStore, err := getSecretStore(cmd.Context())
 	if err != nil {
 		return fmt.Errorf("Failed to get secret store: %w", err)
 	}
@@ -86,11 +86,11 @@ func write(cmd *cobra.Command, args []string) error {
 	}
 
 	if skipUnchanged {
-		currentSecret, err := secretStore.Read(secretId, -1)
+		currentSecret, err := secretStore.Read(cmd.Context(), secretId, -1)
 		if err == nil && value == *currentSecret.Value {
 			return nil
 		}
 	}
 
-	return secretStore.Write(secretId, value)
+	return secretStore.Write(cmd.Context(), secretId, value)
 }

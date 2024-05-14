@@ -180,7 +180,7 @@ func TestNewSecretsManagerStore(t *testing.T) {
 		os.Setenv("AWS_DEFAULT_REGION", "us-west-2")
 		defer os.Unsetenv("AWS_DEFAULT_REGION")
 
-		s, err := NewSecretsManagerStore(1)
+		s, err := NewSecretsManagerStore(context.Background(), 1)
 		assert.Nil(t, err)
 		assert.Equal(t, "us-east-1", s.config.Region)
 	})
@@ -189,7 +189,7 @@ func TestNewSecretsManagerStore(t *testing.T) {
 		os.Setenv("AWS_REGION", "us-west-1")
 		defer os.Unsetenv("AWS_REGION")
 
-		s, err := NewSecretsManagerStore(1)
+		s, err := NewSecretsManagerStore(context.Background(), 1)
 		assert.Nil(t, err)
 		assert.Equal(t, "us-west-1", s.config.Region)
 	})
@@ -198,7 +198,7 @@ func TestNewSecretsManagerStore(t *testing.T) {
 		os.Setenv("CHAMBER_AWS_SSM_ENDPOINT", "mycustomendpoint")
 		defer os.Unsetenv("CHAMBER_AWS_SSM_ENDPOINT")
 
-		s, err := NewSecretsManagerStore(1)
+		s, err := NewSecretsManagerStore(context.Background(), 1)
 		assert.Nil(t, err)
 		endpoint, err := s.config.EndpointResolverWithOptions.ResolveEndpoint(secretsmanager.ServiceID, "us-west-2")
 		assert.Nil(t, err)
@@ -206,7 +206,7 @@ func TestNewSecretsManagerStore(t *testing.T) {
 	})
 
 	t.Run("Should use default AWS SSM endpoint if CHAMBER_AWS_SSM_ENDPOINT not set", func(t *testing.T) {
-		s, err := NewSecretsManagerStore(1)
+		s, err := NewSecretsManagerStore(context.Background(), 1)
 		assert.Nil(t, err)
 		_, err = s.config.EndpointResolverWithOptions.ResolveEndpoint(secretsmanager.ServiceID, "us-west-2")
 		var notFoundError *aws.EndpointNotFoundError
@@ -215,6 +215,7 @@ func TestNewSecretsManagerStore(t *testing.T) {
 }
 
 func TestSecretsManagerWrite(t *testing.T) {
+	ctx := context.Background()
 	secrets := make(map[string]mockSecret)
 	outputs := make(map[string]secretsmanager.DescribeSecretOutput)
 	store := NewTestSecretsManagerStore(secrets, outputs)
@@ -222,7 +223,7 @@ func TestSecretsManagerWrite(t *testing.T) {
 	t.Run("Setting a new key should work", func(t *testing.T) {
 		key := "mykey"
 		secretId := SecretId{Service: "test", Key: key}
-		err := store.Write(secretId, "value")
+		err := store.Write(ctx, secretId, "value")
 		assert.Nil(t, err)
 		assert.Contains(t, secrets, secretId.Service)
 		assert.Equal(t, "value", (*secrets[secretId.Service].currentSecret)[key])
@@ -235,7 +236,7 @@ func TestSecretsManagerWrite(t *testing.T) {
 	t.Run("Setting a key twice should create a new version", func(t *testing.T) {
 		key := "multipleversions"
 		secretId := SecretId{Service: "test", Key: key}
-		err := store.Write(secretId, "value")
+		err := store.Write(ctx, secretId, "value")
 		assert.Nil(t, err)
 		assert.Contains(t, secrets, secretId.Service)
 		assert.Equal(t, "value", (*secrets[secretId.Service].currentSecret)[key])
@@ -244,7 +245,7 @@ func TestSecretsManagerWrite(t *testing.T) {
 		assert.Equal(t, 1, keyMetadata.Version)
 		assert.Equal(t, 2, len(secrets[secretId.Service].history))
 
-		err = store.Write(secretId, "newvalue")
+		err = store.Write(ctx, secretId, "newvalue")
 		assert.Nil(t, err)
 		assert.Contains(t, secrets, secretId.Service)
 		assert.Equal(t, "newvalue", (*secrets[secretId.Service].currentSecret)[key])
@@ -259,52 +260,54 @@ func TestSecretsManagerWrite(t *testing.T) {
 		secrets[service] = mockSecret{}
 		outputs[service] = secretsmanager.DescribeSecretOutput{RotationEnabled: aws.Bool(true)}
 		secretId := SecretId{Service: service, Key: "doesnotmatter"}
-		err := store.Write(secretId, "value")
+		err := store.Write(ctx, secretId, "value")
 		assert.EqualError(t, err, "Cannot write to a secret with rotation enabled")
 	})
 }
 
 func TestSecretsManagerRead(t *testing.T) {
+	ctx := context.Background()
 	secrets := make(map[string]mockSecret)
 	outputs := make(map[string]secretsmanager.DescribeSecretOutput)
 	store := NewTestSecretsManagerStore(secrets, outputs)
 	secretId := SecretId{Service: "test", Key: "key"}
-	store.Write(secretId, "value")
-	store.Write(secretId, "second value")
-	store.Write(secretId, "third value")
+	store.Write(ctx, secretId, "value")
+	store.Write(ctx, secretId, "second value")
+	store.Write(ctx, secretId, "third value")
 
 	t.Run("Reading the latest value should work", func(t *testing.T) {
-		s, err := store.Read(secretId, -1)
+		s, err := store.Read(ctx, secretId, -1)
 		assert.Nil(t, err)
 		assert.Equal(t, "third value", *s.Value)
 	})
 
 	t.Run("Reading specific versiosn should work", func(t *testing.T) {
-		first, err := store.Read(secretId, 1)
+		first, err := store.Read(ctx, secretId, 1)
 		assert.Nil(t, err)
 		assert.Equal(t, "value", *first.Value)
 
-		second, err := store.Read(secretId, 2)
+		second, err := store.Read(ctx, secretId, 2)
 		assert.Nil(t, err)
 		assert.Equal(t, "second value", *second.Value)
 
-		third, err := store.Read(secretId, 3)
+		third, err := store.Read(ctx, secretId, 3)
 		assert.Nil(t, err)
 		assert.Equal(t, "third value", *third.Value)
 	})
 
 	t.Run("Reading a non-existent key should give not found err", func(t *testing.T) {
-		_, err := store.Read(SecretId{Service: "test", Key: "nope"}, -1)
+		_, err := store.Read(ctx, SecretId{Service: "test", Key: "nope"}, -1)
 		assert.Equal(t, ErrSecretNotFound, err)
 	})
 
 	t.Run("Reading a non-existent version should give not found error", func(t *testing.T) {
-		_, err := store.Read(secretId, 30)
+		_, err := store.Read(ctx, secretId, 30)
 		assert.Equal(t, ErrSecretNotFound, err)
 	})
 }
 
 func TestSecretsManagerList(t *testing.T) {
+	ctx := context.Background()
 	secrets := make(map[string]mockSecret)
 	outputs := make(map[string]secretsmanager.DescribeSecretOutput)
 	store := NewTestSecretsManagerStore(secrets, outputs)
@@ -315,11 +318,11 @@ func TestSecretsManagerList(t *testing.T) {
 		{Service: "test", Key: "c"},
 	}
 	for _, secret := range testSecrets {
-		store.Write(secret, "value")
+		store.Write(ctx, secret, "value")
 	}
 
 	t.Run("List should return all keys for a service", func(t *testing.T) {
-		s, err := store.List("test", false)
+		s, err := store.List(ctx, "test", false)
 		assert.Nil(t, err)
 		assert.Equal(t, 3, len(s))
 		sort.Sort(ByKey(s))
@@ -329,7 +332,7 @@ func TestSecretsManagerList(t *testing.T) {
 	})
 
 	t.Run("List should not return values if includeValues is false", func(t *testing.T) {
-		s, err := store.List("test", false)
+		s, err := store.List(ctx, "test", false)
 		assert.Nil(t, err)
 		for _, secret := range s {
 			assert.Nil(t, secret.Value)
@@ -337,7 +340,7 @@ func TestSecretsManagerList(t *testing.T) {
 	})
 
 	t.Run("List should return values if includeValues is true", func(t *testing.T) {
-		s, err := store.List("test", true)
+		s, err := store.List(ctx, "test", true)
 		assert.Nil(t, err)
 		for _, secret := range s {
 			assert.Equal(t, "value", *secret.Value)
@@ -345,10 +348,10 @@ func TestSecretsManagerList(t *testing.T) {
 	})
 
 	t.Run("List should only return exact matches on service name", func(t *testing.T) {
-		store.Write(SecretId{Service: "match", Key: "a"}, "val")
-		store.Write(SecretId{Service: "matchlonger", Key: "a"}, "val")
+		store.Write(ctx, SecretId{Service: "match", Key: "a"}, "val")
+		store.Write(ctx, SecretId{Service: "matchlonger", Key: "a"}, "val")
 
-		s, err := store.List("match", false)
+		s, err := store.List(ctx, "match", false)
 		assert.Nil(t, err)
 		assert.Equal(t, 1, len(s))
 		assert.Equal(t, "a", s[0].Meta.Key)
@@ -356,6 +359,7 @@ func TestSecretsManagerList(t *testing.T) {
 }
 
 func TestSecretsManagerListRaw(t *testing.T) {
+	ctx := context.Background()
 	secrets := make(map[string]mockSecret)
 	outputs := make(map[string]secretsmanager.DescribeSecretOutput)
 	store := NewTestSecretsManagerStore(secrets, outputs)
@@ -366,11 +370,11 @@ func TestSecretsManagerListRaw(t *testing.T) {
 		{Service: "test", Key: "c"},
 	}
 	for _, secret := range testSecrets {
-		store.Write(secret, "value")
+		store.Write(ctx, secret, "value")
 	}
 
 	t.Run("ListRaw should return all keys and values for a service", func(t *testing.T) {
-		s, err := store.ListRaw("test")
+		s, err := store.ListRaw(ctx, "test")
 		assert.Nil(t, err)
 		sort.Sort(ByKeyRaw(s))
 		s = s[1:]
@@ -385,10 +389,10 @@ func TestSecretsManagerListRaw(t *testing.T) {
 	})
 
 	t.Run("List should only return exact matches on service name", func(t *testing.T) {
-		store.Write(SecretId{Service: "match", Key: "a"}, "val")
-		store.Write(SecretId{Service: "matchlonger", Key: "a"}, "val")
+		store.Write(ctx, SecretId{Service: "match", Key: "a"}, "val")
+		store.Write(ctx, SecretId{Service: "matchlonger", Key: "a"}, "val")
 
-		s, err := store.ListRaw("match")
+		s, err := store.ListRaw(ctx, "match")
 		sort.Sort(ByKeyRaw(s))
 		s = s[1:]
 		assert.Nil(t, err)
@@ -398,6 +402,7 @@ func TestSecretsManagerListRaw(t *testing.T) {
 }
 
 func TestSecretsManagerHistory(t *testing.T) {
+	ctx := context.Background()
 	secrets := make(map[string]mockSecret)
 	outputs := make(map[string]secretsmanager.DescribeSecretOutput)
 	store := NewTestSecretsManagerStore(secrets, outputs)
@@ -410,23 +415,23 @@ func TestSecretsManagerHistory(t *testing.T) {
 	}
 
 	for _, s := range testSecrets {
-		store.Write(s, "value")
+		store.Write(ctx, s, "value")
 	}
 
 	t.Run("History for a non-existent key should return not found error", func(t *testing.T) {
-		_, err := store.History(SecretId{Service: "test", Key: "nope"})
+		_, err := store.History(ctx, SecretId{Service: "test", Key: "nope"})
 		assert.Equal(t, ErrSecretNotFound, err)
 	})
 
 	t.Run("History should return a single created event for new keys", func(t *testing.T) {
-		events, err := store.History(SecretId{Service: "test", Key: "new"})
+		events, err := store.History(ctx, SecretId{Service: "test", Key: "new"})
 		assert.Nil(t, err)
 		assert.Equal(t, 1, len(events))
 		assert.Equal(t, Created, events[0].Type)
 	})
 
 	t.Run("History should return create followed by updates for keys that have been updated", func(t *testing.T) {
-		events, err := store.History(SecretId{Service: "test", Key: "update"})
+		events, err := store.History(ctx, SecretId{Service: "test", Key: "update"})
 		assert.Nil(t, err)
 		assert.Equal(t, 3, len(events))
 		assert.Equal(t, Created, events[0].Type)
@@ -436,22 +441,23 @@ func TestSecretsManagerHistory(t *testing.T) {
 }
 
 func TestSecretsManagerDelete(t *testing.T) {
+	ctx := context.Background()
 	secrets := make(map[string]mockSecret)
 	outputs := make(map[string]secretsmanager.DescribeSecretOutput)
 	store := NewTestSecretsManagerStore(secrets, outputs)
 
 	secretId := SecretId{Service: "test", Key: "key"}
-	store.Write(secretId, "value")
+	store.Write(ctx, secretId, "value")
 
 	t.Run("Deleting secret should work", func(t *testing.T) {
-		err := store.Delete(secretId)
+		err := store.Delete(ctx, secretId)
 		assert.Nil(t, err)
-		err = store.Delete(secretId)
+		err = store.Delete(ctx, secretId)
 		assert.Equal(t, ErrSecretNotFound, err)
 	})
 
 	t.Run("Deleting missing secret should fail", func(t *testing.T) {
-		err := store.Delete(SecretId{Service: "test", Key: "nonkey"})
+		err := store.Delete(ctx, SecretId{Service: "test", Key: "nonkey"})
 		assert.Equal(t, ErrSecretNotFound, err)
 	})
 }

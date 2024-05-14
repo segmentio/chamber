@@ -34,11 +34,11 @@ func listServices(cmd *cobra.Command, args []string) error {
 		service = utils.NormalizeService(args[0])
 
 	}
-	secretStore, err := getSecretStore()
+	secretStore, err := getSecretStore(cmd.Context())
 	if err != nil {
 		return fmt.Errorf("Failed to get secret store: %w", err)
 	}
-	secrets, err := secretStore.ListServices(service, includeSecretName)
+	secrets, err := secretStore.ListServices(cmd.Context(), service, includeSecretName)
 	if err != nil {
 		return fmt.Errorf("Failed to list store contents: %w", err)
 	}

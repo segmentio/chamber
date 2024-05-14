@@ -54,7 +54,7 @@ func read(cmd *cobra.Command, args []string) error {
 		})
 	}
 
-	secretStore, err := getSecretStore()
+	secretStore, err := getSecretStore(cmd.Context())
 	if err != nil {
 		return fmt.Errorf("Failed to get secret store: %w", err)
 	}
@@ -64,7 +64,7 @@ func read(cmd *cobra.Command, args []string) error {
 		Key:     key,
 	}
 
-	secret, err := secretStore.Read(secretId, version)
+	secret, err := secretStore.Read(cmd.Context(), secretId, version)
 	if err != nil {
 		return fmt.Errorf("Failed to read: %w", err)
 	}

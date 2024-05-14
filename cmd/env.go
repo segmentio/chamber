@@ -64,12 +64,12 @@ func exportEnv(cmd *cobra.Command, args []string) ([]string, error) {
 		return nil, fmt.Errorf("Failed to validate service: %w", err)
 	}
 
-	secretStore, err := getSecretStore()
+	secretStore, err := getSecretStore(cmd.Context())
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get secret store: %w", err)
 	}
 
-	rawSecrets, err := secretStore.ListRaw(service)
+	rawSecrets, err := secretStore.ListRaw(cmd.Context(), service)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to list store contents: %w", err)
 	}

@@ -39,18 +39,18 @@ func find(cmd *cobra.Command, args []string) error {
 		includeSecrets = true
 	}
 
-	secretStore, err := getSecretStore()
+	secretStore, err := getSecretStore(cmd.Context())
 	if err != nil {
 		return fmt.Errorf("Failed to get secret store: %w", err)
 	}
-	services, err := secretStore.ListServices(blankService, includeSecrets)
+	services, err := secretStore.ListServices(cmd.Context(), blankService, includeSecrets)
 	if err != nil {
 		return fmt.Errorf("Failed to list store contents: %w", err)
 	}
 
 	if byValue {
 		for _, service := range services {
-			allSecrets, err := secretStore.List(service, true)
+			allSecrets, err := secretStore.List(cmd.Context(), service, true)
 			if err == nil {
 				matches = append(matches, findValueMatch(allSecrets, findSecret)...)
 			}

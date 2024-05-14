@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"os"
 	"testing"
 
@@ -25,7 +26,7 @@ func TestGetConfig(t *testing.T) {
 		defer os.Unsetenv(RegionEnvVar)
 	}
 
-	config, region, err := getConfig(3, aws.RetryModeStandard)
+	config, region, err := getConfig(context.Background(), 3, aws.RetryModeStandard)
 
 	assert.NoError(t, err)
 	assert.Equal(t, "us-west-2", region)

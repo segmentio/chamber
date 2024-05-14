@@ -42,7 +42,7 @@ type S3KMSStore struct {
 }
 
 func NewS3KMSStore(numRetries int, bucket string, kmsKeyAlias string) (*S3KMSStore, error) {
-	config, _, err := getConfig(numRetries)
+	config, _, err := getConfig(numRetries, aws.RetryModeStandard)
 	if err != nil {
 		return nil, err
 	}

@@ -18,9 +18,8 @@ const (
 	// DefaultKeyID is the default alias for the KMS key used to encrypt/decrypt secrets
 	DefaultKeyID = "alias/parameter_store_key"
 
-	// DefaultMinThrottleDelay is the default delay before retrying throttled requests
-	// DefaultMinThrottleDelay = client.DefaultRetryerMinThrottleDelay
-	DefaultMinThrottleDelay = 0
+	// DefaultRetryMode is the default retry mode for AWS SDK configurations.
+	DefaultRetryMode = aws.RetryModeStandard
 )
 
 // validPathKeyFormat is the format that is expected for key names inside parameter store
@@ -47,27 +46,29 @@ type SSMStore struct {
 
 // NewSSMStore creates a new SSMStore
 func NewSSMStore(numRetries int) (*SSMStore, error) {
-	return ssmStoreUsingRetryer(numRetries, DefaultMinThrottleDelay)
+	return ssmStoreUsingRetryer(numRetries, DefaultRetryMode)
 }
 
 // NewSSMStoreWithMinThrottleDelay creates a new SSMStore with the aws sdk max retries and min throttle delay are configured.
+//
+// Deprecated: The AWS SDK no longer supports specifying a minimum throttle delay. Instead, use
+// NewSSMStoreWithRetryMode.
 func NewSSMStoreWithMinThrottleDelay(numRetries int, minThrottleDelay time.Duration) (*SSMStore, error) {
-	return ssmStoreUsingRetryer(numRetries, minThrottleDelay)
+	return ssmStoreUsingRetryer(numRetries, DefaultRetryMode)
 }
 
-func ssmStoreUsingRetryer(numRetries int, minThrottleDelay time.Duration) (*SSMStore, error) {
-	cfg, _, err := getConfig(numRetries)
+// NewSSMStoreWithRetryMode creates a new SSMStore, configuring the underlying AWS SDK with the
+// given maximum number of retries and retry mode.
+func NewSSMStoreWithRetryMode(numRetries int, retryMode aws.RetryMode) (*SSMStore, error) {
+	return ssmStoreUsingRetryer(numRetries, retryMode)
+}
+
+func ssmStoreUsingRetryer(numRetries int, retryMode aws.RetryMode) (*SSMStore, error) {
+	cfg, _, err := getConfig(numRetries, retryMode)
 
 	if err != nil {
 		return nil, err
 	}
-
-	// FIXME minThrottleDelay is ignored
-	// retryer := retry.NewStandard(
-	// 	func(o *retry.StandardOptions) {
-	// 		o.MaxAttempts = numRetries
-	// 	},
-	// )
 
 	usePaths := true
 	_, ok := os.LookupEnv("CHAMBER_NO_PATHS")

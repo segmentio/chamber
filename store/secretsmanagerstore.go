@@ -81,7 +81,7 @@ type SecretsManagerStore struct {
 
 // NewSecretsManagerStore creates a new SecretsManagerStore
 func NewSecretsManagerStore(numRetries int) (*SecretsManagerStore, error) {
-	cfg, _, err := getConfig(numRetries)
+	cfg, _, err := getConfig(numRetries, aws.RetryModeStandard)
 	if err != nil {
 		return nil, err
 	}

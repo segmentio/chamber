@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	analytics "github.com/segmentio/analytics-go/v3"
 	"github.com/segmentio/chamber/v2/store"
 	"github.com/spf13/cobra"
@@ -22,9 +23,11 @@ var (
 	validServiceFormatWithLabel     = regexp.MustCompile(`^[\w\-\.\:]+$`)
 	validServicePathFormatWithLabel = regexp.MustCompile(`^[\w\-\.]+((\/[\w\-\.]+)+(\:[\w\-\.]+)*)?$`)
 
-	verbose          bool
-	numRetries       int
+	verbose    bool
+	numRetries int
+	// Deprecated: Use retryMode instead.
 	minThrottleDelay time.Duration
+	retryMode        string
 	chamberVersion   string
 	// one of *Backend consts
 	backend             string
@@ -74,7 +77,12 @@ var RootCmd = &cobra.Command{
 
 func init() {
 	RootCmd.PersistentFlags().IntVarP(&numRetries, "retries", "r", DefaultNumRetries, "For SSM or Secrets Manager, the number of retries we'll make before giving up; AKA $CHAMBER_RETRIES")
-	RootCmd.PersistentFlags().DurationVarP(&minThrottleDelay, "min-throttle-delay", "", store.DefaultMinThrottleDelay, "For SSM, minimal delay before retrying throttled requests. Default 500ms.")
+	RootCmd.PersistentFlags().DurationVarP(&minThrottleDelay, "min-throttle-delay", "", 0, "DEPRECATED and no longer has any effect. Use retry-mode instead")
+	RootCmd.PersistentFlags().StringVarP(&retryMode, "retry-mode", "", store.DefaultRetryMode.String(),
+		`For SSM, the model used to retry requests
+  `+aws.RetryModeStandard.String()+`
+  `+aws.RetryModeAdaptive.String(),
+	)
 	RootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "", false, "Print more information to STDOUT")
 	RootCmd.PersistentFlags().StringVarP(&backendFlag, "backend", "b", "ssm",
 		`Backend to use; AKA $CHAMBER_SECRET_BACKEND
@@ -213,7 +221,11 @@ func getSecretStore() (store.Store, error) {
 			return nil, errors.New("Unable to use --kms-key-alias with this backend. Use CHAMBER_KMS_KEY_ALIAS instead.")
 		}
 
-		s, err = store.NewSSMStoreWithMinThrottleDelay(numRetries, minThrottleDelay)
+		parsedRetryMode, err := aws.ParseRetryMode(retryMode)
+		if err != nil {
+			return nil, fmt.Errorf("Invalid retry mode %s", retryMode)
+		}
+		s, err = store.NewSSMStoreWithRetryMode(numRetries, parsedRetryMode)
 	default:
 		return nil, fmt.Errorf("invalid backend `%s`", backend)
 	}

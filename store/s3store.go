@@ -69,7 +69,7 @@ func NewS3Store(numRetries int) (*S3Store, error) {
 }
 
 func NewS3StoreWithBucket(numRetries int, bucket string) (*S3Store, error) {
-	config, _, err := getConfig(numRetries)
+	config, _, err := getConfig(numRetries, aws.RetryModeStandard)
 	if err != nil {
 		return nil, err
 	}

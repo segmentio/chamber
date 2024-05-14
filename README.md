@@ -6,6 +6,19 @@ secrets in SSM Parameter Store, an AWS service for storing secrets.
 For detailed info about using chamber, please read
 [The Right Way To Manage Secrets](https://aws.amazon.com/blogs/mt/the-right-way-to-store-secrets-using-parameter-store/)
 
+## v3.0 Breaking Changes
+
+_Version 3.0 has not yet been released. Changes described here are forward-looking._
+
+* **Use of the SSM Parameter Store's path-based API is now required.** Support
+  added in v2.0 to avoid it has been removed. The `CHAMBER_NO_PATHS` environment
+  variable no longer has any effect. You must migrate to the new storage format
+  using the instructions below.
+* **The `--min-throttle-delay` option no longer has any effect.** Support for
+  specifying a minimum throttle delay has been removed from the underlying AWS
+  SDK with no direct replacement. Instead, set the new `--retry-mode` option to
+  "adaptive" to use an experimental model that accounts for throttling errors.
+
 ## v2.0 Breaking Changes
 
 Starting with version 2.0, chamber uses parameter store's path based API by default.

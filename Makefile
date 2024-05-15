@@ -24,6 +24,10 @@ SRC := $(shell find . -name '*.go')
 test: store/awsapi_mock.go
 	go test -v ./...
 
+.PHONY: coverage
+coverage:
+	go test -coverpkg ./... -coverprofile coverage.out ./...
+
 store/awsapi_mock.go: store/awsapi.go
 ifdef MOQ
 	rm -f $@
@@ -41,9 +45,12 @@ clean:
 dist/:
 	mkdir -p dist
 
+fmt:
+	go fmt ./...
+
 build: chamber
 
-chamber: $(SRC)
+chamber: fmt $(SRC)
 	CGO_ENABLED=0 go build -trimpath $(LDFLAGS) -o $@
 
 dist/chamber-$(VERSION)-darwin-amd64: | dist/
@@ -64,4 +71,4 @@ dist/chamber-$(VERSION)-linux-arm64 dist/chamber-$(VERSION)-linux-aarch64: | dis
 dist/chamber-$(VERSION)-windows-amd64.exe: | dist/
 	GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath $(LDFLAGS) -o $@
 
-.PHONY: clean all linux
+.PHONY: clean all fmt build linux

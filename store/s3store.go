@@ -160,6 +160,14 @@ func (s *S3Store) Read(ctx context.Context, id SecretId, version int) (Secret, e
 	}, nil
 }
 
+func (s *S3Store) WriteTags(ctx context.Context, id SecretId, tags map[string]string, deleteOtherTags bool) error {
+	return errors.New("Not implemented for S3 Store")
+}
+
+func (s *S3Store) ReadTags(ctx context.Context, id SecretId) (map[string]string, error) {
+	return nil, errors.New("Not implemented for S3 Store")
+}
+
 func (s *S3Store) ListServices(ctx context.Context, service string, includeSecretName bool) ([]string, error) {
 	return nil, fmt.Errorf("S3 Backend is experimental and does not implement this command")
 }
@@ -265,6 +273,10 @@ func (s *S3Store) Delete(ctx context.Context, id SecretId) error {
 	}
 
 	return s.writeLatest(ctx, id.Service, index)
+}
+
+func (s *S3Store) DeleteTags(ctx context.Context, id SecretId, tagKeys []string) error {
+	return errors.New("Not implemented for S3 Store")
 }
 
 // getCurrentUser uses the STS API to get the current caller identity,

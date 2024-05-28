@@ -254,6 +254,10 @@ func (s *SecretsManagerStore) Delete(ctx context.Context, id SecretId) error {
 	return s.Write(ctx, id, "")
 }
 
+func (s *SecretsManagerStore) DeleteTags(ctx context.Context, id SecretId, tagKeys []string) error {
+	return errors.New("Not implemented for Secrets Manager Store")
+}
+
 func (s *SecretsManagerStore) readVersion(ctx context.Context, id SecretId, version int) (Secret, error) {
 	listSecretVersionIdsInput := &secretsmanager.ListSecretVersionIdsInput{
 		SecretId:          aws.String(id.Service),
@@ -343,6 +347,14 @@ func (s *SecretsManagerStore) readLatest(ctx context.Context, service string) (s
 	}
 
 	return obj, nil
+}
+
+func (s *SecretsManagerStore) WriteTags(ctx context.Context, id SecretId, tags map[string]string, deleteOtherTags bool) error {
+	return errors.New("Not implemented for Secrets Manager Store")
+}
+
+func (s *SecretsManagerStore) ReadTags(ctx context.Context, id SecretId) (map[string]string, error) {
+	return nil, errors.New("Not implemented for Secrets Manager Store")
 }
 
 // ListServices (not implemented)

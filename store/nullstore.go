@@ -21,6 +21,14 @@ func (s *NullStore) Read(ctx context.Context, id SecretId, version int) (Secret,
 	return Secret{}, errors.New("Not implemented for Null Store")
 }
 
+func (s *NullStore) WriteTags(ctx context.Context, id SecretId, tags map[string]string, deleteOtherTags bool) error {
+	return errors.New("Not implemented for Null Store")
+}
+
+func (s *NullStore) ReadTags(ctx context.Context, id SecretId) (map[string]string, error) {
+	return nil, errors.New("Not implemented for Null Store")
+}
+
 func (s *NullStore) ListServices(ctx context.Context, service string, includeSecretNames bool) ([]string, error) {
 	return nil, nil
 }
@@ -38,5 +46,9 @@ func (s *NullStore) History(ctx context.Context, id SecretId) ([]ChangeEvent, er
 }
 
 func (s *NullStore) Delete(ctx context.Context, id SecretId) error {
+	return errors.New("Not implemented for Null Store")
+}
+
+func (s *NullStore) DeleteTags(ctx context.Context, id SecretId, tags []string) error {
 	return errors.New("Not implemented for Null Store")
 }

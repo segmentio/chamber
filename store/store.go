@@ -62,9 +62,12 @@ type ChangeEvent struct {
 type Store interface {
 	Write(ctx context.Context, id SecretId, value string) error
 	Read(ctx context.Context, id SecretId, version int) (Secret, error)
+	WriteTags(ctx context.Context, id SecretId, tags map[string]string, deleteOtherTags bool) error
+	ReadTags(ctx context.Context, id SecretId) (map[string]string, error)
 	List(ctx context.Context, service string, includeValues bool) ([]Secret, error)
 	ListRaw(ctx context.Context, service string) ([]RawSecret, error)
 	ListServices(ctx context.Context, service string, includeSecretName bool) ([]string, error)
 	History(ctx context.Context, id SecretId) ([]ChangeEvent, error)
 	Delete(ctx context.Context, id SecretId) error
+	DeleteTags(ctx context.Context, id SecretId, tagKeys []string) error
 }

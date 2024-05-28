@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"regexp"
@@ -126,6 +127,72 @@ func (s *SSMStore) Read(ctx context.Context, id SecretId, version int) (Secret, 
 	return s.readVersion(ctx, id, version)
 }
 
+func (s *SSMStore) WriteTags(ctx context.Context, id SecretId, tags map[string]string, deleteOtherTags bool) error {
+	// list the current tags
+	currentTags, err := s.ReadTags(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	if deleteOtherTags {
+		var tagKeysToRemove []string
+		for k := range currentTags {
+			if _, ok := tags[k]; !ok {
+				tagKeysToRemove = append(tagKeysToRemove, k)
+			}
+		}
+
+		if len(tagKeysToRemove) > 0 {
+			if err := s.DeleteTags(ctx, id, tagKeysToRemove); err != nil {
+				return err
+			}
+		}
+	}
+
+	addTags := make([]types.Tag, len(tags))
+	i := 0
+	for k, v := range tags {
+		addTags[i] = types.Tag{
+			Key:   aws.String(k),
+			Value: aws.String(v),
+		}
+		i++
+	}
+
+	addTagsInput := &ssm.AddTagsToResourceInput{
+		ResourceType: types.ResourceTypeForTaggingParameter,
+		ResourceId:   aws.String(s.idToName(id)),
+		Tags:         addTags,
+	}
+	_, err = s.svc.AddTagsToResource(ctx, addTagsInput)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *SSMStore) ReadTags(ctx context.Context, id SecretId) (map[string]string, error) {
+	input := &ssm.ListTagsForResourceInput{
+		ResourceType: types.ResourceTypeForTaggingParameter,
+		ResourceId:   aws.String(s.idToName(id)),
+	}
+	resp, err := s.svc.ListTagsForResource(ctx, input)
+	if err != nil {
+		var iri *types.InvalidResourceId
+		if errors.As(err, &iri) {
+			return nil, ErrSecretNotFound
+		}
+		return nil, err
+	}
+
+	tags := make(map[string]string, len(resp.TagList))
+	for _, tag := range resp.TagList {
+		tags[*tag.Key] = *tag.Value
+	}
+	return tags, nil
+}
+
 // Delete removes a secret from the parameter store. Note this removes all
 // versions of the secret.
 func (s *SSMStore) Delete(ctx context.Context, id SecretId) error {
@@ -140,6 +207,20 @@ func (s *SSMStore) Delete(ctx context.Context, id SecretId) error {
 	}
 
 	_, err = s.svc.DeleteParameter(ctx, deleteParameterInput)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *SSMStore) DeleteTags(ctx context.Context, id SecretId, tagKeys []string) error {
+	removeTagsInput := &ssm.RemoveTagsFromResourceInput{
+		ResourceType: types.ResourceTypeForTaggingParameter,
+		ResourceId:   aws.String(s.idToName(id)),
+		TagKeys:      tagKeys,
+	}
+	_, err := s.svc.RemoveTagsFromResource(ctx, removeTagsInput)
 	if err != nil {
 		return err
 	}

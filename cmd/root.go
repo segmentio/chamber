@@ -21,6 +21,8 @@ var (
 	validKeyFormat                  = regexp.MustCompile(`^[\w\-\.]+$`)
 	validServicePathFormat          = regexp.MustCompile(`^[\w\-\.]+(\/[\w\-\.]+)*$`)
 	validServicePathFormatWithLabel = regexp.MustCompile(`^[\w\-\.]+((\/[\w\-\.]+)+(\:[\w\-\.]+)*)?$`)
+	validTagKeyFormat               = regexp.MustCompile(`^[A-Za-z0-9 +\-=\._:/@]{1,128}$`)
+	validTagValueFormat             = regexp.MustCompile(`^[A-Za-z0-9 +\-=\._:/@]{1,256}$`)
 
 	verbose    bool
 	numRetries int
@@ -130,6 +132,16 @@ func validateServiceWithLabel(service string) error {
 func validateKey(key string) error {
 	if !validKeyFormat.MatchString(key) {
 		return fmt.Errorf("Failed to validate key name '%s'. Only alphanumeric, dashes, full stops and underscores are allowed for key names", key)
+	}
+	return nil
+}
+
+func validateTag(key string, value string) error {
+	if !validTagKeyFormat.MatchString(key) {
+		return fmt.Errorf("Failed to validate tag key '%s'. Only 128 alphanumeric, space, and characters +-=._:/@ are allowed for tag keys", key)
+	}
+	if !validTagValueFormat.MatchString(value) {
+		return fmt.Errorf("Failed to validate tag value '%s'. Only 256 alphanumeric, space, and characters +-=._:/@ are allowed for tag values", value)
 	}
 	return nil
 }

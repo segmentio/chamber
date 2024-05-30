@@ -270,19 +270,19 @@ func NewTestSSMStore(parameters map[string]mockParameter, usePaths bool) *SSMSto
 				return mockDeleteParameter(params, parameters)
 			},
 			DescribeParametersFunc: func(ctx context.Context, params *ssm.DescribeParametersInput, optFns ...func(*ssm.Options)) (*ssm.DescribeParametersOutput, error) {
-				return mockDescribeParameters(params, parameters);
+				return mockDescribeParameters(params, parameters)
 			},
 			GetParameterHistoryFunc: func(ctx context.Context, params *ssm.GetParameterHistoryInput, optFns ...func(*ssm.Options)) (*ssm.GetParameterHistoryOutput, error) {
-				return mockGetParameterHistory(params, parameters);
+				return mockGetParameterHistory(params, parameters)
 			},
 			GetParametersFunc: func(ctx context.Context, params *ssm.GetParametersInput, optFns ...func(*ssm.Options)) (*ssm.GetParametersOutput, error) {
-				return mockGetParameters(params, parameters);
+				return mockGetParameters(params, parameters)
 			},
 			GetParametersByPathFunc: func(ctx context.Context, params *ssm.GetParametersByPathInput, optFns ...func(*ssm.Options)) (*ssm.GetParametersByPathOutput, error) {
-				return mockGetParametersByPath(params, parameters);
+				return mockGetParametersByPath(params, parameters)
 			},
 			PutParameterFunc: func(ctx context.Context, params *ssm.PutParameterInput, optFns ...func(*ssm.Options)) (*ssm.PutParameterOutput, error) {
-				return mockPutParameter(params, parameters);
+				return mockPutParameter(params, parameters)
 			},
 		},
 	}
@@ -330,24 +330,22 @@ func TestNewSSMStore(t *testing.T) {
 		assert.ErrorAs(t, err, &notFoundError)
 	})
 
-	// FIXME minThrottleDelay is ignored
-	// t.Run("Should set aws sdk min throttle delay to default", func(t *testing.T) {
-	// 	s, err := NewSSMStore(1)
-	// 	assert.Nil(t, err)
-	// 	assert.Equal(t, DefaultMinThrottleDelay, s.svc.(*ssm.SSM).Config.Retryer.(client.DefaultRetryer).MinThrottleDelay)
-	// })
+	t.Run("Should set AWS SDK retry mode to default", func(t *testing.T) {
+		s, err := NewSSMStore(1)
+		assert.Nil(t, err)
+		assert.Equal(t, DefaultRetryMode, s.config.RetryMode)
+	})
 
 }
 
-// FIXME minThrottleDelay is ignored
-// func TestNewSSMStoreMinThrottleDelay(t *testing.T) {
-// 	t.Run("Should configure aws sdk retryer - num max retries and min throttle delay", func(t *testing.T) {
-// 		s, err := NewSSMStoreWithMinThrottleDelay(2, time.Duration(1000)*time.Millisecond)
-// 		assert.Nil(t, err)
-// 		assert.Equal(t, 2, s.config.Retryer().MaxAttempts())
-// 		assert.Equal(t, time.Duration(1000)*time.Millisecond, s.svc.(*ssm.SSM).Config.Retryer.(client.DefaultRetryer).MinThrottleDelay)
-// 	})
-// }
+func TestNewSSMStoreWithRetryMode(t *testing.T) {
+	t.Run("Should configure AWS SDK max attempts and retry mode", func(t *testing.T) {
+		s, err := NewSSMStoreWithRetryMode(2, aws.RetryModeAdaptive)
+		assert.Nil(t, err)
+		assert.Equal(t, 2, s.config.RetryMaxAttempts)
+		assert.Equal(t, aws.RetryModeAdaptive, s.config.RetryMode)
+	})
+}
 
 func TestWrite(t *testing.T) {
 	parameters := map[string]mockParameter{}

@@ -14,12 +14,12 @@ const (
 	CustomSSMEndpointEnvVar = "CHAMBER_AWS_SSM_ENDPOINT"
 )
 
-func getConfig(numRetries int) (aws.Config, string, error) {
+func getConfig(numRetries int, retryMode aws.RetryMode) (aws.Config, string, error) {
 	endpointResolver := func(service, region string, options ...interface{}) (aws.Endpoint, error) {
 		customSsmEndpoint, ok := os.LookupEnv(CustomSSMEndpointEnvVar)
 		if ok {
 			return aws.Endpoint{
-				URL: customSsmEndpoint,
+				URL:    customSsmEndpoint,
 				Source: aws.EndpointSourceCustom,
 			}, nil
 		}
@@ -35,6 +35,7 @@ func getConfig(numRetries int) (aws.Config, string, error) {
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
 		config.WithRegion(region),
 		config.WithRetryMaxAttempts(numRetries),
+		config.WithRetryMode(retryMode),
 		config.WithEndpointResolverWithOptions(aws.EndpointResolverWithOptionsFunc(endpointResolver)),
 	)
 	if err != nil {

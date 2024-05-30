@@ -121,7 +121,7 @@ func mockGetCallerIdentity(_ *sts.GetCallerIdentityInput) (*sts.GetCallerIdentit
 
 func NewTestSecretsManagerStore(secrets map[string]mockSecret, outputs map[string]secretsmanager.DescribeSecretOutput) *SecretsManagerStore {
 	return &SecretsManagerStore{
-		svc:    &apiSecretsManagerMock{
+		svc: &apiSecretsManagerMock{
 			CreateSecretFunc: func(ctx context.Context, params *secretsmanager.CreateSecretInput, optFns ...func(*secretsmanager.Options)) (*secretsmanager.CreateSecretOutput, error) {
 				return mockCreateSecret(params, secrets)
 			},

@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"sort"
 	"time"
 
@@ -19,8 +18,6 @@ import (
 
 const (
 	MaximumVersions = 100
-	// deprecated
-	BucketEnvVar = "CHAMBER_S3_BUCKET"
 
 	latestObjectName = "__latest.json"
 )
@@ -56,16 +53,6 @@ type S3Store struct {
 	svc    apiS3
 	stsSvc apiSTS
 	bucket string
-}
-
-// Deprecated; use NewS3StoreWithBucket instead
-func NewS3Store(numRetries int) (*S3Store, error) {
-	bucket, ok := os.LookupEnv(BucketEnvVar)
-	if !ok {
-		return nil, fmt.Errorf("Must set %s for s3 backend", BucketEnvVar)
-	}
-
-	return NewS3StoreWithBucket(numRetries, bucket)
 }
 
 func NewS3StoreWithBucket(numRetries int, bucket string) (*S3Store, error) {

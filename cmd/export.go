@@ -53,7 +53,7 @@ func runExport(cmd *cobra.Command, args []string) error {
 		})
 	}
 
-	secretStore, err := getSecretStore()
+	secretStore, err := getSecretStore(cmd.Context())
 	if err != nil {
 		return err
 	}
@@ -64,7 +64,7 @@ func runExport(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("Failed to validate service %s: %w", service, err)
 		}
 
-		rawSecrets, err := secretStore.ListRaw(service)
+		rawSecrets, err := secretStore.ListRaw(cmd.Context(), service)
 		if err != nil {
 			return fmt.Errorf("Failed to list store contents for service %s: %w", service, err)
 		}

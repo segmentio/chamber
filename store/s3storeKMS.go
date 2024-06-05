@@ -41,8 +41,8 @@ type S3KMSStore struct {
 	kmsKeyAlias string
 }
 
-func NewS3KMSStore(numRetries int, bucket string, kmsKeyAlias string) (*S3KMSStore, error) {
-	config, _, err := getConfig(numRetries, aws.RetryModeStandard)
+func NewS3KMSStore(ctx context.Context, numRetries int, bucket string, kmsKeyAlias string) (*S3KMSStore, error) {
+	config, _, err := getConfig(ctx, numRetries, aws.RetryModeStandard)
 	if err != nil {
 		return nil, err
 	}
@@ -70,8 +70,8 @@ func NewS3KMSStore(numRetries int, bucket string, kmsKeyAlias string) (*S3KMSSto
 	}, nil
 }
 
-func (s *S3KMSStore) Write(id SecretId, value string) error {
-	index, err := s.readLatest(id.Service)
+func (s *S3KMSStore) Write(ctx context.Context, id SecretId, value string) error {
+	index, err := s.readLatest(ctx, id.Service)
 	if err != nil {
 		return err
 	}
@@ -81,7 +81,7 @@ func (s *S3KMSStore) Write(id SecretId, value string) error {
 	}
 
 	objPath := getObjectPath(id)
-	existing, ok, err := s.readObjectById(id)
+	existing, ok, err := s.readObjectById(ctx, id)
 	if err != nil {
 		return err
 	}
@@ -98,7 +98,7 @@ func (s *S3KMSStore) Write(id SecretId, value string) error {
 	}
 
 	thisVersion := getLatestVersion(obj.Values) + 1
-	user, err := s.getCurrentUser()
+	user, err := s.getCurrentUser(ctx)
 	if err != nil {
 		return err
 	}
@@ -124,7 +124,7 @@ func (s *S3KMSStore) Write(id SecretId, value string) error {
 		Body:                 bytes.NewReader(contents),
 	}
 
-	_, err = s.svc.PutObject(context.TODO(), putObjectInput)
+	_, err = s.svc.PutObject(ctx, putObjectInput)
 	if err != nil {
 		// TODO: catch specific awserr
 		return err
@@ -135,22 +135,22 @@ func (s *S3KMSStore) Write(id SecretId, value string) error {
 		Value:    value,
 		KMSAlias: s.kmsKeyAlias,
 	}
-	return s.writeLatest(id.Service, index)
+	return s.writeLatest(ctx, id.Service, index)
 }
 
-func (s *S3KMSStore) ListServices(service string, includeSecretName bool) ([]string, error) {
+func (s *S3KMSStore) ListServices(ctx context.Context, service string, includeSecretName bool) ([]string, error) {
 	return nil, fmt.Errorf("S3KMS Backend is experimental and does not implement this command")
 }
 
-func (s *S3KMSStore) List(service string, includeValues bool) ([]Secret, error) {
-	index, err := s.readLatest(service)
+func (s *S3KMSStore) List(ctx context.Context, service string, includeValues bool) ([]Secret, error) {
+	index, err := s.readLatest(ctx, service)
 	if err != nil {
 		return []Secret{}, err
 	}
 
 	secrets := []Secret{}
 	for key := range index.Latest {
-		obj, ok, err := s.readObjectById(SecretId{Service: service, Key: key})
+		obj, ok, err := s.readObjectById(ctx, SecretId{Service: service, Key: key})
 		if err != nil {
 			return []Secret{}, err
 		}
@@ -186,8 +186,8 @@ func (s *S3KMSStore) List(service string, includeValues bool) ([]Secret, error) 
 // ListRaw returns RawSecrets by extracting them from the index file. It only ever uses the
 // index file; it never consults the actual secrets, so if the index file is out of sync, these
 // results will reflect that.
-func (s *S3KMSStore) ListRaw(service string) ([]RawSecret, error) {
-	index, err := s.readLatest(service)
+func (s *S3KMSStore) ListRaw(ctx context.Context, service string) ([]RawSecret, error) {
+	index, err := s.readLatest(ctx, service)
 	if err != nil {
 		return []RawSecret{}, err
 	}
@@ -205,8 +205,8 @@ func (s *S3KMSStore) ListRaw(service string) ([]RawSecret, error) {
 	return secrets, nil
 }
 
-func (s *S3KMSStore) Delete(id SecretId) error {
-	index, err := s.readLatest(id.Service)
+func (s *S3KMSStore) Delete(ctx context.Context, id SecretId) error {
+	index, err := s.readLatest(ctx, id.Service)
 	if err != nil {
 		return err
 	}
@@ -219,20 +219,20 @@ func (s *S3KMSStore) Delete(id SecretId) error {
 		delete(index.Latest, id.Key)
 	}
 
-	if err := s.deleteObjectById(id); err != nil {
+	if err := s.deleteObjectById(ctx, id); err != nil {
 		return err
 	}
 
-	return s.writeLatest(id.Service, index)
+	return s.writeLatest(ctx, id.Service, index)
 }
 
-func (s *S3KMSStore) readObject(path string) (secretObject, bool, error) {
+func (s *S3KMSStore) readObject(ctx context.Context, path string) (secretObject, bool, error) {
 	getObjectInput := &s3.GetObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(path),
 	}
 
-	resp, err := s.svc.GetObject(context.TODO(), getObjectInput)
+	resp, err := s.svc.GetObject(ctx, getObjectInput)
 	if err != nil {
 		// handle specific AWS  errors
 		var nsb *types.NoSuchBucket
@@ -261,7 +261,7 @@ func (s *S3KMSStore) readObject(path string) (secretObject, bool, error) {
 
 }
 
-func (s *S3KMSStore) puts3raw(path string, contents []byte) error {
+func (s *S3KMSStore) puts3raw(ctx context.Context, path string, contents []byte) error {
 	putObjectInput := &s3.PutObjectInput{
 		Bucket:               aws.String(s.bucket),
 		ServerSideEncryption: types.ServerSideEncryptionAwsKms,
@@ -270,17 +270,17 @@ func (s *S3KMSStore) puts3raw(path string, contents []byte) error {
 		Body:                 bytes.NewReader(contents),
 	}
 
-	_, err := s.svc.PutObject(context.TODO(), putObjectInput)
+	_, err := s.svc.PutObject(ctx, putObjectInput)
 	return err
 }
 
-func (s *S3KMSStore) readLatestFile(path string) (LatestIndexFile, error) {
+func (s *S3KMSStore) readLatestFile(ctx context.Context, path string) (LatestIndexFile, error) {
 	getObjectInput := &s3.GetObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(path),
 	}
 
-	resp, err := s.svc.GetObject(context.TODO(), getObjectInput)
+	resp, err := s.svc.GetObject(ctx, getObjectInput)
 
 	if err != nil {
 		var nsk *types.NoSuchKey
@@ -312,7 +312,7 @@ func (s *S3KMSStore) readLatestFile(path string) (LatestIndexFile, error) {
 	return index, nil
 }
 
-func (s *S3KMSStore) readLatest(service string) (LatestIndexFile, error) {
+func (s *S3KMSStore) readLatest(ctx context.Context, service string) (LatestIndexFile, error) {
 	// Create an empty latest, this will be used to merge together the various KMS Latest Files
 	latestResult := LatestIndexFile{Latest: map[string]LatestValue{}}
 
@@ -325,14 +325,14 @@ func (s *S3KMSStore) readLatest(service string) (LatestIndexFile, error) {
 	var paginationError error
 	paginator := s3.NewListObjectsV2Paginator(s.svc, params)
 	for paginator.HasMorePages() {
-		page, err := paginator.NextPage(context.TODO())
+		page, err := paginator.NextPage(ctx)
 		if err != nil {
 			return latestResult, err
 		}
 
 		for index := range page.Contents {
 			key_name := *page.Contents[index].Key
-			result, err := s.readLatestFile(key_name)
+			result, err := s.readLatestFile(ctx, key_name)
 
 			if err != nil {
 				paginationError = errors.New(fmt.Sprintf("Error reading latest index for KMS Key (%s): %s", key_name, err))
@@ -366,7 +366,7 @@ func (s *S3KMSStore) latestFileKeyNameByKMSKey() string {
 	return fmt.Sprintf("__kms_%s__latest.json", strings.Replace(s.kmsKeyAlias, "/", "_", -1))
 }
 
-func (s *S3KMSStore) writeLatest(service string, index LatestIndexFile) error {
+func (s *S3KMSStore) writeLatest(ctx context.Context, service string, index LatestIndexFile) error {
 	path := fmt.Sprintf("%s/%s", service, s.latestFileKeyNameByKMSKey())
 	for k, v := range index.Latest {
 		if v.KMSAlias != s.kmsKeyAlias {
@@ -379,5 +379,5 @@ func (s *S3KMSStore) writeLatest(service string, index LatestIndexFile) error {
 		return err
 	}
 
-	return s.puts3raw(path, raw)
+	return s.puts3raw(ctx, path, raw)
 }

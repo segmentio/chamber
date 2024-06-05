@@ -92,7 +92,7 @@ func execRun(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	secretStore, err := getSecretStore()
+	secretStore, err := getSecretStore(cmd.Context())
 	if err != nil {
 		return fmt.Errorf("Failed to get secret store: %w", err)
 	}
@@ -108,7 +108,7 @@ func execRun(cmd *cobra.Command, args []string) error {
 		}
 		var err error
 		env = environ.Environ(os.Environ())
-		err = env.LoadStrict(secretStore, strictValue, pristine, services...)
+		err = env.LoadStrict(cmd.Context(), secretStore, strictValue, pristine, services...)
 		if err != nil {
 			return err
 		}
@@ -120,7 +120,7 @@ func execRun(cmd *cobra.Command, args []string) error {
 			collisions := make([]string, 0)
 			var err error
 			// TODO: these interfaces should look the same as Strict*, so move pristine in there
-			err = env.Load(secretStore, service, &collisions)
+			err = env.Load(cmd.Context(), secretStore, service, &collisions)
 			if err != nil {
 				return fmt.Errorf("Failed to list store contents: %w", err)
 			}

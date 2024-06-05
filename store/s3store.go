@@ -55,8 +55,8 @@ type S3Store struct {
 	bucket string
 }
 
-func NewS3StoreWithBucket(numRetries int, bucket string) (*S3Store, error) {
-	config, _, err := getConfig(numRetries, aws.RetryModeStandard)
+func NewS3StoreWithBucket(ctx context.Context, numRetries int, bucket string) (*S3Store, error) {
+	config, _, err := getConfig(ctx, numRetries, aws.RetryModeStandard)
 	if err != nil {
 		return nil, err
 	}
@@ -72,14 +72,14 @@ func NewS3StoreWithBucket(numRetries int, bucket string) (*S3Store, error) {
 	}, nil
 }
 
-func (s *S3Store) Write(id SecretId, value string) error {
-	index, err := s.readLatest(id.Service)
+func (s *S3Store) Write(ctx context.Context, id SecretId, value string) error {
+	index, err := s.readLatest(ctx, id.Service)
 	if err != nil {
 		return err
 	}
 
 	objPath := getObjectPath(id)
-	existing, ok, err := s.readObjectById(id)
+	existing, ok, err := s.readObjectById(ctx, id)
 	if err != nil {
 		return err
 	}
@@ -96,7 +96,7 @@ func (s *S3Store) Write(id SecretId, value string) error {
 	}
 
 	thisVersion := getLatestVersion(obj.Values) + 1
-	user, err := s.getCurrentUser()
+	user, err := s.getCurrentUser(ctx)
 	if err != nil {
 		return err
 	}
@@ -121,18 +121,18 @@ func (s *S3Store) Write(id SecretId, value string) error {
 		Body:                 bytes.NewReader(contents),
 	}
 
-	_, err = s.svc.PutObject(context.TODO(), putObjectInput)
+	_, err = s.svc.PutObject(ctx, putObjectInput)
 	if err != nil {
 		// TODO: catch specific awserr
 		return err
 	}
 
 	index.Latest[id.Key] = value
-	return s.writeLatest(id.Service, index)
+	return s.writeLatest(ctx, id.Service, index)
 }
 
-func (s *S3Store) Read(id SecretId, version int) (Secret, error) {
-	obj, ok, err := s.readObjectById(id)
+func (s *S3Store) Read(ctx context.Context, id SecretId, version int) (Secret, error) {
+	obj, ok, err := s.readObjectById(ctx, id)
 	if err != nil {
 		return Secret{}, err
 	}
@@ -160,19 +160,19 @@ func (s *S3Store) Read(id SecretId, version int) (Secret, error) {
 	}, nil
 }
 
-func (s *S3Store) ListServices(service string, includeSecretName bool) ([]string, error) {
+func (s *S3Store) ListServices(ctx context.Context, service string, includeSecretName bool) ([]string, error) {
 	return nil, fmt.Errorf("S3 Backend is experimental and does not implement this command")
 }
 
-func (s *S3Store) List(service string, includeValues bool) ([]Secret, error) {
-	index, err := s.readLatest(service)
+func (s *S3Store) List(ctx context.Context, service string, includeValues bool) ([]Secret, error) {
+	index, err := s.readLatest(ctx, service)
 	if err != nil {
 		return []Secret{}, err
 	}
 
 	secrets := []Secret{}
 	for key := range index.Latest {
-		obj, ok, err := s.readObjectById(SecretId{Service: service, Key: key})
+		obj, ok, err := s.readObjectById(ctx, SecretId{Service: service, Key: key})
 		if err != nil {
 			return []Secret{}, err
 		}
@@ -205,8 +205,8 @@ func (s *S3Store) List(service string, includeValues bool) ([]Secret, error) {
 	return secrets, nil
 }
 
-func (s *S3Store) ListRaw(service string) ([]RawSecret, error) {
-	index, err := s.readLatest(service)
+func (s *S3Store) ListRaw(ctx context.Context, service string) ([]RawSecret, error) {
+	index, err := s.readLatest(ctx, service)
 	if err != nil {
 		return []RawSecret{}, err
 	}
@@ -224,8 +224,8 @@ func (s *S3Store) ListRaw(service string) ([]RawSecret, error) {
 	return secrets, nil
 }
 
-func (s *S3Store) History(id SecretId) ([]ChangeEvent, error) {
-	obj, ok, err := s.readObjectById(id)
+func (s *S3Store) History(ctx context.Context, id SecretId) ([]ChangeEvent, error) {
+	obj, ok, err := s.readObjectById(ctx, id)
 	if err != nil {
 		return []ChangeEvent{}, err
 	}
@@ -252,8 +252,8 @@ func (s *S3Store) History(id SecretId) ([]ChangeEvent, error) {
 	return events, nil
 }
 
-func (s *S3Store) Delete(id SecretId) error {
-	index, err := s.readLatest(id.Service)
+func (s *S3Store) Delete(ctx context.Context, id SecretId) error {
+	index, err := s.readLatest(ctx, id.Service)
 	if err != nil {
 		return err
 	}
@@ -262,18 +262,18 @@ func (s *S3Store) Delete(id SecretId) error {
 		delete(index.Latest, id.Key)
 	}
 
-	if err := s.deleteObjectById(id); err != nil {
+	if err := s.deleteObjectById(ctx, id); err != nil {
 		return err
 	}
 
-	return s.writeLatest(id.Service, index)
+	return s.writeLatest(ctx, id.Service, index)
 }
 
 // getCurrentUser uses the STS API to get the current caller identity,
 // so that secret value changes can be correctly attributed to the right
 // aws user/role
-func (s *S3Store) getCurrentUser() (string, error) {
-	resp, err := s.stsSvc.GetCallerIdentity(context.TODO(), &sts.GetCallerIdentityInput{})
+func (s *S3Store) getCurrentUser(ctx context.Context) (string, error) {
+	resp, err := s.stsSvc.GetCallerIdentity(ctx, &sts.GetCallerIdentityInput{})
 	if err != nil {
 		return "", err
 	}
@@ -281,28 +281,28 @@ func (s *S3Store) getCurrentUser() (string, error) {
 	return *resp.Arn, nil
 }
 
-func (s *S3Store) deleteObjectById(id SecretId) error {
+func (s *S3Store) deleteObjectById(ctx context.Context, id SecretId) error {
 	path := getObjectPath(id)
-	return s.deleteObject(path)
+	return s.deleteObject(ctx, path)
 }
 
-func (s *S3Store) deleteObject(path string) error {
+func (s *S3Store) deleteObject(ctx context.Context, path string) error {
 	deleteObjectInput := &s3.DeleteObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(path),
 	}
 
-	_, err := s.svc.DeleteObject(context.TODO(), deleteObjectInput)
+	_, err := s.svc.DeleteObject(ctx, deleteObjectInput)
 	return err
 }
 
-func (s *S3Store) readObject(path string) (secretObject, bool, error) {
+func (s *S3Store) readObject(ctx context.Context, path string) (secretObject, bool, error) {
 	getObjectInput := &s3.GetObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(path),
 	}
 
-	resp, err := s.svc.GetObject(context.TODO(), getObjectInput)
+	resp, err := s.svc.GetObject(ctx, getObjectInput)
 	if err != nil {
 		// handle specific AWS errors
 		var nsb *types.NoSuchBucket
@@ -331,12 +331,12 @@ func (s *S3Store) readObject(path string) (secretObject, bool, error) {
 
 }
 
-func (s *S3Store) readObjectById(id SecretId) (secretObject, bool, error) {
+func (s *S3Store) readObjectById(ctx context.Context, id SecretId) (secretObject, bool, error) {
 	path := getObjectPath(id)
-	return s.readObject(path)
+	return s.readObject(ctx, path)
 }
 
-func (s *S3Store) puts3raw(path string, contents []byte) error {
+func (s *S3Store) puts3raw(ctx context.Context, path string, contents []byte) error {
 	putObjectInput := &s3.PutObjectInput{
 		Bucket:               aws.String(s.bucket),
 		ServerSideEncryption: types.ServerSideEncryptionAes256,
@@ -344,11 +344,11 @@ func (s *S3Store) puts3raw(path string, contents []byte) error {
 		Body:                 bytes.NewReader(contents),
 	}
 
-	_, err := s.svc.PutObject(context.TODO(), putObjectInput)
+	_, err := s.svc.PutObject(ctx, putObjectInput)
 	return err
 }
 
-func (s *S3Store) readLatest(service string) (latest, error) {
+func (s *S3Store) readLatest(ctx context.Context, service string) (latest, error) {
 	path := fmt.Sprintf("%s/%s", service, latestObjectName)
 
 	getObjectInput := &s3.GetObjectInput{
@@ -356,7 +356,7 @@ func (s *S3Store) readLatest(service string) (latest, error) {
 		Key:    aws.String(path),
 	}
 
-	resp, err := s.svc.GetObject(context.TODO(), getObjectInput)
+	resp, err := s.svc.GetObject(ctx, getObjectInput)
 	if err != nil {
 		var nsk *types.NoSuchKey
 		if errors.As(err, &nsk) {
@@ -379,7 +379,7 @@ func (s *S3Store) readLatest(service string) (latest, error) {
 	return index, nil
 }
 
-func (s *S3Store) writeLatest(service string, index latest) error {
+func (s *S3Store) writeLatest(ctx context.Context, service string, index latest) error {
 	path := fmt.Sprintf("%s/%s", service, latestObjectName)
 
 	raw, err := json.Marshal(index)
@@ -387,7 +387,7 @@ func (s *S3Store) writeLatest(service string, index latest) error {
 		return err
 	}
 
-	return s.puts3raw(path, raw)
+	return s.puts3raw(ctx, path, raw)
 }
 
 func stringInSlice(val string, sl []string) bool {

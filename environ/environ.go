@@ -1,6 +1,7 @@
 package environ
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -83,8 +84,8 @@ func normalizeEnvVarName(k string) string {
 
 // load loads environment variables into e from s given a service
 // collisions will be populated with any keys that get overwritten
-func (e *Environ) load(s store.Store, service string, collisions *[]string) error {
-	rawSecrets, err := s.ListRaw(utils.NormalizeService(service))
+func (e *Environ) load(ctx context.Context, s store.Store, service string, collisions *[]string) error {
+	rawSecrets, err := s.ListRaw(ctx, utils.NormalizeService(service))
 	if err != nil {
 		return err
 	}
@@ -104,20 +105,20 @@ func (e *Environ) load(s store.Store, service string, collisions *[]string) erro
 
 // Load loads environment variables into e from s given a service
 // collisions will be populated with any keys that get overwritten
-func (e *Environ) Load(s store.Store, service string, collisions *[]string) error {
-	return e.load(s, service, collisions)
+func (e *Environ) Load(ctx context.Context, s store.Store, service string, collisions *[]string) error {
+	return e.load(ctx, s, service, collisions)
 }
 
 // LoadStrict loads all services from s in strict mode: env vars in e with value equal to valueExpected
 // are the only ones substituted. If there are any env vars in s that are also in e, but don't have their value
 // set to valueExpected, this is an error.
-func (e *Environ) LoadStrict(s store.Store, valueExpected string, pristine bool, services ...string) error {
-	return e.loadStrict(s, valueExpected, pristine, services...)
+func (e *Environ) LoadStrict(ctx context.Context, s store.Store, valueExpected string, pristine bool, services ...string) error {
+	return e.loadStrict(ctx, s, valueExpected, pristine, services...)
 }
 
-func (e *Environ) loadStrict(s store.Store, valueExpected string, pristine bool, services ...string) error {
+func (e *Environ) loadStrict(ctx context.Context, s store.Store, valueExpected string, pristine bool, services ...string) error {
 	for _, service := range services {
-		rawSecrets, err := s.ListRaw(utils.NormalizeService(service))
+		rawSecrets, err := s.ListRaw(ctx, utils.NormalizeService(service))
 		if err != nil {
 			return err
 		}

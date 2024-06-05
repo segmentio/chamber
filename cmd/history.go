@@ -47,7 +47,7 @@ func history(cmd *cobra.Command, args []string) error {
 		})
 	}
 
-	secretStore, err := getSecretStore()
+	secretStore, err := getSecretStore(cmd.Context())
 	if err != nil {
 		return fmt.Errorf("Failed to get secret store: %w", err)
 	}
@@ -56,7 +56,7 @@ func history(cmd *cobra.Command, args []string) error {
 		Key:     key,
 	}
 
-	events, err := secretStore.History(secretId)
+	events, err := secretStore.History(cmd.Context(), secretId)
 	if err != nil {
 		return fmt.Errorf("Failed to get history: %w", err)
 	}

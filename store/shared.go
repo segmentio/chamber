@@ -14,7 +14,7 @@ const (
 	CustomSSMEndpointEnvVar = "CHAMBER_AWS_SSM_ENDPOINT"
 )
 
-func getConfig(numRetries int, retryMode aws.RetryMode) (aws.Config, string, error) {
+func getConfig(ctx context.Context, numRetries int, retryMode aws.RetryMode) (aws.Config, string, error) {
 	endpointResolver := func(service, region string, options ...interface{}) (aws.Endpoint, error) {
 		customSsmEndpoint, ok := os.LookupEnv(CustomSSMEndpointEnvVar)
 		if ok {
@@ -32,7 +32,7 @@ func getConfig(numRetries int, retryMode aws.RetryMode) (aws.Config, string, err
 		region = regionOverride
 	}
 
-	cfg, err := config.LoadDefaultConfig(context.TODO(),
+	cfg, err := config.LoadDefaultConfig(ctx,
 		config.WithRegion(region),
 		config.WithRetryMaxAttempts(numRetries),
 		config.WithRetryMode(retryMode),
@@ -44,10 +44,10 @@ func getConfig(numRetries int, retryMode aws.RetryMode) (aws.Config, string, err
 
 	// If region is still not set, attempt to determine it via ec2 metadata API
 	if cfg.Region == "" {
-		imdsConfig, err := config.LoadDefaultConfig(context.TODO())
+		imdsConfig, err := config.LoadDefaultConfig(ctx)
 		if err != nil {
 			ec2metadataSvc := imds.NewFromConfig(imdsConfig)
-			if regionOverride, err := ec2metadataSvc.GetRegion(context.TODO(), &imds.GetRegionInput{}); err == nil {
+			if regionOverride, err := ec2metadataSvc.GetRegion(ctx, &imds.GetRegionInput{}); err == nil {
 				region = regionOverride.Region
 			}
 		}

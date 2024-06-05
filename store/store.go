@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"errors"
 	"time"
 )
@@ -59,11 +60,11 @@ type ChangeEvent struct {
 }
 
 type Store interface {
-	Write(id SecretId, value string) error
-	Read(id SecretId, version int) (Secret, error)
-	List(service string, includeValues bool) ([]Secret, error)
-	ListRaw(service string) ([]RawSecret, error)
-	ListServices(service string, includeSecretName bool) ([]string, error)
-	History(id SecretId) ([]ChangeEvent, error)
-	Delete(id SecretId) error
+	Write(ctx context.Context, id SecretId, value string) error
+	Read(ctx context.Context, id SecretId, version int) (Secret, error)
+	List(ctx context.Context, service string, includeValues bool) ([]Secret, error)
+	ListRaw(ctx context.Context, service string) ([]RawSecret, error)
+	ListServices(ctx context.Context, service string, includeSecretName bool) ([]string, error)
+	History(ctx context.Context, id SecretId) ([]ChangeEvent, error)
+	Delete(ctx context.Context, id SecretId) error
 }

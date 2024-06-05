@@ -89,11 +89,8 @@ func (e *Environ) load(ctx context.Context, s store.Store, service string, colli
 	if err != nil {
 		return err
 	}
-	envVarKeys := make([]string, 0)
 	for _, rawSecret := range rawSecrets {
 		envVarKey := secretKeyToEnvVarName(rawSecret.Key)
-
-		envVarKeys = append(envVarKeys, envVarKey)
 
 		if e.IsSet(envVarKey) {
 			*collisions = append(*collisions, envVarKey)

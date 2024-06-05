@@ -136,9 +136,7 @@ func (s *SecretsManagerStore) Write(ctx context.Context, id SecretId, value stri
 		if err != nil {
 			return err
 		}
-		if _, ok := metadata[id.Key]; ok {
-			delete(metadata, id.Key)
-		}
+		delete(metadata, id.Key)
 
 		rawMetadata, err := dehydrateMetadata(&metadata)
 		if err != nil {

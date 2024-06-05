@@ -43,7 +43,7 @@ func list(cmd *cobra.Command, args []string) error {
 	}
 
 	if analyticsEnabled && analyticsClient != nil {
-		analyticsClient.Enqueue(analytics.Track{
+		_ = analyticsClient.Enqueue(analytics.Track{
 			UserId: username,
 			Event:  "Ran Command",
 			Properties: analytics.NewProperties().

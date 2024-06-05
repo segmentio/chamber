@@ -75,7 +75,7 @@ func execRun(cmd *cobra.Command, args []string) error {
 	services, command, commandArgs := args[:dashIx], args[dashIx], args[dashIx+1:]
 
 	if analyticsEnabled && analyticsClient != nil {
-		analyticsClient.Enqueue(analytics.Track{
+		_ = analyticsClient.Enqueue(analytics.Track{
 			UserId: username,
 			Event:  "Ran Command",
 			Properties: analytics.NewProperties().
@@ -118,9 +118,8 @@ func execRun(cmd *cobra.Command, args []string) error {
 		}
 		for _, service := range services {
 			collisions := make([]string, 0)
-			var err error
 			// TODO: these interfaces should look the same as Strict*, so move pristine in there
-			err = env.Load(cmd.Context(), secretStore, service, &collisions)
+			err := env.Load(cmd.Context(), secretStore, service, &collisions)
 			if err != nil {
 				return fmt.Errorf("Failed to list store contents: %w", err)
 			}

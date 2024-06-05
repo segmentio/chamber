@@ -32,6 +32,7 @@ func TestGetConfig(t *testing.T) {
 	assert.Equal(t, "us-west-2", region)
 
 	endpoint, err := config.EndpointResolverWithOptions.ResolveEndpoint("ssm", "us-west-2")
+	assert.NoError(t, err)
 	assert.Equal(t, "https://example.com/custom-endpoint", endpoint.URL)
 	assert.Equal(t, aws.EndpointSourceCustom, endpoint.Source)
 

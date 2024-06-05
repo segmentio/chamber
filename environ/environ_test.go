@@ -99,7 +99,7 @@ func TestEnvironStrict(t *testing.T) {
 			if strictVal == "" {
 				strictVal = "chamberme"
 			}
-			err := tc.e.loadStrictOne(rawSecrets, strictVal, tc.pristine, false)
+			err := tc.e.loadStrictOne(rawSecrets, strictVal, tc.pristine)
 			if err != nil {
 				assert.EqualValues(t, tc.expectedErr, err)
 			} else {

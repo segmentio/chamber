@@ -404,6 +404,22 @@ you can use `CHAMBER_AWS_REGION` to override just for chamber.
 If you'd like to use a custom SSM endpoint for chamber, you can use `CHAMBER_AWS_SSM_ENDPOINT`
 to override AWS default URL.
 
+## AWS Secrets Manager
+Chamber supports AWS Secrets Manager as an optional backend. For example:
+
+```
+chamber -b secretsmanager write myservice foo fah
+chamber -b secretsmanager write myservice foo2 fah2
+```
+
+This will result in one secret being generated with the following JSON value:
+
+```json
+{"_chamber_metadata":"{\"foo\":{\"created\":\"2024-06-05T00:32:06.680112Z\",\"created_by\":\"arn:aws:sts::0123456789:assumed-role/yourrole\",\"version\":1},\"foo2\":{\"created\":\"2024-06-05T00:32:39.672526Z\",\"created_by\":\"arn:aws:sts::0123456789:assumed-role/yourrole\",\"version\":1}}",
+"foo":"fah",
+"foo2":"fah2"}
+```
+
 ## S3 Backend (Experimental)
 
 By default, chamber store secrets in AWS Parameter Store. We now also provide an

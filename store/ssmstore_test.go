@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type mockParameter struct {
@@ -356,7 +357,7 @@ func TestListRawWithPaths(t *testing.T) {
 		{Service: "test", Key: "c"},
 	}
 	for _, secret := range secrets {
-		store.Write(ctx, secret, "value")
+		require.NoError(t, store.Write(ctx, secret, "value"))
 	}
 
 	t.Run("ListRaw should return all keys and values for a service", func(t *testing.T) {
@@ -374,8 +375,8 @@ func TestListRawWithPaths(t *testing.T) {
 	})
 
 	t.Run("List should only return exact matches on service name", func(t *testing.T) {
-		store.Write(ctx, SecretId{Service: "match", Key: "a"}, "val")
-		store.Write(ctx, SecretId{Service: "matchlonger", Key: "a"}, "val")
+		require.NoError(t, store.Write(ctx, SecretId{Service: "match", Key: "a"}, "val"))
+		require.NoError(t, store.Write(ctx, SecretId{Service: "matchlonger", Key: "a"}, "val"))
 
 		s, err := store.ListRaw(ctx, "match")
 		assert.Nil(t, err)
@@ -418,9 +419,9 @@ func TestReadPaths(t *testing.T) {
 	parameters := map[string]mockParameter{}
 	store := NewTestSSMStore(parameters)
 	secretId := SecretId{Service: "test", Key: "key"}
-	store.Write(ctx, secretId, "value")
-	store.Write(ctx, secretId, "second value")
-	store.Write(ctx, secretId, "third value")
+	require.NoError(t, store.Write(ctx, secretId, "value"))
+	require.NoError(t, store.Write(ctx, secretId, "second value"))
+	require.NoError(t, store.Write(ctx, secretId, "third value"))
 
 	t.Run("Reading the latest value should work", func(t *testing.T) {
 		s, err := store.Read(ctx, secretId, -1)
@@ -464,7 +465,7 @@ func TestListPaths(t *testing.T) {
 		{Service: "test", Key: "c"},
 	}
 	for _, secret := range secrets {
-		store.Write(ctx, secret, "value")
+		require.NoError(t, store.Write(ctx, secret, "value"))
 	}
 
 	t.Run("List should return all keys for a service", func(t *testing.T) {
@@ -494,8 +495,8 @@ func TestListPaths(t *testing.T) {
 	})
 
 	t.Run("List should only return exact matches on service name", func(t *testing.T) {
-		store.Write(ctx, SecretId{Service: "match", Key: "a"}, "val")
-		store.Write(ctx, SecretId{Service: "matchlonger", Key: "a"}, "val")
+		require.NoError(t, store.Write(ctx, SecretId{Service: "match", Key: "a"}, "val"))
+		require.NoError(t, store.Write(ctx, SecretId{Service: "matchlonger", Key: "a"}, "val"))
 
 		s, err := store.List(ctx, "match", false)
 		assert.Nil(t, err)
@@ -517,7 +518,7 @@ func TestHistoryPaths(t *testing.T) {
 	}
 
 	for _, s := range secrets {
-		store.Write(ctx, s, "value")
+		require.NoError(t, store.Write(ctx, s, "value"))
 	}
 
 	t.Run("History for a non-existent key should return not found error", func(t *testing.T) {
@@ -548,7 +549,7 @@ func TestDeletePaths(t *testing.T) {
 	store := NewTestSSMStore(parameters)
 
 	secretId := SecretId{Service: "test", Key: "key"}
-	store.Write(ctx, secretId, "value")
+	require.NoError(t, store.Write(ctx, secretId, "value"))
 
 	t.Run("Deleting secret should work", func(t *testing.T) {
 		err := store.Delete(ctx, secretId)

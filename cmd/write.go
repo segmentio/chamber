@@ -3,7 +3,7 @@ package cmd
 import (
 	"bufio"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"strings"
 
@@ -44,7 +44,7 @@ func write(cmd *cobra.Command, args []string) error {
 	}
 
 	if analyticsEnabled && analyticsClient != nil {
-		analyticsClient.Enqueue(analytics.Track{
+		_ = analyticsClient.Enqueue(analytics.Track{
 			UserId: username,
 			Event:  "Ran Command",
 			Properties: analytics.NewProperties().
@@ -67,7 +67,7 @@ func write(cmd *cobra.Command, args []string) error {
 			}
 			value = strings.TrimSuffix(v, "\n")
 		} else {
-			v, err := ioutil.ReadAll(os.Stdin)
+			v, err := io.ReadAll(os.Stdin)
 			if err != nil {
 				return err
 			}

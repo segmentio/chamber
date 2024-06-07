@@ -26,10 +26,6 @@ const (
 // when using paths
 var validPathKeyFormat = regexp.MustCompile(`^(\/[\w\-\.]+)+$`)
 
-// validKeyFormat is the format that is expected for key names inside parameter store when
-// not using paths
-var validKeyFormat = regexp.MustCompile(`^[\w\-\.]+$`)
-
 // ensure SSMStore confirms to Store interface
 var _ Store = &SSMStore{}
 
@@ -206,14 +202,13 @@ func (s *SSMStore) readLatest(ctx context.Context, id SecretId) (Secret, error) 
 	}
 	param := resp.Parameters[0]
 	var parameter *types.ParameterMetadata
-	var describeParametersInput *ssm.DescribeParametersInput
 
 	// To get metadata, we need to use describe parameters
 
 	// There is no way to use describe parameters to get a single key
 	// if that key uses paths, so instead get all the keys for a path,
 	// then find the one you are looking for :(
-	describeParametersInput = &ssm.DescribeParametersInput{
+	describeParametersInput := &ssm.DescribeParametersInput{
 		ParameterFilters: []types.ParameterStringFilter{
 			{
 				Key:    aws.String("Path"),
@@ -250,9 +245,8 @@ func (s *SSMStore) readLatest(ctx context.Context, id SecretId) (Secret, error) 
 
 func (s *SSMStore) ListServices(ctx context.Context, service string, includeSecretName bool) ([]string, error) {
 	secrets := map[string]Secret{}
-	var describeParametersInput *ssm.DescribeParametersInput
 
-	describeParametersInput = &ssm.DescribeParametersInput{
+	describeParametersInput := &ssm.DescribeParametersInput{
 		MaxResults: aws.Int32(50),
 		ParameterFilters: []types.ParameterStringFilter{
 			{

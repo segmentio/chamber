@@ -105,7 +105,7 @@ func Execute(vers string, writeKey string) {
 
 	if cmd, err := RootCmd.ExecuteC(); err != nil {
 		if strings.Contains(err.Error(), "arg(s)") || strings.Contains(err.Error(), "usage") {
-			cmd.Usage()
+			_ = cmd.Usage()
 		}
 		os.Exit(1)
 	}
@@ -206,7 +206,8 @@ func getSecretStore(ctx context.Context) (store.Store, error) {
 			return nil, errors.New("Unable to use --kms-key-alias with this backend. Use CHAMBER_KMS_KEY_ALIAS instead.")
 		}
 
-		parsedRetryMode, err := aws.ParseRetryMode(retryMode)
+		var parsedRetryMode aws.RetryMode
+		parsedRetryMode, err = aws.ParseRetryMode(retryMode)
 		if err != nil {
 			return nil, fmt.Errorf("Invalid retry mode %s", retryMode)
 		}
@@ -225,7 +226,7 @@ func prerun(cmd *cobra.Command, args []string) {
 		})
 
 		username = os.Getenv("USER")
-		analyticsClient.Enqueue(analytics.Identify{
+		_ = analyticsClient.Enqueue(analytics.Identify{
 			UserId: username,
 			Traits: analytics.NewTraits().
 				Set("chamber-version", chamberVersion),

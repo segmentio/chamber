@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"sort"
 	"time"
 
@@ -258,9 +258,7 @@ func (s *S3Store) Delete(ctx context.Context, id SecretId) error {
 		return err
 	}
 
-	if _, ok := index.Latest[id.Key]; ok {
-		delete(index.Latest, id.Key)
-	}
+	delete(index.Latest, id.Key)
 
 	if err := s.deleteObjectById(ctx, id); err != nil {
 		return err
@@ -317,7 +315,7 @@ func (s *S3Store) readObject(ctx context.Context, path string) (secretObject, bo
 		return secretObject{}, false, err
 	}
 
-	raw, err := ioutil.ReadAll(resp.Body)
+	raw, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return secretObject{}, false, err
 	}
@@ -366,7 +364,7 @@ func (s *S3Store) readLatest(ctx context.Context, service string) (latest, error
 		return latest{}, err
 	}
 
-	raw, err := ioutil.ReadAll(resp.Body)
+	raw, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return latest{}, err
 	}
@@ -388,15 +386,6 @@ func (s *S3Store) writeLatest(ctx context.Context, service string, index latest)
 	}
 
 	return s.puts3raw(ctx, path, raw)
-}
-
-func stringInSlice(val string, sl []string) bool {
-	for _, v := range sl {
-		if v == val {
-			return true
-		}
-	}
-	return false
 }
 
 func getObjectPath(id SecretId) string {

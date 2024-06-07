@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"strings"
 	"time"
 
@@ -215,50 +215,13 @@ func (s *S3KMSStore) Delete(ctx context.Context, id SecretId) error {
 		return fmt.Errorf("Unable to overwrite secret %s using new KMS key %s; mismatch with existing key %s", id.Key, s.kmsKeyAlias, val.KMSAlias)
 	}
 
-	if _, ok := index.Latest[id.Key]; ok {
-		delete(index.Latest, id.Key)
-	}
+	delete(index.Latest, id.Key)
 
 	if err := s.deleteObjectById(ctx, id); err != nil {
 		return err
 	}
 
 	return s.writeLatest(ctx, id.Service, index)
-}
-
-func (s *S3KMSStore) readObject(ctx context.Context, path string) (secretObject, bool, error) {
-	getObjectInput := &s3.GetObjectInput{
-		Bucket: aws.String(s.bucket),
-		Key:    aws.String(path),
-	}
-
-	resp, err := s.svc.GetObject(ctx, getObjectInput)
-	if err != nil {
-		// handle specific AWS  errors
-		var nsb *types.NoSuchBucket
-		if errors.As(err, &nsb) {
-			return secretObject{}, false, err
-		}
-		var nsk *types.NoSuchKey
-		if errors.As(err, &nsk) {
-			return secretObject{}, false, nil
-		}
-		// generic errors
-		return secretObject{}, false, err
-	}
-
-	raw, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return secretObject{}, false, err
-	}
-
-	var obj secretObject
-	if err := json.Unmarshal(raw, &obj); err != nil {
-		return secretObject{}, false, err
-	}
-
-	return obj, true, nil
-
 }
 
 func (s *S3KMSStore) puts3raw(ctx context.Context, path string, contents []byte) error {
@@ -299,7 +262,7 @@ func (s *S3KMSStore) readLatestFile(ctx context.Context, path string) (LatestInd
 		return LatestIndexFile{}, err
 	}
 
-	raw, err := ioutil.ReadAll(resp.Body)
+	raw, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return LatestIndexFile{}, err
 	}
@@ -335,7 +298,7 @@ func (s *S3KMSStore) readLatest(ctx context.Context, service string) (LatestInde
 			result, err := s.readLatestFile(ctx, key_name)
 
 			if err != nil {
-				paginationError = errors.New(fmt.Sprintf("Error reading latest index for KMS Key (%s): %s", key_name, err))
+				paginationError = fmt.Errorf("Error reading latest index for KMS Key (%s): %s", key_name, err)
 				break
 			}
 

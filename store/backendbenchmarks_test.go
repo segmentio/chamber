@@ -8,6 +8,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
 // This file contains some tests which can be used to benchmark
@@ -49,11 +51,13 @@ func benchmarkStore(t *testing.T, store Store, services []string) {
 
 		for i := 0; i < concurrency; i++ {
 			wg.Add(1)
-			go emulateExec(t, ctx, &wg, store, services)
-
+			go func() {
+				// TODO: collect errors in a channel
+				_ = emulateExec(t, ctx, &wg, store, services)
+			}()
 		}
 		wg.Wait()
-		elapsed := time.Now().Sub(start)
+		elapsed := time.Since(start)
 		t.Logf("Concurrently started %d services in %s", concurrency, elapsed)
 	}
 }
@@ -106,7 +110,7 @@ func setupStore(t *testing.T, ctx context.Context, store Store, services []strin
 				Key:     key,
 			}
 
-			store.Write(ctx, id, RandStringRunes(100))
+			require.NoError(t, store.Write(ctx, id, RandStringRunes(100)))
 		}
 	}
 }
@@ -120,7 +124,7 @@ func cleanupStore(t *testing.T, ctx context.Context, store Store, services []str
 				Key:     key,
 			}
 
-			store.Delete(ctx, id)
+			require.NoError(t, store.Delete(ctx, id))
 		}
 	}
 }

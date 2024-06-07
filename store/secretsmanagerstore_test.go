@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"sort"
 	"testing"
@@ -15,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager/types"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type mockSecret struct {
@@ -271,9 +271,9 @@ func TestSecretsManagerRead(t *testing.T) {
 	outputs := make(map[string]secretsmanager.DescribeSecretOutput)
 	store := NewTestSecretsManagerStore(secrets, outputs)
 	secretId := SecretId{Service: "test", Key: "key"}
-	store.Write(ctx, secretId, "value")
-	store.Write(ctx, secretId, "second value")
-	store.Write(ctx, secretId, "third value")
+	require.NoError(t, store.Write(ctx, secretId, "value"))
+	require.NoError(t, store.Write(ctx, secretId, "second value"))
+	require.NoError(t, store.Write(ctx, secretId, "third value"))
 
 	t.Run("Reading the latest value should work", func(t *testing.T) {
 		s, err := store.Read(ctx, secretId, -1)
@@ -318,7 +318,7 @@ func TestSecretsManagerList(t *testing.T) {
 		{Service: "test", Key: "c"},
 	}
 	for _, secret := range testSecrets {
-		store.Write(ctx, secret, "value")
+		require.NoError(t, store.Write(ctx, secret, "value"))
 	}
 
 	t.Run("List should return all keys for a service", func(t *testing.T) {
@@ -348,8 +348,8 @@ func TestSecretsManagerList(t *testing.T) {
 	})
 
 	t.Run("List should only return exact matches on service name", func(t *testing.T) {
-		store.Write(ctx, SecretId{Service: "match", Key: "a"}, "val")
-		store.Write(ctx, SecretId{Service: "matchlonger", Key: "a"}, "val")
+		require.NoError(t, store.Write(ctx, SecretId{Service: "match", Key: "a"}, "val"))
+		require.NoError(t, store.Write(ctx, SecretId{Service: "matchlonger", Key: "a"}, "val"))
 
 		s, err := store.List(ctx, "match", false)
 		assert.Nil(t, err)
@@ -370,7 +370,7 @@ func TestSecretsManagerListRaw(t *testing.T) {
 		{Service: "test", Key: "c"},
 	}
 	for _, secret := range testSecrets {
-		store.Write(ctx, secret, "value")
+		require.NoError(t, store.Write(ctx, secret, "value"))
 	}
 
 	t.Run("ListRaw should return all keys and values for a service", func(t *testing.T) {
@@ -389,8 +389,8 @@ func TestSecretsManagerListRaw(t *testing.T) {
 	})
 
 	t.Run("List should only return exact matches on service name", func(t *testing.T) {
-		store.Write(ctx, SecretId{Service: "match", Key: "a"}, "val")
-		store.Write(ctx, SecretId{Service: "matchlonger", Key: "a"}, "val")
+		require.NoError(t, store.Write(ctx, SecretId{Service: "match", Key: "a"}, "val"))
+		require.NoError(t, store.Write(ctx, SecretId{Service: "matchlonger", Key: "a"}, "val"))
 
 		s, err := store.ListRaw(ctx, "match")
 		sort.Sort(ByKeyRaw(s))
@@ -415,7 +415,7 @@ func TestSecretsManagerHistory(t *testing.T) {
 	}
 
 	for _, s := range testSecrets {
-		store.Write(ctx, s, "value")
+		require.NoError(t, store.Write(ctx, s, "value"))
 	}
 
 	t.Run("History for a non-existent key should return not found error", func(t *testing.T) {
@@ -447,7 +447,7 @@ func TestSecretsManagerDelete(t *testing.T) {
 	store := NewTestSecretsManagerStore(secrets, outputs)
 
 	secretId := SecretId{Service: "test", Key: "key"}
-	store.Write(ctx, secretId, "value")
+	require.NoError(t, store.Write(ctx, secretId, "value"))
 
 	t.Run("Deleting secret should work", func(t *testing.T) {
 		err := store.Delete(ctx, secretId)
@@ -464,6 +464,6 @@ func TestSecretsManagerDelete(t *testing.T) {
 
 func uniqueID() string {
 	uuid := make([]byte, 16)
-	io.ReadFull(rand.Reader, uuid)
+	_, _ = rand.Read(uuid)
 	return fmt.Sprintf("%x", uuid)
 }

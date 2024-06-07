@@ -22,14 +22,14 @@ MOQ := $(shell command -v moq 2> /dev/null)
 SRC := $(shell find . -name '*.go')
 GOLANGCI_LINT := $(shell command -v golangci-lint 2> /dev/null)
 
-vet:
-	go vet ./...
-
 test: store/awsapi_mock.go
 	go test -v ./...
 
 coverage:
 	go test -coverpkg ./... -coverprofile coverage.out ./...
+
+vet:
+	go vet ./...
 
 lint: vet
 ifdef GOLANGCI_LINT

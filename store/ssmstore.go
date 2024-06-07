@@ -128,13 +128,13 @@ func (s *SSMStore) Read(ctx context.Context, id SecretId, version int) (Secret, 
 }
 
 func (s *SSMStore) WriteTags(ctx context.Context, id SecretId, tags map[string]string, deleteOtherTags bool) error {
-	// list the current tags
-	currentTags, err := s.ReadTags(ctx, id)
-	if err != nil {
-		return err
-	}
-
 	if deleteOtherTags {
+		// list the current tags
+		currentTags, err := s.ReadTags(ctx, id)
+		if err != nil {
+			return err
+		}
+
 		var tagKeysToRemove []string
 		for k := range currentTags {
 			if _, ok := tags[k]; !ok {
@@ -164,7 +164,7 @@ func (s *SSMStore) WriteTags(ctx context.Context, id SecretId, tags map[string]s
 		ResourceId:   aws.String(s.idToName(id)),
 		Tags:         addTags,
 	}
-	_, err = s.svc.AddTagsToResource(ctx, addTagsInput)
+	_, err := s.svc.AddTagsToResource(ctx, addTagsInput)
 	if err != nil {
 		return err
 	}

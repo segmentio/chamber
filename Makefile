@@ -22,6 +22,9 @@ MOQ := $(shell command -v moq 2> /dev/null)
 SRC := $(shell find . -name '*.go')
 GOLANGCI_LINT := $(shell command -v golangci-lint 2> /dev/null)
 
+# don't rely on target ordering to define a default make goal
+.DEFAULT_GOAL := test
+
 test: store/awsapi_mock.go
 	go test -v ./...
 

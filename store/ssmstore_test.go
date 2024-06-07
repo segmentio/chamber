@@ -20,6 +20,7 @@ type mockParameter struct {
 	currentParam *types.Parameter
 	history      []types.ParameterHistory
 	meta         *types.ParameterMetadata
+	tags         map[string]string
 }
 
 func mockPutParameter(i *ssm.PutParameterInput, parameters map[string]mockParameter) (*ssm.PutParameterOutput, error) {
@@ -179,6 +180,56 @@ func mockDeleteParameter(i *ssm.DeleteParameterInput, parameters map[string]mock
 	return &ssm.DeleteParameterOutput{}, nil
 }
 
+func mockAddTagsToResource(i *ssm.AddTagsToResourceInput, parameters map[string]mockParameter) (*ssm.AddTagsToResourceOutput, error) {
+	param, ok := parameters[*i.ResourceId]
+	if !ok {
+		return &ssm.AddTagsToResourceOutput{}, errors.New("secret not found")
+	}
+
+	if param.tags == nil {
+		param.tags = make(map[string]string)
+	}
+	for _, tag := range i.Tags {
+		param.tags[*tag.Key] = *tag.Value
+	}
+	parameters[*i.ResourceId] = param
+
+	return &ssm.AddTagsToResourceOutput{}, nil
+}
+
+func mockListTagsForResource(i *ssm.ListTagsForResourceInput, parameters map[string]mockParameter) (*ssm.ListTagsForResourceOutput, error) {
+	param, ok := parameters[*i.ResourceId]
+	if !ok {
+		return &ssm.ListTagsForResourceOutput{}, errors.New("secret not found")
+	}
+
+	tags := []types.Tag{}
+	for key, value := range param.tags {
+		tags = append(tags, types.Tag{
+			Key:   aws.String(key),
+			Value: aws.String(value),
+		})
+	}
+
+	return &ssm.ListTagsForResourceOutput{
+		TagList: tags,
+	}, nil
+}
+
+func mockRemoveTagsFromResource(i *ssm.RemoveTagsFromResourceInput, parameters map[string]mockParameter) (*ssm.RemoveTagsFromResourceOutput, error) {
+	param, ok := parameters[*i.ResourceId]
+	if !ok {
+		return &ssm.RemoveTagsFromResourceOutput{}, errors.New("secret not found")
+	}
+
+	for _, tag := range i.TagKeys {
+		delete(param.tags, tag)
+	}
+	parameters[*i.ResourceId] = param
+
+	return &ssm.RemoveTagsFromResourceOutput{}, nil
+}
+
 func paramNameInSlice(name *string, slice []string) bool {
 	for _, val := range slice {
 		if val == *name {
@@ -266,6 +317,9 @@ func matchStringFilters(filters []types.ParameterStringFilter, param mockParamet
 func NewTestSSMStore(parameters map[string]mockParameter) *SSMStore {
 	return &SSMStore{
 		svc: &apiSSMMock{
+			AddTagsToResourceFunc: func(ctx context.Context, params *ssm.AddTagsToResourceInput, optFns ...func(*ssm.Options)) (*ssm.AddTagsToResourceOutput, error) {
+				return mockAddTagsToResource(params, parameters)
+			},
 			DeleteParameterFunc: func(ctx context.Context, params *ssm.DeleteParameterInput, optFns ...func(*ssm.Options)) (*ssm.DeleteParameterOutput, error) {
 				return mockDeleteParameter(params, parameters)
 			},
@@ -281,8 +335,14 @@ func NewTestSSMStore(parameters map[string]mockParameter) *SSMStore {
 			GetParametersByPathFunc: func(ctx context.Context, params *ssm.GetParametersByPathInput, optFns ...func(*ssm.Options)) (*ssm.GetParametersByPathOutput, error) {
 				return mockGetParametersByPath(params, parameters)
 			},
+			ListTagsForResourceFunc: func(ctx context.Context, params *ssm.ListTagsForResourceInput, optFns ...func(*ssm.Options)) (*ssm.ListTagsForResourceOutput, error) {
+				return mockListTagsForResource(params, parameters)
+			},
 			PutParameterFunc: func(ctx context.Context, params *ssm.PutParameterInput, optFns ...func(*ssm.Options)) (*ssm.PutParameterOutput, error) {
 				return mockPutParameter(params, parameters)
+			},
+			RemoveTagsFromResourceFunc: func(ctx context.Context, params *ssm.RemoveTagsFromResourceInput, optFns ...func(*ssm.Options)) (*ssm.RemoveTagsFromResourceOutput, error) {
+				return mockRemoveTagsFromResource(params, parameters)
 			},
 		},
 	}
@@ -429,7 +489,7 @@ func TestReadPaths(t *testing.T) {
 		assert.Equal(t, "third value", *s.Value)
 	})
 
-	t.Run("Reading specific versiosn should work", func(t *testing.T) {
+	t.Run("Reading specific versions should work", func(t *testing.T) {
 		first, err := store.Read(ctx, secretId, 1)
 		assert.Nil(t, err)
 		assert.Equal(t, "value", *first.Value)
@@ -533,7 +593,7 @@ func TestHistoryPaths(t *testing.T) {
 		assert.Equal(t, Created, events[0].Type)
 	})
 
-	t.Run("Histor should return create followed by updates for keys that have been updated", func(t *testing.T) {
+	t.Run("History should return create followed by updates for keys that have been updated", func(t *testing.T) {
 		events, err := store.History(ctx, SecretId{Service: "test", Key: "update"})
 		assert.Nil(t, err)
 		assert.Equal(t, 3, len(events))
@@ -560,6 +620,127 @@ func TestDeletePaths(t *testing.T) {
 
 	t.Run("Deleting missing secret should fail", func(t *testing.T) {
 		err := store.Delete(ctx, SecretId{Service: "test", Key: "nonkey"})
+		assert.Equal(t, ErrSecretNotFound, err)
+	})
+}
+
+func TestWriteTags(t *testing.T) {
+	ctx := context.Background()
+	parameters := map[string]mockParameter{}
+	store := NewTestSSMStore(parameters)
+	secretId := SecretId{Service: "test", Key: "key"}
+	require.NoError(t, store.Write(ctx, secretId, "value"))
+
+	t.Run("Writing tags should work", func(t *testing.T) {
+		tags := map[string]string{
+			"tag1": "value1",
+			"tag2": "value2",
+		}
+		err := store.WriteTags(ctx, secretId, tags, false)
+
+		assert.Nil(t, err)
+		assert.Contains(t, parameters, store.idToName(secretId))
+		paramTags := parameters[store.idToName(secretId)].tags
+		assert.Equal(t, "value1", paramTags["tag1"])
+		assert.Equal(t, "value2", paramTags["tag2"])
+	})
+
+	t.Run("Writing tags should overwrite existing tags", func(t *testing.T) {
+		tags := map[string]string{
+			"tag1": "newvalue1",
+		}
+		err := store.WriteTags(ctx, secretId, tags, false)
+
+		assert.Nil(t, err)
+		assert.Contains(t, parameters, store.idToName(secretId))
+		paramTags := parameters[store.idToName(secretId)].tags
+		assert.Equal(t, "newvalue1", paramTags["tag1"])
+		assert.Equal(t, "value2", paramTags["tag2"])
+	})
+
+	t.Run("Writing tags should delete other tags when desired", func(t *testing.T) {
+		tags := map[string]string{
+			"tag1": "newervalue1",
+		}
+		err := store.WriteTags(ctx, secretId, tags, true)
+
+		assert.Nil(t, err)
+		assert.Contains(t, parameters, store.idToName(secretId))
+		paramTags := parameters[store.idToName(secretId)].tags
+		assert.Equal(t, "newervalue1", paramTags["tag1"])
+		_, ok := paramTags["tag2"]
+		assert.False(t, ok)
+	})
+
+	t.Run("Writing tags to a non-existent key should give not found err", func(t *testing.T) {
+		tags := map[string]string{
+			"tag3": "value3",
+		}
+		err := store.WriteTags(ctx, SecretId{Service: "test", Key: "nope"}, tags, false)
+		assert.Equal(t, ErrSecretNotFound, err)
+	})
+}
+
+func TestReadTags(t *testing.T) {
+	ctx := context.Background()
+	parameters := map[string]mockParameter{}
+	store := NewTestSSMStore(parameters)
+	secretId := SecretId{Service: "test", Key: "key"}
+	require.NoError(t, store.Write(ctx, secretId, "value"))
+
+	t.Run("Reading tags should work", func(t *testing.T) {
+		tags := map[string]string{
+			"tag1": "value1",
+			"tag2": "value2",
+		}
+		require.NoError(t, store.WriteTags(ctx, secretId, tags, false))
+
+		readTags, err := store.ReadTags(ctx, secretId)
+		assert.Nil(t, err)
+		assert.Equal(t, tags, readTags)
+	})
+
+	t.Run("Reading tags for a non-existent key should give not found err", func(t *testing.T) {
+		_, err := store.ReadTags(ctx, SecretId{Service: "test", Key: "nope"})
+		assert.Equal(t, ErrSecretNotFound, err)
+	})
+}
+
+func TestDeleteTags(t *testing.T) {
+	ctx := context.Background()
+	parameters := map[string]mockParameter{}
+	store := NewTestSSMStore(parameters)
+	secretId := SecretId{Service: "test", Key: "key"}
+	require.NoError(t, store.Write(ctx, secretId, "value"))
+
+	t.Run("Deleting tags should work", func(t *testing.T) {
+		tags := map[string]string{
+			"tag1": "value1",
+			"tag2": "value2",
+		}
+		require.NoError(t, store.WriteTags(ctx, secretId, tags, false))
+
+		err := store.DeleteTags(ctx, secretId, []string{"tag1"})
+		assert.Nil(t, err)
+		readTags, err := store.ReadTags(ctx, secretId)
+		assert.Nil(t, err)
+		assert.Equal(t, map[string]string{"tag2": "value2"}, readTags)
+	})
+
+	t.Run("Deleting tags should work for non-existent tags", func(t *testing.T) {
+		tags := map[string]string{
+			"tag2": "value2",
+		} // state from previous test
+
+		err := store.DeleteTags(ctx, secretId, []string{"tag3"})
+		assert.Nil(t, err)
+		readTags, err := store.ReadTags(ctx, secretId)
+		assert.Nil(t, err)
+		assert.Equal(t, tags, readTags)
+	})
+
+	t.Run("Deleting tags for a non-existent key should give not found err", func(t *testing.T) {
+		err := store.DeleteTags(ctx, SecretId{Service: "test", Key: "nope"}, []string{"tag1"})
 		assert.Equal(t, ErrSecretNotFound, err)
 	})
 }

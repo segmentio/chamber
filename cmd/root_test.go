@@ -6,9 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestValidations(t *testing.T) {
-
-	// Test Key formats
+func TestValidateKey(t *testing.T) {
 	validKeyFormat := []string{
 		"foo",
 		"foo.bar",
@@ -23,7 +21,9 @@ func TestValidations(t *testing.T) {
 			assert.Nil(t, result)
 		})
 	}
+}
 
+func TestValidateKey_Invalid(t *testing.T) {
 	invalidKeyFormat := []string{
 		"/foo",
 		"foo//bar",
@@ -36,8 +36,9 @@ func TestValidations(t *testing.T) {
 			assert.Error(t, result)
 		})
 	}
+}
 
-	// Test Service format with PATH
+func TestValidateService_Path(t *testing.T) {
 	validServicePathFormat := []string{
 		"foo",
 		"foo.",
@@ -58,7 +59,9 @@ func TestValidations(t *testing.T) {
 			assert.Nil(t, result)
 		})
 	}
+}
 
+func TestValidateService_Path_Invalid(t *testing.T) {
 	invalidServicePathFormat := []string{
 		"foo/",
 		"/foo",
@@ -71,8 +74,9 @@ func TestValidations(t *testing.T) {
 			assert.Error(t, result)
 		})
 	}
+}
 
-	// Test Service format with PATH and Label
+func TestValidateService_PathLabel(t *testing.T) {
 	validServicePathFormatWithLabel := []string{
 		"foo",
 		"foo/bar:-current-",
@@ -90,7 +94,9 @@ func TestValidations(t *testing.T) {
 			assert.Nil(t, result)
 		})
 	}
+}
 
+func TestValidateService_PathLabel_Invalid(t *testing.T) {
 	invalidServicePathFormatWithLabel := []string{
 		"foo:current$",
 		"foo.:",

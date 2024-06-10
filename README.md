@@ -143,6 +143,42 @@ Secret keys are normalized automatically. The `-` will be `_` and the letters wi
 be converted to upper case (for example a secret with key `secret_key` and
 `secret-key` will become `SECRET_KEY`).
 
+#### Tagging on Write
+
+```bash
+$ chamber write <service> <key> <value> --tags key1=value1,key2=value2
+```
+
+This operation will write a secret into the secret store with the specified tags.
+Tagging on write is only available for new secrets.
+
+### Tagging Secrets
+
+```bash
+$ chamber tag write <service> <key> tag1=value1 tag2=value2
+Key Value
+tag1  value1
+tag2  value2
+$ chamber tag read <service> <key>
+Key Value
+tag1  value1
+tag2  value2
+$ chamber tag delete <service> <key> tag1
+$ chamber tag read <service> <key>
+Key Value
+tag2  value2
+```
+
+Writing tags normally leaves other tags intact. If you want to replace all tags
+with the new ones, use `--delete-other-tags` flag. _Note: The option may change
+before the next major release._
+
+```bash
+$ chamber tag write --delete-other-tags <service> <key> tag1=value1
+Key Value
+tag1  value1
+```
+
 ### Listing Secrets
 
 ```bash

@@ -16,6 +16,7 @@ import (
 var (
 	singleline    bool
 	skipUnchanged bool
+	tags          map[string]string
 
 	// writeCmd represents the write command
 	writeCmd = &cobra.Command{
@@ -29,6 +30,7 @@ var (
 func init() {
 	writeCmd.Flags().BoolVarP(&singleline, "singleline", "s", false, "Insert single line parameter (end with \\n)")
 	writeCmd.Flags().BoolVarP(&skipUnchanged, "skip-unchanged", "", false, "Skip writing secret if value is unchanged")
+	writeCmd.Flags().StringToStringVarP(&tags, "tags", "t", map[string]string{}, "Add tags to the secret; new secrets only")
 	RootCmd.AddCommand(writeCmd)
 }
 
@@ -92,5 +94,9 @@ func write(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	return secretStore.Write(cmd.Context(), secretId, value)
+	if len(tags) > 0 {
+		return secretStore.WriteWithTags(cmd.Context(), secretId, value, tags)
+	} else {
+		return secretStore.Write(cmd.Context(), secretId, value)
+	}
 }

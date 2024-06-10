@@ -138,6 +138,10 @@ func (s *S3KMSStore) Write(ctx context.Context, id SecretId, value string) error
 	return s.writeLatest(ctx, id.Service, index)
 }
 
+func (s *S3KMSStore) WriteWithTags(ctx context.Context, id SecretId, value string, tags map[string]string) error {
+	return errors.New("Not implemented for S3 KMS Store")
+}
+
 func (s *S3KMSStore) ListServices(ctx context.Context, service string, includeSecretName bool) ([]string, error) {
 	return nil, fmt.Errorf("S3KMS Backend is experimental and does not implement this command")
 }

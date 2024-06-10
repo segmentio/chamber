@@ -215,6 +215,10 @@ func (s *SecretsManagerStore) Write(ctx context.Context, id SecretId, value stri
 	return nil
 }
 
+func (s *SecretsManagerStore) WriteWithTags(ctx context.Context, id SecretId, value string, tags map[string]string) error {
+	return errors.New("tags on write not implemented for Secrets Manager Store")
+}
+
 // Read reads a secret at a specific version.
 // To grab the latest version, use -1 as the version number.
 func (s *SecretsManagerStore) Read(ctx context.Context, id SecretId, version int) (Secret, error) {

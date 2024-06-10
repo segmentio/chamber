@@ -16,6 +16,10 @@ import (
 )
 
 const (
+	// CustomSSMEndpointEnvVar is the name of the environment variable specifying a custom base SSM
+	// endpoint.
+	CustomSSMEndpointEnvVar = "CHAMBER_AWS_SSM_ENDPOINT"
+
 	// DefaultKeyID is the default alias for the KMS key used to encrypt/decrypt secrets
 	DefaultKeyID = "alias/parameter_store_key"
 
@@ -61,9 +65,12 @@ func NewSSMStoreWithRetryMode(ctx context.Context, numRetries int, retryMode aws
 
 func ssmStoreUsingRetryer(ctx context.Context, numRetries int, retryMode aws.RetryMode) (*SSMStore, error) {
 	cfg, _, err := getConfig(ctx, numRetries, retryMode)
-
 	if err != nil {
 		return nil, err
+	}
+	customSsmEndpoint, ok := os.LookupEnv(CustomSSMEndpointEnvVar)
+	if ok {
+		cfg.BaseEndpoint = aws.String(customSsmEndpoint)
 	}
 
 	svc := ssm.NewFromConfig(cfg)

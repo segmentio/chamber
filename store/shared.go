@@ -10,8 +10,7 @@ import (
 )
 
 const (
-	RegionEnvVar            = "CHAMBER_AWS_REGION"
-	CustomSSMEndpointEnvVar = "CHAMBER_AWS_SSM_ENDPOINT"
+	RegionEnvVar = "CHAMBER_AWS_REGION"
 )
 
 func getConfig(ctx context.Context, numRetries int, retryMode aws.RetryMode) (aws.Config, string, error) {

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"reflect"
 	"sort"
 	"strconv"
@@ -15,6 +16,12 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager/types"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
+)
+
+const (
+	// CustomSecretsManagerEndpointEnvVar is the name of the environment variable specifying a custom
+	// base Secrets Manager endpoint.
+	CustomSecretsManagerEndpointEnvVar = "CHAMBER_AWS_SECRETS_MANAGER_ENDPOINT"
 )
 
 // We store all Chamber metadata in a stringified JSON format,
@@ -84,6 +91,16 @@ func NewSecretsManagerStore(ctx context.Context, numRetries int) (*SecretsManage
 	cfg, _, err := getConfig(ctx, numRetries, aws.RetryModeStandard)
 	if err != nil {
 		return nil, err
+	}
+	customSecretsManagerEndpoint, ok := os.LookupEnv(CustomSecretsManagerEndpointEnvVar)
+	if ok {
+		cfg.BaseEndpoint = aws.String(customSecretsManagerEndpoint)
+	} else {
+		// Preserving incorrect and deprecated use of the SSM environment variable from v2
+		customSecretsManagerEndpoint, ok = os.LookupEnv(CustomSSMEndpointEnvVar)
+		if ok {
+			cfg.BaseEndpoint = aws.String(customSecretsManagerEndpoint)
+		}
 	}
 
 	svc := secretsmanager.NewFromConfig(cfg)

@@ -10,23 +10,10 @@ import (
 )
 
 const (
-	RegionEnvVar            = "CHAMBER_AWS_REGION"
-	CustomSSMEndpointEnvVar = "CHAMBER_AWS_SSM_ENDPOINT"
+	RegionEnvVar = "CHAMBER_AWS_REGION"
 )
 
 func getConfig(ctx context.Context, numRetries int, retryMode aws.RetryMode) (aws.Config, string, error) {
-	endpointResolver := func(service, region string, options ...interface{}) (aws.Endpoint, error) {
-		customSsmEndpoint, ok := os.LookupEnv(CustomSSMEndpointEnvVar)
-		if ok {
-			return aws.Endpoint{
-				URL:    customSsmEndpoint,
-				Source: aws.EndpointSourceCustom,
-			}, nil
-		}
-
-		return aws.Endpoint{}, &aws.EndpointNotFoundError{}
-	}
-
 	var region string
 	if regionOverride, ok := os.LookupEnv(RegionEnvVar); ok {
 		region = regionOverride
@@ -36,7 +23,6 @@ func getConfig(ctx context.Context, numRetries int, retryMode aws.RetryMode) (aw
 		config.WithRegion(region),
 		config.WithRetryMaxAttempts(numRetries),
 		config.WithRetryMode(retryMode),
-		config.WithEndpointResolverWithOptions(aws.EndpointResolverWithOptionsFunc(endpointResolver)),
 	)
 	if err != nil {
 		return aws.Config{}, "", err

@@ -194,23 +194,33 @@ func TestNewSecretsManagerStore(t *testing.T) {
 		assert.Equal(t, "us-west-1", s.config.Region)
 	})
 
-	t.Run("Should use CHAMBER_AWS_SSM_ENDPOINT if set", func(t *testing.T) {
+	t.Run("Should use CHAMBER_AWS_SECRETS_MANAGER_ENDPOINT if set", func(t *testing.T) {
+		os.Setenv("CHAMBER_AWS_SECRETS_MANAGER_ENDPOINT", "mycustomendpoint")
+		defer os.Unsetenv("CHAMBER_AWS_SECRETS_MANAGER_ENDPOINT")
+
+		s, err := NewSecretsManagerStore(context.Background(), 1)
+		assert.Nil(t, err)
+		secretsmanagerClient := s.svc.(*secretsmanager.Client)
+		assert.Equal(t, "mycustomendpoint", *secretsmanagerClient.Options().BaseEndpoint)
+		// default endpoint resolution (v2) uses the client's BaseEndpoint
+	})
+
+	t.Run("Should use CHAMBER_AWS_SSM_ENDPOINT if set (deprecated)", func(t *testing.T) {
 		os.Setenv("CHAMBER_AWS_SSM_ENDPOINT", "mycustomendpoint")
 		defer os.Unsetenv("CHAMBER_AWS_SSM_ENDPOINT")
 
 		s, err := NewSecretsManagerStore(context.Background(), 1)
 		assert.Nil(t, err)
-		endpoint, err := s.config.EndpointResolverWithOptions.ResolveEndpoint(secretsmanager.ServiceID, "us-west-2")
-		assert.Nil(t, err)
-		assert.Equal(t, "mycustomendpoint", endpoint.URL)
+		secretsmanagerClient := s.svc.(*secretsmanager.Client)
+		assert.Equal(t, "mycustomendpoint", *secretsmanagerClient.Options().BaseEndpoint)
+		// default endpoint resolution (v2) uses the client's BaseEndpoint
 	})
 
-	t.Run("Should use default AWS SSM endpoint if CHAMBER_AWS_SSM_ENDPOINT not set", func(t *testing.T) {
+	t.Run("Should use default AWS secrets manager endpoint if CHAMBER_AWS_SECRETS_MANAGER_ENDPOINT not set", func(t *testing.T) {
 		s, err := NewSecretsManagerStore(context.Background(), 1)
 		assert.Nil(t, err)
-		_, err = s.config.EndpointResolverWithOptions.ResolveEndpoint(secretsmanager.ServiceID, "us-west-2")
-		var notFoundError *aws.EndpointNotFoundError
-		assert.ErrorAs(t, err, &notFoundError)
+		secretsmanagerClient := s.svc.(*secretsmanager.Client)
+		assert.Nil(t, secretsmanagerClient.Options().BaseEndpoint)
 	})
 }
 

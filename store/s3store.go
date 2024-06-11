@@ -131,6 +131,10 @@ func (s *S3Store) Write(ctx context.Context, id SecretId, value string) error {
 	return s.writeLatest(ctx, id.Service, index)
 }
 
+func (s *S3Store) WriteWithTags(ctx context.Context, id SecretId, value string, tags map[string]string) error {
+	return errors.New("Not implemented for S3 Store")
+}
+
 func (s *S3Store) Read(ctx context.Context, id SecretId, version int) (Secret, error) {
 	obj, ok, err := s.readObjectById(ctx, id)
 	if err != nil {

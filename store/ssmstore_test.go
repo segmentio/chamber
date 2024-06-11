@@ -473,6 +473,39 @@ func TestWritePaths(t *testing.T) {
 	})
 }
 
+func TestWriteWithTags(t *testing.T) {
+	ctx := context.Background()
+	parameters := map[string]mockParameter{}
+	store := NewTestSSMStore(parameters)
+
+	t.Run("Setting a new key with tags should work", func(t *testing.T) {
+		secretId := SecretId{Service: "test", Key: "mykey"}
+		tags := map[string]string{
+			"tag1": "value1",
+			"tag2": "value2",
+		}
+		err := store.WriteWithTags(ctx, secretId, "value", tags)
+		assert.Nil(t, err)
+		assert.Contains(t, parameters, store.idToName(secretId))
+
+		paramTags := parameters[store.idToName(secretId)].tags
+		assert.Equal(t, "value1", paramTags["tag1"])
+		assert.Equal(t, "value2", paramTags["tag2"])
+	})
+
+	t.Run("Setting a existing key with tags should fail", func(t *testing.T) {
+		secretId := SecretId{Service: "test", Key: "mykey"}
+		tags := map[string]string{
+			"tag3": "value3",
+		}
+		err := store.WriteWithTags(ctx, secretId, "newvalue", tags)
+		assert.Error(t, err)
+
+		assert.Contains(t, parameters, store.idToName(secretId))
+		assert.Equal(t, "value", *parameters[store.idToName(secretId)].currentParam.Value) // unchanged
+	})
+}
+
 func TestReadPaths(t *testing.T) {
 	ctx := context.Background()
 	parameters := map[string]mockParameter{}

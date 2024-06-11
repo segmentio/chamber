@@ -61,6 +61,7 @@ type ChangeEvent struct {
 
 type Store interface {
 	Write(ctx context.Context, id SecretId, value string) error
+	WriteWithTags(ctx context.Context, id SecretId, value string, tags map[string]string) error
 	Read(ctx context.Context, id SecretId, version int) (Secret, error)
 	WriteTags(ctx context.Context, id SecretId, tags map[string]string, deleteOtherTags bool) error
 	ReadTags(ctx context.Context, id SecretId) (map[string]string, error)

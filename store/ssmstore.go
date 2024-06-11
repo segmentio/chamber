@@ -96,6 +96,14 @@ func (s *SSMStore) KMSKey() string {
 // Write writes a given value to a secret identified by id.  If the secret
 // already exists, then write a new version.
 func (s *SSMStore) Write(ctx context.Context, id SecretId, value string) error {
+	return s.write(ctx, id, value, nil)
+}
+
+func (s *SSMStore) WriteWithTags(ctx context.Context, id SecretId, value string, tags map[string]string) error {
+	return s.write(ctx, id, value, tags)
+}
+
+func (s *SSMStore) write(ctx context.Context, id SecretId, value string, tags map[string]string) error {
 	version := 1
 	// first read to get the current version
 	current, err := s.Read(ctx, id, -1)
@@ -104,6 +112,10 @@ func (s *SSMStore) Write(ctx context.Context, id SecretId, value string) error {
 	}
 	if err == nil {
 		version = current.Meta.Version + 1
+	}
+
+	if len(tags) > 0 && version != 1 {
+		return errors.New("tags on write only supported for new secrets")
 	}
 
 	putParameterInput := &ssm.PutParameterInput{
@@ -119,6 +131,12 @@ func (s *SSMStore) Write(ctx context.Context, id SecretId, value string) error {
 	_, err = s.svc.PutParameter(ctx, putParameterInput)
 	if err != nil {
 		return err
+	}
+
+	if len(tags) > 0 {
+		if err := s.WriteTags(ctx, id, tags, false); err != nil {
+			return fmt.Errorf("failed to write tags on successfully created secret: %w", err)
+		}
 	}
 
 	return nil

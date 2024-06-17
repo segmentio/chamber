@@ -14,7 +14,8 @@ import (
 )
 
 // originally ported from github.com/joho/godotenv
-const doubleQuoteSpecialChars = "\\\n\r\"!$`"
+// exclamation point removed; ruby and node dotenv libraries do not escape it
+const doubleQuoteSpecialChars = "\\\n\r\"$`"
 
 var (
 	// envCmd represents the env command

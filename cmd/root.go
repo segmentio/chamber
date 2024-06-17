@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -18,10 +19,10 @@ import (
 // Regex's used to validate service and key names
 var (
 	validKeyFormat                  = regexp.MustCompile(`^[\w\-\.]+$`)
-	validServiceFormat              = regexp.MustCompile(`^[\w\-\.]+$`)
 	validServicePathFormat          = regexp.MustCompile(`^[\w\-\.]+(\/[\w\-\.]+)*$`)
-	validServiceFormatWithLabel     = regexp.MustCompile(`^[\w\-\.\:]+$`)
 	validServicePathFormatWithLabel = regexp.MustCompile(`^[\w\-\.]+((\/[\w\-\.]+)+(\:[\w\-\.]+)*)?$`)
+	validTagKeyFormat               = regexp.MustCompile(`^[A-Za-z0-9 +\-=\._:/@]{1,128}$`)
+	validTagValueFormat             = regexp.MustCompile(`^[A-Za-z0-9 +\-=\._:/@]{1,256}$`)
 
 	verbose    bool
 	numRetries int
@@ -106,37 +107,23 @@ func Execute(vers string, writeKey string) {
 
 	if cmd, err := RootCmd.ExecuteC(); err != nil {
 		if strings.Contains(err.Error(), "arg(s)") || strings.Contains(err.Error(), "usage") {
-			cmd.Usage()
+			_ = cmd.Usage()
 		}
 		os.Exit(1)
 	}
 }
 
 func validateService(service string) error {
-	_, noPaths := os.LookupEnv("CHAMBER_NO_PATHS")
-	if noPaths {
-		if !validServiceFormat.MatchString(service) {
-			return fmt.Errorf("Failed to validate service name '%s'. Only alphanumeric, dashes, full stops and underscores are allowed for service names", service)
-		}
-	} else {
-		if !validServicePathFormat.MatchString(service) {
-			return fmt.Errorf("Failed to validate service name '%s'. Only alphanumeric, dashes, forward slashes, full stops and underscores are allowed for service names. Service names must not start or end with a forward slash", service)
-		}
+	if !validServicePathFormat.MatchString(service) {
+		return fmt.Errorf("Failed to validate service name '%s'. Only alphanumeric, dashes, forward slashes, full stops and underscores are allowed for service names. Service names must not start or end with a forward slash", service)
 	}
 
 	return nil
 }
 
 func validateServiceWithLabel(service string) error {
-	_, noPaths := os.LookupEnv("CHAMBER_NO_PATHS")
-	if noPaths {
-		if !validServiceFormatWithLabel.MatchString(service) {
-			return fmt.Errorf("Failed to validate service name '%s'. Only alphanumeric, dashes, full stops and underscores are allowed for service names, and colon followed by a label name", service)
-		}
-	} else {
-		if !validServicePathFormatWithLabel.MatchString(service) {
-			return fmt.Errorf("Failed to validate service name '%s'. Only alphanumeric, dashes, forward slashes, full stops and underscores are allowed for service names, and colon followed by a label name. Service names must not start or end with a forward slash or colon", service)
-		}
+	if !validServicePathFormatWithLabel.MatchString(service) {
+		return fmt.Errorf("Failed to validate service name '%s'. Only alphanumeric, dashes, forward slashes, full stops and underscores are allowed for service names, and colon followed by a label name. Service names must not start or end with a forward slash or colon", service)
 	}
 
 	return nil
@@ -149,7 +136,17 @@ func validateKey(key string) error {
 	return nil
 }
 
-func getSecretStore() (store.Store, error) {
+func validateTag(key string, value string) error {
+	if !validTagKeyFormat.MatchString(key) {
+		return fmt.Errorf("Failed to validate tag key '%s'. Only 128 alphanumeric, space, and characters +-=._:/@ are allowed for tag keys", key)
+	}
+	if !validTagValueFormat.MatchString(value) {
+		return fmt.Errorf("Failed to validate tag value '%s'. Only 256 alphanumeric, space, and characters +-=._:/@ are allowed for tag values", value)
+	}
+	return nil
+}
+
+func getSecretStore(ctx context.Context) (store.Store, error) {
 	rootPflags := RootCmd.PersistentFlags()
 	if backendEnvVarValue := os.Getenv(BackendEnvVar); !rootPflags.Changed("backend") && backendEnvVarValue != "" {
 		backend = backendEnvVarValue
@@ -186,7 +183,7 @@ func getSecretStore() (store.Store, error) {
 		if bucket == "" {
 			return nil, errors.New("Must set bucket for s3 backend")
 		}
-		s, err = store.NewS3StoreWithBucket(numRetries, bucket)
+		s, err = store.NewS3StoreWithBucket(ctx, numRetries, bucket)
 	case S3KMSBackend:
 		var bucket string
 		if bucketEnvVarValue := os.Getenv(BucketEnvVar); !rootPflags.Changed("backend-s3-bucket") && bucketEnvVarValue != "" {
@@ -213,19 +210,20 @@ func getSecretStore() (store.Store, error) {
 			return nil, errors.New("Must set kmsKeyAlias for S3 KMS backend")
 		}
 
-		s, err = store.NewS3KMSStore(numRetries, bucket, kmsKeyAlias)
+		s, err = store.NewS3KMSStore(ctx, numRetries, bucket, kmsKeyAlias)
 	case SecretsManagerBackend:
-		s, err = store.NewSecretsManagerStore(numRetries)
+		s, err = store.NewSecretsManagerStore(ctx, numRetries)
 	case SSMBackend:
 		if kmsKeyAliasFlag != DefaultKMSKey {
 			return nil, errors.New("Unable to use --kms-key-alias with this backend. Use CHAMBER_KMS_KEY_ALIAS instead.")
 		}
 
-		parsedRetryMode, err := aws.ParseRetryMode(retryMode)
+		var parsedRetryMode aws.RetryMode
+		parsedRetryMode, err = aws.ParseRetryMode(retryMode)
 		if err != nil {
 			return nil, fmt.Errorf("Invalid retry mode %s", retryMode)
 		}
-		s, err = store.NewSSMStoreWithRetryMode(numRetries, parsedRetryMode)
+		s, err = store.NewSSMStoreWithRetryMode(ctx, numRetries, parsedRetryMode)
 	default:
 		return nil, fmt.Errorf("invalid backend `%s`", backend)
 	}
@@ -240,7 +238,7 @@ func prerun(cmd *cobra.Command, args []string) {
 		})
 
 		username = os.Getenv("USER")
-		analyticsClient.Enqueue(analytics.Identify{
+		_ = analyticsClient.Enqueue(analytics.Identify{
 			UserId: username,
 			Traits: analytics.NewTraits().
 				Set("chamber-version", chamberVersion),

@@ -40,7 +40,7 @@ func delete(cmd *cobra.Command, args []string) error {
 	}
 
 	if analyticsEnabled && analyticsClient != nil {
-		analyticsClient.Enqueue(analytics.Track{
+		_ = analyticsClient.Enqueue(analytics.Track{
 			UserId: username,
 			Event:  "Ran Command",
 			Properties: analytics.NewProperties().
@@ -51,7 +51,7 @@ func delete(cmd *cobra.Command, args []string) error {
 				Set("backend", backend),
 		})
 	}
-	secretStore, err := getSecretStore()
+	secretStore, err := getSecretStore(cmd.Context())
 	if err != nil {
 		return fmt.Errorf("Failed to get secret store: %w", err)
 	}
@@ -60,5 +60,5 @@ func delete(cmd *cobra.Command, args []string) error {
 		Key:     key,
 	}
 
-	return secretStore.Delete(secretId)
+	return secretStore.Delete(cmd.Context(), secretId)
 }

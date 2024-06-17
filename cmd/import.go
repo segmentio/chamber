@@ -54,7 +54,7 @@ func importRun(cmd *cobra.Command, args []string) error {
 	}
 
 	if analyticsEnabled && analyticsClient != nil {
-		analyticsClient.Enqueue(analytics.Track{
+		_ = analyticsClient.Enqueue(analytics.Track{
 			UserId: username,
 			Event:  "Ran Command",
 			Properties: analytics.NewProperties().
@@ -65,7 +65,7 @@ func importRun(cmd *cobra.Command, args []string) error {
 		})
 	}
 
-	secretStore, err := getSecretStore()
+	secretStore, err := getSecretStore(cmd.Context())
 	if err != nil {
 		return fmt.Errorf("Failed to get secret store: %w", err)
 	}
@@ -78,7 +78,7 @@ func importRun(cmd *cobra.Command, args []string) error {
 			Service: service,
 			Key:     key,
 		}
-		if err := secretStore.Write(secretId, value); err != nil {
+		if err := secretStore.Write(cmd.Context(), secretId, value); err != nil {
 			return fmt.Errorf("Failed to write secret: %w", err)
 		}
 	}

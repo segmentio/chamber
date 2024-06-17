@@ -3,7 +3,7 @@ package cmd
 import (
 	"bufio"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"strings"
 
@@ -16,6 +16,7 @@ import (
 var (
 	singleline    bool
 	skipUnchanged bool
+	tags          map[string]string
 
 	// writeCmd represents the write command
 	writeCmd = &cobra.Command{
@@ -29,6 +30,7 @@ var (
 func init() {
 	writeCmd.Flags().BoolVarP(&singleline, "singleline", "s", false, "Insert single line parameter (end with \\n)")
 	writeCmd.Flags().BoolVarP(&skipUnchanged, "skip-unchanged", "", false, "Skip writing secret if value is unchanged")
+	writeCmd.Flags().StringToStringVarP(&tags, "tags", "t", map[string]string{}, "Add tags to the secret; new secrets only")
 	RootCmd.AddCommand(writeCmd)
 }
 
@@ -44,7 +46,7 @@ func write(cmd *cobra.Command, args []string) error {
 	}
 
 	if analyticsEnabled && analyticsClient != nil {
-		analyticsClient.Enqueue(analytics.Track{
+		_ = analyticsClient.Enqueue(analytics.Track{
 			UserId: username,
 			Event:  "Ran Command",
 			Properties: analytics.NewProperties().
@@ -67,7 +69,7 @@ func write(cmd *cobra.Command, args []string) error {
 			}
 			value = strings.TrimSuffix(v, "\n")
 		} else {
-			v, err := ioutil.ReadAll(os.Stdin)
+			v, err := io.ReadAll(os.Stdin)
 			if err != nil {
 				return err
 			}
@@ -75,7 +77,7 @@ func write(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	secretStore, err := getSecretStore()
+	secretStore, err := getSecretStore(cmd.Context())
 	if err != nil {
 		return fmt.Errorf("Failed to get secret store: %w", err)
 	}
@@ -86,11 +88,15 @@ func write(cmd *cobra.Command, args []string) error {
 	}
 
 	if skipUnchanged {
-		currentSecret, err := secretStore.Read(secretId, -1)
+		currentSecret, err := secretStore.Read(cmd.Context(), secretId, -1)
 		if err == nil && value == *currentSecret.Value {
 			return nil
 		}
 	}
 
-	return secretStore.Write(secretId, value)
+	if len(tags) > 0 {
+		return secretStore.WriteWithTags(cmd.Context(), secretId, value, tags)
+	} else {
+		return secretStore.Write(cmd.Context(), secretId, value)
+	}
 }

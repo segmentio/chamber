@@ -1,12 +1,15 @@
 package store
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"math/rand"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
 // This file contains some tests which can be used to benchmark
@@ -36,8 +39,9 @@ func RandStringRunes(n int) string {
 }
 
 func benchmarkStore(t *testing.T, store Store, services []string) {
-	setupStore(t, store, services)
-	defer cleanupStore(t, store, services)
+	ctx := context.Background()
+	setupStore(t, ctx, store, services)
+	defer cleanupStore(t, ctx, store, services)
 
 	concurrentExecs := []int{1, 10, 500, 1000}
 
@@ -47,20 +51,22 @@ func benchmarkStore(t *testing.T, store Store, services []string) {
 
 		for i := 0; i < concurrency; i++ {
 			wg.Add(1)
-			go emulateExec(t, &wg, store, services)
-
+			go func() {
+				// TODO: collect errors in a channel
+				_ = emulateExec(t, ctx, &wg, store, services)
+			}()
 		}
 		wg.Wait()
-		elapsed := time.Now().Sub(start)
+		elapsed := time.Since(start)
 		t.Logf("Concurrently started %d services in %s", concurrency, elapsed)
 	}
 }
 
-func emulateExec(t *testing.T, wg *sync.WaitGroup, s Store, services []string) error {
+func emulateExec(t *testing.T, ctx context.Context, wg *sync.WaitGroup, s Store, services []string) error {
 	defer wg.Done()
 	// Exec calls ListRaw once per service specified
 	for _, service := range services {
-		_, err := s.ListRaw(service)
+		_, err := s.ListRaw(ctx, service)
 		if err != nil {
 			t.Logf("Failed to execute ListRaw: %s", err)
 			return err
@@ -73,7 +79,7 @@ func TestS3StoreConcurrency(t *testing.T) {
 	if !benchmarkEnabled {
 		t.SkipNow()
 	}
-	s, _ := NewS3StoreWithBucket(10, "chamber-test")
+	s, _ := NewS3StoreWithBucket(context.Background(), 10, "chamber-test")
 	benchmarkStore(t, s, []string{"foo"})
 }
 
@@ -81,7 +87,7 @@ func TestSecretsManagerStoreConcurrency(t *testing.T) {
 	if !benchmarkEnabled {
 		t.SkipNow()
 	}
-	s, _ := NewSecretsManagerStore(10)
+	s, _ := NewSecretsManagerStore(context.Background(), 10)
 	benchmarkStore(t, s, []string{"foo"})
 }
 
@@ -90,11 +96,11 @@ func TestSSMConcurrency(t *testing.T) {
 		t.SkipNow()
 	}
 
-	s, _ := NewSSMStore(10)
+	s, _ := NewSSMStore(context.Background(), 10)
 	benchmarkStore(t, s, []string{"foo"})
 }
 
-func setupStore(t *testing.T, store Store, services []string) {
+func setupStore(t *testing.T, ctx context.Context, store Store, services []string) {
 	// populate the store for services listed
 	for _, service := range services {
 		for i := 0; i < KeysPerService; i++ {
@@ -104,12 +110,12 @@ func setupStore(t *testing.T, store Store, services []string) {
 				Key:     key,
 			}
 
-			store.Write(id, RandStringRunes(100))
+			require.NoError(t, store.Write(ctx, id, RandStringRunes(100)))
 		}
 	}
 }
 
-func cleanupStore(t *testing.T, store Store, services []string) {
+func cleanupStore(t *testing.T, ctx context.Context, store Store, services []string) {
 	for _, service := range services {
 		for i := 0; i < KeysPerService; i++ {
 			key := fmt.Sprintf("var%d", i)
@@ -118,7 +124,7 @@ func cleanupStore(t *testing.T, store Store, services []string) {
 				Key:     key,
 			}
 
-			store.Delete(id)
+			require.NoError(t, store.Delete(ctx, id))
 		}
 	}
 }

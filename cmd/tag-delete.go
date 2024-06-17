@@ -2,8 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
-	"text/tabwriter"
 
 	analytics "github.com/segmentio/analytics-go/v3"
 	"github.com/segmentio/chamber/v2/store"
@@ -11,19 +9,21 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// historyCmd represents the history command
-var historyCmd = &cobra.Command{
-	Use:   "history <service> <key>",
-	Short: "View the history of a secret",
-	Args:  cobra.ExactArgs(2),
-	RunE:  history,
-}
+var (
+	// tagWriteCmd represents the tag read command
+	tagDeleteCmd = &cobra.Command{
+		Use:   "delete <service> <key> <tag key>...",
+		Short: "Delete tags for a specific secret",
+		Args:  cobra.MinimumNArgs(3),
+		RunE:  tagDelete,
+	}
+)
 
 func init() {
-	RootCmd.AddCommand(historyCmd)
+	tagCmd.AddCommand(tagDeleteCmd)
 }
 
-func history(cmd *cobra.Command, args []string) error {
+func tagDelete(cmd *cobra.Command, args []string) error {
 	service := utils.NormalizeService(args[0])
 	if err := validateService(service); err != nil {
 		return fmt.Errorf("Failed to validate service: %w", err)
@@ -34,12 +34,20 @@ func history(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("Failed to validate key: %w", err)
 	}
 
+	tagKeys := make([]string, len(args)-2)
+	for i, tagArg := range args[2:] {
+		if err := validateTag(tagArg, "dummy"); err != nil {
+			return fmt.Errorf("Failed to validate tag key %s: %w", tagArg, err)
+		}
+		tagKeys[i] = tagArg
+	}
+
 	if analyticsEnabled && analyticsClient != nil {
 		_ = analyticsClient.Enqueue(analytics.Track{
 			UserId: username,
 			Event:  "Ran Command",
 			Properties: analytics.NewProperties().
-				Set("command", "history").
+				Set("command", "tag delete").
 				Set("chamber-version", chamberVersion).
 				Set("service", service).
 				Set("key", key).
@@ -51,26 +59,16 @@ func history(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("Failed to get secret store: %w", err)
 	}
+
 	secretId := store.SecretId{
 		Service: service,
 		Key:     key,
 	}
 
-	events, err := secretStore.History(cmd.Context(), secretId)
+	err = secretStore.DeleteTags(cmd.Context(), secretId, tagKeys)
 	if err != nil {
-		return fmt.Errorf("Failed to get history: %w", err)
+		return fmt.Errorf("Failed to delete tags: %w", err)
 	}
 
-	w := tabwriter.NewWriter(os.Stdout, 0, 8, 2, '\t', 0)
-	fmt.Fprintln(w, "Event\tVersion\tDate\tUser")
-	for _, event := range events {
-		fmt.Fprintf(w, "%s\t%d\t%s\t%s\n",
-			event.Type,
-			event.Version,
-			event.Time.Local().Format(ShortTimeFormat),
-			event.User,
-		)
-	}
-	w.Flush()
 	return nil
 }

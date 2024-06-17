@@ -268,6 +268,9 @@ var _ apiSSM = &apiSSMMock{}
 //
 //		// make and configure a mocked apiSSM
 //		mockedapiSSM := &apiSSMMock{
+//			AddTagsToResourceFunc: func(ctx context.Context, params *ssm.AddTagsToResourceInput, optFns ...func(*ssm.Options)) (*ssm.AddTagsToResourceOutput, error) {
+//				panic("mock out the AddTagsToResource method")
+//			},
 //			DeleteParameterFunc: func(ctx context.Context, params *ssm.DeleteParameterInput, optFns ...func(*ssm.Options)) (*ssm.DeleteParameterOutput, error) {
 //				panic("mock out the DeleteParameter method")
 //			},
@@ -283,8 +286,14 @@ var _ apiSSM = &apiSSMMock{}
 //			GetParametersByPathFunc: func(ctx context.Context, params *ssm.GetParametersByPathInput, optFns ...func(*ssm.Options)) (*ssm.GetParametersByPathOutput, error) {
 //				panic("mock out the GetParametersByPath method")
 //			},
+//			ListTagsForResourceFunc: func(ctx context.Context, params *ssm.ListTagsForResourceInput, optFns ...func(*ssm.Options)) (*ssm.ListTagsForResourceOutput, error) {
+//				panic("mock out the ListTagsForResource method")
+//			},
 //			PutParameterFunc: func(ctx context.Context, params *ssm.PutParameterInput, optFns ...func(*ssm.Options)) (*ssm.PutParameterOutput, error) {
 //				panic("mock out the PutParameter method")
+//			},
+//			RemoveTagsFromResourceFunc: func(ctx context.Context, params *ssm.RemoveTagsFromResourceInput, optFns ...func(*ssm.Options)) (*ssm.RemoveTagsFromResourceOutput, error) {
+//				panic("mock out the RemoveTagsFromResource method")
 //			},
 //		}
 //
@@ -293,6 +302,9 @@ var _ apiSSM = &apiSSMMock{}
 //
 //	}
 type apiSSMMock struct {
+	// AddTagsToResourceFunc mocks the AddTagsToResource method.
+	AddTagsToResourceFunc func(ctx context.Context, params *ssm.AddTagsToResourceInput, optFns ...func(*ssm.Options)) (*ssm.AddTagsToResourceOutput, error)
+
 	// DeleteParameterFunc mocks the DeleteParameter method.
 	DeleteParameterFunc func(ctx context.Context, params *ssm.DeleteParameterInput, optFns ...func(*ssm.Options)) (*ssm.DeleteParameterOutput, error)
 
@@ -308,11 +320,26 @@ type apiSSMMock struct {
 	// GetParametersByPathFunc mocks the GetParametersByPath method.
 	GetParametersByPathFunc func(ctx context.Context, params *ssm.GetParametersByPathInput, optFns ...func(*ssm.Options)) (*ssm.GetParametersByPathOutput, error)
 
+	// ListTagsForResourceFunc mocks the ListTagsForResource method.
+	ListTagsForResourceFunc func(ctx context.Context, params *ssm.ListTagsForResourceInput, optFns ...func(*ssm.Options)) (*ssm.ListTagsForResourceOutput, error)
+
 	// PutParameterFunc mocks the PutParameter method.
 	PutParameterFunc func(ctx context.Context, params *ssm.PutParameterInput, optFns ...func(*ssm.Options)) (*ssm.PutParameterOutput, error)
 
+	// RemoveTagsFromResourceFunc mocks the RemoveTagsFromResource method.
+	RemoveTagsFromResourceFunc func(ctx context.Context, params *ssm.RemoveTagsFromResourceInput, optFns ...func(*ssm.Options)) (*ssm.RemoveTagsFromResourceOutput, error)
+
 	// calls tracks calls to the methods.
 	calls struct {
+		// AddTagsToResource holds details about calls to the AddTagsToResource method.
+		AddTagsToResource []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// Params is the params argument value.
+			Params *ssm.AddTagsToResourceInput
+			// OptFns is the optFns argument value.
+			OptFns []func(*ssm.Options)
+		}
 		// DeleteParameter holds details about calls to the DeleteParameter method.
 		DeleteParameter []struct {
 			// Ctx is the ctx argument value.
@@ -358,6 +385,15 @@ type apiSSMMock struct {
 			// OptFns is the optFns argument value.
 			OptFns []func(*ssm.Options)
 		}
+		// ListTagsForResource holds details about calls to the ListTagsForResource method.
+		ListTagsForResource []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// Params is the params argument value.
+			Params *ssm.ListTagsForResourceInput
+			// OptFns is the optFns argument value.
+			OptFns []func(*ssm.Options)
+		}
 		// PutParameter holds details about calls to the PutParameter method.
 		PutParameter []struct {
 			// Ctx is the ctx argument value.
@@ -367,13 +403,65 @@ type apiSSMMock struct {
 			// OptFns is the optFns argument value.
 			OptFns []func(*ssm.Options)
 		}
+		// RemoveTagsFromResource holds details about calls to the RemoveTagsFromResource method.
+		RemoveTagsFromResource []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// Params is the params argument value.
+			Params *ssm.RemoveTagsFromResourceInput
+			// OptFns is the optFns argument value.
+			OptFns []func(*ssm.Options)
+		}
 	}
-	lockDeleteParameter     sync.RWMutex
-	lockDescribeParameters  sync.RWMutex
-	lockGetParameterHistory sync.RWMutex
-	lockGetParameters       sync.RWMutex
-	lockGetParametersByPath sync.RWMutex
-	lockPutParameter        sync.RWMutex
+	lockAddTagsToResource      sync.RWMutex
+	lockDeleteParameter        sync.RWMutex
+	lockDescribeParameters     sync.RWMutex
+	lockGetParameterHistory    sync.RWMutex
+	lockGetParameters          sync.RWMutex
+	lockGetParametersByPath    sync.RWMutex
+	lockListTagsForResource    sync.RWMutex
+	lockPutParameter           sync.RWMutex
+	lockRemoveTagsFromResource sync.RWMutex
+}
+
+// AddTagsToResource calls AddTagsToResourceFunc.
+func (mock *apiSSMMock) AddTagsToResource(ctx context.Context, params *ssm.AddTagsToResourceInput, optFns ...func(*ssm.Options)) (*ssm.AddTagsToResourceOutput, error) {
+	if mock.AddTagsToResourceFunc == nil {
+		panic("apiSSMMock.AddTagsToResourceFunc: method is nil but apiSSM.AddTagsToResource was just called")
+	}
+	callInfo := struct {
+		Ctx    context.Context
+		Params *ssm.AddTagsToResourceInput
+		OptFns []func(*ssm.Options)
+	}{
+		Ctx:    ctx,
+		Params: params,
+		OptFns: optFns,
+	}
+	mock.lockAddTagsToResource.Lock()
+	mock.calls.AddTagsToResource = append(mock.calls.AddTagsToResource, callInfo)
+	mock.lockAddTagsToResource.Unlock()
+	return mock.AddTagsToResourceFunc(ctx, params, optFns...)
+}
+
+// AddTagsToResourceCalls gets all the calls that were made to AddTagsToResource.
+// Check the length with:
+//
+//	len(mockedapiSSM.AddTagsToResourceCalls())
+func (mock *apiSSMMock) AddTagsToResourceCalls() []struct {
+	Ctx    context.Context
+	Params *ssm.AddTagsToResourceInput
+	OptFns []func(*ssm.Options)
+} {
+	var calls []struct {
+		Ctx    context.Context
+		Params *ssm.AddTagsToResourceInput
+		OptFns []func(*ssm.Options)
+	}
+	mock.lockAddTagsToResource.RLock()
+	calls = mock.calls.AddTagsToResource
+	mock.lockAddTagsToResource.RUnlock()
+	return calls
 }
 
 // DeleteParameter calls DeleteParameterFunc.
@@ -576,6 +664,46 @@ func (mock *apiSSMMock) GetParametersByPathCalls() []struct {
 	return calls
 }
 
+// ListTagsForResource calls ListTagsForResourceFunc.
+func (mock *apiSSMMock) ListTagsForResource(ctx context.Context, params *ssm.ListTagsForResourceInput, optFns ...func(*ssm.Options)) (*ssm.ListTagsForResourceOutput, error) {
+	if mock.ListTagsForResourceFunc == nil {
+		panic("apiSSMMock.ListTagsForResourceFunc: method is nil but apiSSM.ListTagsForResource was just called")
+	}
+	callInfo := struct {
+		Ctx    context.Context
+		Params *ssm.ListTagsForResourceInput
+		OptFns []func(*ssm.Options)
+	}{
+		Ctx:    ctx,
+		Params: params,
+		OptFns: optFns,
+	}
+	mock.lockListTagsForResource.Lock()
+	mock.calls.ListTagsForResource = append(mock.calls.ListTagsForResource, callInfo)
+	mock.lockListTagsForResource.Unlock()
+	return mock.ListTagsForResourceFunc(ctx, params, optFns...)
+}
+
+// ListTagsForResourceCalls gets all the calls that were made to ListTagsForResource.
+// Check the length with:
+//
+//	len(mockedapiSSM.ListTagsForResourceCalls())
+func (mock *apiSSMMock) ListTagsForResourceCalls() []struct {
+	Ctx    context.Context
+	Params *ssm.ListTagsForResourceInput
+	OptFns []func(*ssm.Options)
+} {
+	var calls []struct {
+		Ctx    context.Context
+		Params *ssm.ListTagsForResourceInput
+		OptFns []func(*ssm.Options)
+	}
+	mock.lockListTagsForResource.RLock()
+	calls = mock.calls.ListTagsForResource
+	mock.lockListTagsForResource.RUnlock()
+	return calls
+}
+
 // PutParameter calls PutParameterFunc.
 func (mock *apiSSMMock) PutParameter(ctx context.Context, params *ssm.PutParameterInput, optFns ...func(*ssm.Options)) (*ssm.PutParameterOutput, error) {
 	if mock.PutParameterFunc == nil {
@@ -613,6 +741,46 @@ func (mock *apiSSMMock) PutParameterCalls() []struct {
 	mock.lockPutParameter.RLock()
 	calls = mock.calls.PutParameter
 	mock.lockPutParameter.RUnlock()
+	return calls
+}
+
+// RemoveTagsFromResource calls RemoveTagsFromResourceFunc.
+func (mock *apiSSMMock) RemoveTagsFromResource(ctx context.Context, params *ssm.RemoveTagsFromResourceInput, optFns ...func(*ssm.Options)) (*ssm.RemoveTagsFromResourceOutput, error) {
+	if mock.RemoveTagsFromResourceFunc == nil {
+		panic("apiSSMMock.RemoveTagsFromResourceFunc: method is nil but apiSSM.RemoveTagsFromResource was just called")
+	}
+	callInfo := struct {
+		Ctx    context.Context
+		Params *ssm.RemoveTagsFromResourceInput
+		OptFns []func(*ssm.Options)
+	}{
+		Ctx:    ctx,
+		Params: params,
+		OptFns: optFns,
+	}
+	mock.lockRemoveTagsFromResource.Lock()
+	mock.calls.RemoveTagsFromResource = append(mock.calls.RemoveTagsFromResource, callInfo)
+	mock.lockRemoveTagsFromResource.Unlock()
+	return mock.RemoveTagsFromResourceFunc(ctx, params, optFns...)
+}
+
+// RemoveTagsFromResourceCalls gets all the calls that were made to RemoveTagsFromResource.
+// Check the length with:
+//
+//	len(mockedapiSSM.RemoveTagsFromResourceCalls())
+func (mock *apiSSMMock) RemoveTagsFromResourceCalls() []struct {
+	Ctx    context.Context
+	Params *ssm.RemoveTagsFromResourceInput
+	OptFns []func(*ssm.Options)
+} {
+	var calls []struct {
+		Ctx    context.Context
+		Params *ssm.RemoveTagsFromResourceInput
+		OptFns []func(*ssm.Options)
+	}
+	mock.lockRemoveTagsFromResource.RLock()
+	calls = mock.calls.RemoveTagsFromResource
+	mock.lockRemoveTagsFromResource.RUnlock()
 	return calls
 }
 

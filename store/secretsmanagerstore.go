@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"reflect"
 	"sort"
 	"strconv"
@@ -15,6 +16,12 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager/types"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
+)
+
+const (
+	// CustomSecretsManagerEndpointEnvVar is the name of the environment variable specifying a custom
+	// base Secrets Manager endpoint.
+	CustomSecretsManagerEndpointEnvVar = "CHAMBER_AWS_SECRETS_MANAGER_ENDPOINT"
 )
 
 // We store all Chamber metadata in a stringified JSON format,
@@ -80,10 +87,20 @@ type SecretsManagerStore struct {
 }
 
 // NewSecretsManagerStore creates a new SecretsManagerStore
-func NewSecretsManagerStore(numRetries int) (*SecretsManagerStore, error) {
-	cfg, _, err := getConfig(numRetries, aws.RetryModeStandard)
+func NewSecretsManagerStore(ctx context.Context, numRetries int) (*SecretsManagerStore, error) {
+	cfg, _, err := getConfig(ctx, numRetries, aws.RetryModeStandard)
 	if err != nil {
 		return nil, err
+	}
+	customSecretsManagerEndpoint, ok := os.LookupEnv(CustomSecretsManagerEndpointEnvVar)
+	if ok {
+		cfg.BaseEndpoint = aws.String(customSecretsManagerEndpoint)
+	} else {
+		// Preserving incorrect and deprecated use of the SSM environment variable from v2
+		customSecretsManagerEndpoint, ok = os.LookupEnv(CustomSSMEndpointEnvVar)
+		if ok {
+			cfg.BaseEndpoint = aws.String(customSecretsManagerEndpoint)
+		}
 	}
 
 	svc := secretsmanager.NewFromConfig(cfg)
@@ -99,10 +116,10 @@ func NewSecretsManagerStore(numRetries int) (*SecretsManagerStore, error) {
 
 // Write writes a given value to a secret identified by id. If the secret
 // already exists, then write a new version.
-func (s *SecretsManagerStore) Write(id SecretId, value string) error {
+func (s *SecretsManagerStore) Write(ctx context.Context, id SecretId, value string) error {
 	version := 1
 	// first read to get the current version
-	latest, err := s.readLatest(id.Service)
+	latest, err := s.readLatest(ctx, id.Service)
 	mustCreate := false
 	deleteKeyFromSecret := len(value) == 0
 
@@ -136,9 +153,7 @@ func (s *SecretsManagerStore) Write(id SecretId, value string) error {
 		if err != nil {
 			return err
 		}
-		if _, ok := metadata[id.Key]; ok {
-			delete(metadata, id.Key)
-		}
+		delete(metadata, id.Key)
 
 		rawMetadata, err := dehydrateMetadata(&metadata)
 		if err != nil {
@@ -146,7 +161,7 @@ func (s *SecretsManagerStore) Write(id SecretId, value string) error {
 		}
 		latest[metadataKey] = rawMetadata
 	} else {
-		user, err := s.getCurrentUser()
+		user, err := s.getCurrentUser(ctx)
 		if err != nil {
 			return err
 		}
@@ -185,7 +200,7 @@ func (s *SecretsManagerStore) Write(id SecretId, value string) error {
 			Name:         aws.String(id.Service),
 			SecretString: aws.String(string(contents)),
 		}
-		_, err = s.svc.CreateSecret(context.TODO(), createSecretValueInput)
+		_, err = s.svc.CreateSecret(ctx, createSecretValueInput)
 		if err != nil {
 			return err
 		}
@@ -195,7 +210,7 @@ func (s *SecretsManagerStore) Write(id SecretId, value string) error {
 		describeSecretInput := &secretsmanager.DescribeSecretInput{
 			SecretId: aws.String(id.Service),
 		}
-		details, err := s.svc.DescribeSecret(context.TODO(), describeSecretInput)
+		details, err := s.svc.DescribeSecret(ctx, describeSecretInput)
 		if err != nil {
 			return err
 		}
@@ -208,7 +223,7 @@ func (s *SecretsManagerStore) Write(id SecretId, value string) error {
 			SecretString:  aws.String(string(contents)),
 			VersionStages: []string{"AWSCURRENT", "CHAMBER" + fmt.Sprint(version)},
 		}
-		_, err = s.svc.PutSecretValue(context.TODO(), putSecretValueInput)
+		_, err = s.svc.PutSecretValue(ctx, putSecretValueInput)
 		if err != nil {
 			return err
 		}
@@ -217,11 +232,15 @@ func (s *SecretsManagerStore) Write(id SecretId, value string) error {
 	return nil
 }
 
+func (s *SecretsManagerStore) WriteWithTags(ctx context.Context, id SecretId, value string, tags map[string]string) error {
+	return errors.New("tags on write not implemented for Secrets Manager Store")
+}
+
 // Read reads a secret at a specific version.
 // To grab the latest version, use -1 as the version number.
-func (s *SecretsManagerStore) Read(id SecretId, version int) (Secret, error) {
+func (s *SecretsManagerStore) Read(ctx context.Context, id SecretId, version int) (Secret, error) {
 	if version == -1 {
-		latest, err := s.readLatest(id.Service)
+		latest, err := s.readLatest(ctx, id.Service)
 		if err != nil {
 			return Secret{}, err
 		}
@@ -247,23 +266,27 @@ func (s *SecretsManagerStore) Read(id SecretId, version int) (Secret, error) {
 		}, nil
 
 	}
-	return s.readVersion(id, version)
+	return s.readVersion(ctx, id, version)
 }
 
 // Delete removes a secret. Note this removes all versions of the secret. (True?)
-func (s *SecretsManagerStore) Delete(id SecretId) error {
+func (s *SecretsManagerStore) Delete(ctx context.Context, id SecretId) error {
 	// delegate to Write
-	return s.Write(id, "")
+	return s.Write(ctx, id, "")
 }
 
-func (s *SecretsManagerStore) readVersion(id SecretId, version int) (Secret, error) {
+func (s *SecretsManagerStore) DeleteTags(ctx context.Context, id SecretId, tagKeys []string) error {
+	return errors.New("Not implemented for Secrets Manager Store")
+}
+
+func (s *SecretsManagerStore) readVersion(ctx context.Context, id SecretId, version int) (Secret, error) {
 	listSecretVersionIdsInput := &secretsmanager.ListSecretVersionIdsInput{
 		SecretId:          aws.String(id.Service),
 		IncludeDeprecated: aws.Bool(false),
 	}
 
 	var result Secret
-	resp, err := s.svc.ListSecretVersionIds(context.TODO(), listSecretVersionIdsInput)
+	resp, err := s.svc.ListSecretVersionIds(ctx, listSecretVersionIdsInput)
 	if err != nil {
 		return Secret{}, err
 	}
@@ -277,7 +300,7 @@ func (s *SecretsManagerStore) readVersion(id SecretId, version int) (Secret, err
 			VersionId: h.VersionId,
 		}
 
-		resp, err := s.svc.GetSecretValue(context.TODO(), getSecretValueInput)
+		resp, err := s.svc.GetSecretValue(ctx, getSecretValueInput)
 
 		if err != nil {
 			return Secret{}, err
@@ -324,12 +347,12 @@ func (s *SecretsManagerStore) readVersion(id SecretId, version int) (Secret, err
 	return Secret{}, ErrSecretNotFound
 }
 
-func (s *SecretsManagerStore) readLatest(service string) (secretValueObject, error) {
+func (s *SecretsManagerStore) readLatest(ctx context.Context, service string) (secretValueObject, error) {
 	getSecretValueInput := &secretsmanager.GetSecretValueInput{
 		SecretId: aws.String(service),
 	}
 
-	resp, err := s.svc.GetSecretValue(context.TODO(), getSecretValueInput)
+	resp, err := s.svc.GetSecretValue(ctx, getSecretValueInput)
 
 	if err != nil {
 		return secretValueObject{}, err
@@ -347,18 +370,26 @@ func (s *SecretsManagerStore) readLatest(service string) (secretValueObject, err
 	return obj, nil
 }
 
+func (s *SecretsManagerStore) WriteTags(ctx context.Context, id SecretId, tags map[string]string, deleteOtherTags bool) error {
+	return errors.New("Not implemented for Secrets Manager Store")
+}
+
+func (s *SecretsManagerStore) ReadTags(ctx context.Context, id SecretId) (map[string]string, error) {
+	return nil, errors.New("Not implemented for Secrets Manager Store")
+}
+
 // ListServices (not implemented)
-func (s *SecretsManagerStore) ListServices(service string, includeSecretName bool) ([]string, error) {
+func (s *SecretsManagerStore) ListServices(ctx context.Context, service string, includeSecretName bool) ([]string, error) {
 	return nil, fmt.Errorf("Secrets Manager Backend is experimental and does not implement this command")
 }
 
 // List lists all secrets for a given service.  If includeValues is true,
 // then those secrets are decrypted and returned, otherwise only the metadata
 // about a secret is returned.
-func (s *SecretsManagerStore) List(serviceName string, includeValues bool) ([]Secret, error) {
+func (s *SecretsManagerStore) List(ctx context.Context, serviceName string, includeValues bool) ([]Secret, error) {
 	secrets := map[string]Secret{}
 
-	latest, err := s.readLatest(serviceName)
+	latest, err := s.readLatest(ctx, serviceName)
 	if err != nil {
 		return nil, err
 	}
@@ -399,8 +430,8 @@ func (s *SecretsManagerStore) List(serviceName string, includeValues bool) ([]Se
 
 // ListRaw lists all secrets keys and values for a given service. Does not include any
 // other metadata. Suitable for use in production environments.
-func (s *SecretsManagerStore) ListRaw(serviceName string) ([]RawSecret, error) {
-	latest, err := s.readLatest(serviceName)
+func (s *SecretsManagerStore) ListRaw(ctx context.Context, serviceName string) ([]RawSecret, error) {
+	latest, err := s.readLatest(ctx, serviceName)
 	if err != nil {
 		return nil, err
 	}
@@ -420,7 +451,7 @@ func (s *SecretsManagerStore) ListRaw(serviceName string) ([]RawSecret, error) {
 
 // History returns a list of events that have occurred regarding the given
 // secret.
-func (s *SecretsManagerStore) History(id SecretId) ([]ChangeEvent, error) {
+func (s *SecretsManagerStore) History(ctx context.Context, id SecretId) ([]ChangeEvent, error) {
 	events := []ChangeEvent{}
 
 	listSecretVersionIdsInput := &secretsmanager.ListSecretVersionIdsInput{
@@ -428,7 +459,7 @@ func (s *SecretsManagerStore) History(id SecretId) ([]ChangeEvent, error) {
 		IncludeDeprecated: aws.Bool(false),
 	}
 
-	resp, err := s.svc.ListSecretVersionIds(context.TODO(), listSecretVersionIdsInput)
+	resp, err := s.svc.ListSecretVersionIds(ctx, listSecretVersionIdsInput)
 	if err != nil {
 		return events, err
 	}
@@ -445,7 +476,7 @@ func (s *SecretsManagerStore) History(id SecretId) ([]ChangeEvent, error) {
 			VersionId: h.VersionId,
 		}
 
-		resp, err := s.svc.GetSecretValue(context.TODO(), getSecretValueInput)
+		resp, err := s.svc.GetSecretValue(ctx, getSecretValueInput)
 
 		if err != nil {
 			return events, err
@@ -498,8 +529,8 @@ func (s *SecretsManagerStore) History(id SecretId) ([]ChangeEvent, error) {
 	return events, nil
 }
 
-func (s *SecretsManagerStore) getCurrentUser() (string, error) {
-	resp, err := s.stsSvc.GetCallerIdentity(context.TODO(), &sts.GetCallerIdentityInput{})
+func (s *SecretsManagerStore) getCurrentUser(ctx context.Context) (string, error) {
+	resp, err := s.stsSvc.GetCallerIdentity(ctx, &sts.GetCallerIdentityInput{})
 	if err != nil {
 		return "", err
 	}

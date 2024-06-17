@@ -42,7 +42,7 @@ func runExport(cmd *cobra.Command, args []string) error {
 	var err error
 
 	if analyticsEnabled && analyticsClient != nil {
-		analyticsClient.Enqueue(analytics.Track{
+		_ = analyticsClient.Enqueue(analytics.Track{
 			UserId: username,
 			Event:  "Ran Command",
 			Properties: analytics.NewProperties().
@@ -53,7 +53,7 @@ func runExport(cmd *cobra.Command, args []string) error {
 		})
 	}
 
-	secretStore, err := getSecretStore()
+	secretStore, err := getSecretStore(cmd.Context())
 	if err != nil {
 		return err
 	}
@@ -64,7 +64,7 @@ func runExport(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("Failed to validate service %s: %w", service, err)
 		}
 
-		rawSecrets, err := secretStore.ListRaw(service)
+		rawSecrets, err := secretStore.ListRaw(cmd.Context(), service)
 		if err != nil {
 			return fmt.Errorf("Failed to list store contents for service %s: %w", service, err)
 		}
@@ -82,6 +82,7 @@ func runExport(cmd *cobra.Command, args []string) error {
 		if file, err = os.OpenFile(exportOutput, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644); err != nil {
 			return fmt.Errorf("Failed to open output file for writing: %w", err)
 		}
+		// TODO: check for errors flushing, syncing, or closing
 		defer file.Close()
 		defer file.Sync()
 	}
@@ -144,7 +145,10 @@ func exportAsTFvars(params map[string]string, w io.Writer) error {
 	for _, k := range sortedKeys(params) {
 		key := sanitizeKey(strings.TrimPrefix(k, "tf_var_"))
 
-		w.Write([]byte(fmt.Sprintf(`%s = "%s"`+"\n", key, doubleQuoteEscape(params[k]))))
+		_, err := w.Write([]byte(fmt.Sprintf(`%s = "%s"`+"\n", key, doubleQuoteEscape(params[k]))))
+		if err != nil {
+			return fmt.Errorf("failed to write variable with key %s: %v", k, err)
+		}
 	}
 	return nil
 }
@@ -170,7 +174,10 @@ func exportAsJavaProperties(params map[string]string, w io.Writer) error {
 	p := properties.NewProperties()
 	p.DisableExpansion = true
 	for _, k := range sortedKeys(params) {
-		p.Set(k, params[k])
+		_, _, err := p.Set(k, params[k])
+		if err != nil {
+			return fmt.Errorf("failed to set property %s: %v", k, err)
+		}
 	}
 
 	// Java expects properties in ISO-8859-1 by default

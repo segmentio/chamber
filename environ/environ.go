@@ -1,6 +1,7 @@
 package environ
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -65,19 +66,16 @@ func fromMap(m map[string]string) Environ {
 }
 
 // like cmd/list.key, but without the env var lookup
-func key(s string, noPaths bool) string {
+func key(s string) string {
 	sep := "/"
-	if noPaths {
-		sep = "."
-	}
 	tokens := strings.Split(s, sep)
 	secretKey := tokens[len(tokens)-1]
 	return secretKey
 }
 
 // transforms a secret key to an env var name, i.e. upppercase, substitute `-` -> `_`
-func secretKeyToEnvVarName(k string, noPaths bool) string {
-	return normalizeEnvVarName(key(k, noPaths))
+func secretKeyToEnvVarName(k string) string {
+	return normalizeEnvVarName(key(k))
 }
 
 func normalizeEnvVarName(k string) string {
@@ -86,17 +84,13 @@ func normalizeEnvVarName(k string) string {
 
 // load loads environment variables into e from s given a service
 // collisions will be populated with any keys that get overwritten
-// noPaths enables the behavior as if CHAMBER_NO_PATHS had been set
-func (e *Environ) load(s store.Store, service string, collisions *[]string, noPaths bool) error {
-	rawSecrets, err := s.ListRaw(utils.NormalizeService(service))
+func (e *Environ) load(ctx context.Context, s store.Store, service string, collisions *[]string) error {
+	rawSecrets, err := s.ListRaw(ctx, utils.NormalizeService(service))
 	if err != nil {
 		return err
 	}
-	envVarKeys := make([]string, 0)
 	for _, rawSecret := range rawSecrets {
-		envVarKey := secretKeyToEnvVarName(rawSecret.Key, noPaths)
-
-		envVarKeys = append(envVarKeys, envVarKey)
+		envVarKey := secretKeyToEnvVarName(rawSecret.Key)
 
 		if e.IsSet(envVarKey) {
 			*collisions = append(*collisions, envVarKey)
@@ -108,38 +102,24 @@ func (e *Environ) load(s store.Store, service string, collisions *[]string, noPa
 
 // Load loads environment variables into e from s given a service
 // collisions will be populated with any keys that get overwritten
-func (e *Environ) Load(s store.Store, service string, collisions *[]string) error {
-	return e.load(s, service, collisions, false)
-}
-
-// LoadNoPaths is identical to Load, but uses v1-style "."-separated paths
-//
-// Deprecated like all noPaths functionality
-func (e *Environ) LoadNoPaths(s store.Store, service string, collisions *[]string) error {
-	return e.load(s, service, collisions, true)
+func (e *Environ) Load(ctx context.Context, s store.Store, service string, collisions *[]string) error {
+	return e.load(ctx, s, service, collisions)
 }
 
 // LoadStrict loads all services from s in strict mode: env vars in e with value equal to valueExpected
 // are the only ones substituted. If there are any env vars in s that are also in e, but don't have their value
 // set to valueExpected, this is an error.
-func (e *Environ) LoadStrict(s store.Store, valueExpected string, pristine bool, services ...string) error {
-	return e.loadStrict(s, valueExpected, pristine, false, services...)
+func (e *Environ) LoadStrict(ctx context.Context, s store.Store, valueExpected string, pristine bool, services ...string) error {
+	return e.loadStrict(ctx, s, valueExpected, pristine, services...)
 }
 
-// LoadNoPathsStrict is identical to LoadStrict, but uses v1-style "."-separated paths
-//
-// Deprecated like all noPaths functionality
-func (e *Environ) LoadStrictNoPaths(s store.Store, valueExpected string, pristine bool, services ...string) error {
-	return e.loadStrict(s, valueExpected, pristine, true, services...)
-}
-
-func (e *Environ) loadStrict(s store.Store, valueExpected string, pristine bool, noPaths bool, services ...string) error {
+func (e *Environ) loadStrict(ctx context.Context, s store.Store, valueExpected string, pristine bool, services ...string) error {
 	for _, service := range services {
-		rawSecrets, err := s.ListRaw(utils.NormalizeService(service))
+		rawSecrets, err := s.ListRaw(ctx, utils.NormalizeService(service))
 		if err != nil {
 			return err
 		}
-		err = e.loadStrictOne(rawSecrets, valueExpected, pristine, noPaths)
+		err = e.loadStrictOne(rawSecrets, valueExpected, pristine)
 		if err != nil {
 			return err
 		}
@@ -147,7 +127,7 @@ func (e *Environ) loadStrict(s store.Store, valueExpected string, pristine bool,
 	return nil
 }
 
-func (e *Environ) loadStrictOne(rawSecrets []store.RawSecret, valueExpected string, pristine bool, noPaths bool) error {
+func (e *Environ) loadStrictOne(rawSecrets []store.RawSecret, valueExpected string, pristine bool) error {
 	parentMap := e.Map()
 	parentExpects := map[string]struct{}{}
 	for k, v := range parentMap {
@@ -162,7 +142,7 @@ func (e *Environ) loadStrictOne(rawSecrets []store.RawSecret, valueExpected stri
 
 	envVarKeysAdded := map[string]struct{}{}
 	for _, rawSecret := range rawSecrets {
-		envVarKey := secretKeyToEnvVarName(rawSecret.Key, noPaths)
+		envVarKey := secretKeyToEnvVarName(rawSecret.Key)
 
 		parentVal, parentOk := parentMap[envVarKey]
 		// skip injecting secrets that are not present in the parent

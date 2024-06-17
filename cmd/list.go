@@ -43,7 +43,7 @@ func list(cmd *cobra.Command, args []string) error {
 	}
 
 	if analyticsEnabled && analyticsClient != nil {
-		analyticsClient.Enqueue(analytics.Track{
+		_ = analyticsClient.Enqueue(analytics.Track{
 			UserId: username,
 			Event:  "Ran Command",
 			Properties: analytics.NewProperties().
@@ -54,11 +54,11 @@ func list(cmd *cobra.Command, args []string) error {
 		})
 	}
 
-	secretStore, err := getSecretStore()
+	secretStore, err := getSecretStore(cmd.Context())
 	if err != nil {
 		return fmt.Errorf("Failed to get secret store: %w", err)
 	}
-	secrets, err := secretStore.List(service, withValues)
+	secrets, err := secretStore.List(cmd.Context(), service, withValues)
 	if err != nil {
 		return fmt.Errorf("Failed to list store contents: %w", err)
 	}
@@ -99,11 +99,7 @@ func list(cmd *cobra.Command, args []string) error {
 }
 
 func key(s string) string {
-	_, noPaths := os.LookupEnv("CHAMBER_NO_PATHS")
 	sep := "/"
-	if noPaths {
-		sep = "."
-	}
 
 	tokens := strings.Split(s, sep)
 	secretKey := tokens[len(tokens)-1]

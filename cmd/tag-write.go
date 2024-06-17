@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 	"text/tabwriter"
 
 	analytics "github.com/segmentio/analytics-go/v3"
@@ -12,25 +13,23 @@ import (
 )
 
 var (
-	version int
-	quiet   bool
+	deleteOtherTags bool
 
-	// readCmd represents the read command
-	readCmd = &cobra.Command{
-		Use:   "read <service> <key>",
-		Short: "Read a specific secret from the parameter store",
-		Args:  cobra.ExactArgs(2),
-		RunE:  read,
+	// tagWriteCmd represents the tag read command
+	tagWriteCmd = &cobra.Command{
+		Use:   "write <service> <key> <tag>...",
+		Short: "Write tags for a specific secret",
+		Args:  cobra.MinimumNArgs(3),
+		RunE:  tagWrite,
 	}
 )
 
 func init() {
-	readCmd.Flags().IntVarP(&version, "version", "v", -1, "The version number of the secret. Defaults to latest.")
-	readCmd.Flags().BoolVarP(&quiet, "quiet", "q", false, "Only print the secret")
-	RootCmd.AddCommand(readCmd)
+	tagWriteCmd.Flags().BoolVar(&deleteOtherTags, "delete-other-tags", false, "Delete tags not specified in the command")
+	tagCmd.AddCommand(tagWriteCmd)
 }
 
-func read(cmd *cobra.Command, args []string) error {
+func tagWrite(cmd *cobra.Command, args []string) error {
 	service := utils.NormalizeService(args[0])
 	if err := validateService(service); err != nil {
 		return fmt.Errorf("Failed to validate service: %w", err)
@@ -41,12 +40,24 @@ func read(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("Failed to validate key: %w", err)
 	}
 
+	tags := make(map[string]string, len(args)-2)
+	for _, tagArg := range args[2:] {
+		tagKey, tagValue, found := strings.Cut(tagArg, "=")
+		if !found {
+			return fmt.Errorf("Failed to parse tag %s: tag must be in the form key=value", tagArg)
+		}
+		if err := validateTag(tagKey, tagValue); err != nil {
+			return fmt.Errorf("Failed to validate tag with key %s: %w", tagKey, err)
+		}
+		tags[tagKey] = tagValue
+	}
+
 	if analyticsEnabled && analyticsClient != nil {
 		_ = analyticsClient.Enqueue(analytics.Track{
 			UserId: username,
 			Event:  "Ran Command",
 			Properties: analytics.NewProperties().
-				Set("command", "read").
+				Set("command", "tag write").
 				Set("chamber-version", chamberVersion).
 				Set("service", service).
 				Set("key", key).
@@ -64,24 +75,21 @@ func read(cmd *cobra.Command, args []string) error {
 		Key:     key,
 	}
 
-	secret, err := secretStore.Read(cmd.Context(), secretId, version)
+	err = secretStore.WriteTags(cmd.Context(), secretId, tags, deleteOtherTags)
 	if err != nil {
-		return fmt.Errorf("Failed to read: %w", err)
+		return fmt.Errorf("Failed to write tags: %w", err)
 	}
 
 	if quiet {
-		fmt.Fprintf(os.Stdout, "%s\n", *secret.Value)
+		fmt.Fprintf(os.Stdout, "%s\n", tags)
 		return nil
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 8, 2, '\t', 0)
-	fmt.Fprintln(w, "Key\tValue\tVersion\tLastModified\tUser")
-	fmt.Fprintf(w, "%s\t%s\t%d\t%s\t%s\n",
-		key,
-		*secret.Value,
-		secret.Meta.Version,
-		secret.Meta.Created.Local().Format(ShortTimeFormat),
-		secret.Meta.CreatedBy)
+	fmt.Fprintln(w, "Key\tValue")
+	for k, v := range tags {
+		fmt.Fprintf(w, "%s\t%s\n", k, v)
+	}
 	w.Flush()
 	return nil
 }

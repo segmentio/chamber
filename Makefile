@@ -20,13 +20,27 @@ ANALYTICS_WRITE_KEY ?=
 LDFLAGS := -ldflags='-X "main.Version=$(VERSION)" -X "main.AnalyticsWriteKey=$(ANALYTICS_WRITE_KEY)"'
 MOQ := $(shell command -v moq 2> /dev/null)
 SRC := $(shell find . -name '*.go')
+GOLANGCI_LINT := $(shell command -v golangci-lint 2> /dev/null)
+
+# don't rely on target ordering to define a default make goal
+.DEFAULT_GOAL := test
 
 test: store/awsapi_mock.go
 	go test -v ./...
 
-.PHONY: coverage
 coverage:
 	go test -coverpkg ./... -coverprofile coverage.out ./...
+
+vet:
+	go vet ./...
+
+lint: vet
+ifdef GOLANGCI_LINT
+	@golangci-lint run --max-same-issues 0 --max-issues-per-linter 0
+else
+	@echo "Please install golangci-lint: brew install golangci-lint"
+	@false
+endif
 
 store/awsapi_mock.go: store/awsapi.go
 ifdef MOQ
@@ -71,4 +85,4 @@ dist/chamber-$(VERSION)-linux-arm64 dist/chamber-$(VERSION)-linux-aarch64: | dis
 dist/chamber-$(VERSION)-windows-amd64.exe: | dist/
 	GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath $(LDFLAGS) -o $@
 
-.PHONY: clean all fmt build linux
+.PHONY: vet test coverage lint clean all fmt build linux

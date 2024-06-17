@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"testing"
 )
 
@@ -35,7 +34,7 @@ func Test_sanitizeKey(t *testing.T) {
 	}{
 		{given: "invalid strings", expected: "invalid_strings"},
 		{given: "extremely  invalid  strings", expected: "extremely__invalid__strings"},
-		{given: fmt.Sprintf("\nunbelievably\tinvalid\tstrings\n"), expected: "unbelievably_invalid_strings"},
+		{given: "\nunbelievably\tinvalid\tstrings\n", expected: "unbelievably_invalid_strings"},
 		{given: "valid_string", expected: "valid_string"},
 		{given: "validish-string", expected: "validish_string"},
 		{given: "valid.string", expected: "valid_string"},

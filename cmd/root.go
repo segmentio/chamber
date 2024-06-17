@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"regexp"
 	"strconv"
@@ -79,12 +80,13 @@ var RootCmd = &cobra.Command{
 func init() {
 	RootCmd.PersistentFlags().IntVarP(&numRetries, "retries", "r", DefaultNumRetries, "For SSM or Secrets Manager, the number of retries we'll make before giving up; AKA $CHAMBER_RETRIES")
 	RootCmd.PersistentFlags().DurationVarP(&minThrottleDelay, "min-throttle-delay", "", 0, "DEPRECATED and no longer has any effect. Use retry-mode instead")
+	_ = RootCmd.PersistentFlags().MarkDeprecated("min-throttle-delay", "use --retry-mode instead")
 	RootCmd.PersistentFlags().StringVarP(&retryMode, "retry-mode", "", store.DefaultRetryMode.String(),
 		`For SSM, the model used to retry requests
   `+aws.RetryModeStandard.String()+`
   `+aws.RetryModeAdaptive.String(),
 	)
-	RootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "", false, "Print more information to STDOUT")
+	RootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "", false, "Print more information to STDERR")
 	RootCmd.PersistentFlags().StringVarP(&backendFlag, "backend", "b", "ssm",
 		`Backend to use; AKA $CHAMBER_SECRET_BACKEND
 	null: no-op
@@ -249,6 +251,13 @@ func prerun(cmd *cobra.Command, args []string) {
 			Traits: analytics.NewTraits().
 				Set("chamber-version", chamberVersion),
 		})
+	}
+
+	if verbose {
+		levelVar := &slog.LevelVar{}
+		levelVar.Set(slog.LevelDebug)
+		handler := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: levelVar})
+		slog.SetDefault(slog.New(handler))
 	}
 }
 

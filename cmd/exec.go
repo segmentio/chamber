@@ -3,6 +3,7 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 
@@ -97,15 +98,13 @@ func execRun(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("Failed to get secret store: %w", err)
 	}
 
-	if pristine && verbose {
-		fmt.Fprintf(os.Stderr, "chamber: pristine mode engaged\n")
+	if pristine {
+		slog.Debug("chamber: pristine mode engaged")
 	}
 
 	var env environ.Environ
 	if strict {
-		if verbose {
-			fmt.Fprintf(os.Stderr, "chamber: strict mode engaged\n")
-		}
+		slog.Debug("chamber: strict mode engaged")
 		var err error
 		env = environ.Environ(os.Environ())
 		err = env.LoadStrict(cmd.Context(), secretStore, strictValue, pristine, services...)
@@ -130,9 +129,7 @@ func execRun(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	if verbose {
-		fmt.Fprintf(os.Stdout, "info: With environment %s\n", strings.Join(env, ","))
-	}
+	slog.Debug(fmt.Sprintf("info: With environment %s\n", strings.Join(env, ",")))
 
 	return exec(command, commandArgs, env)
 }

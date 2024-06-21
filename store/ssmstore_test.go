@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"sort"
 	"strings"
@@ -853,3 +854,59 @@ type ByKeyRaw []RawSecret
 func (a ByKeyRaw) Len() int           { return len(a) }
 func (a ByKeyRaw) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a ByKeyRaw) Less(i, j int) bool { return a[i].Key < a[j].Key }
+
+func TestSSMStoreConfig(t *testing.T) {
+	storeConfigName := fmt.Sprintf("/%s/%s", ChamberService, storeConfigKey)
+	parameters := map[string]mockParameter{
+		storeConfigName: {
+			currentParam: &types.Parameter{
+				Name:  aws.String(storeConfigName),
+				Type:  types.ParameterTypeSecureString,
+				Value: aws.String(`{"version":"2","requiredTags":["key1", "key2"]}`),
+			},
+			meta: &types.ParameterMetadata{
+				Name:             aws.String(storeConfigName),
+				Description:      aws.String("1"),
+				LastModifiedDate: aws.Time(time.Now()),
+				LastModifiedUser: aws.String("test"),
+			},
+		},
+	}
+	store := NewTestSSMStore(parameters)
+
+	config, err := store.Config(context.Background())
+
+	assert.NoError(t, err)
+	assert.Equal(t, "2", config.Version)
+	assert.Equal(t, []string{"key1", "key2"}, config.RequiredTags)
+}
+
+func TestSSMStoreConfig_Missing(t *testing.T) {
+	parameters := map[string]mockParameter{}
+	store := NewTestSSMStore(parameters)
+
+	config, err := store.Config(context.Background())
+
+	assert.NoError(t, err)
+	assert.Equal(t, LatestStoreConfigVersion, config.Version)
+	assert.Empty(t, config.RequiredTags)
+}
+
+func TestSSMStoreSetConfig(t *testing.T) {
+	parameters := map[string]mockParameter{}
+	store := NewTestSSMStore(parameters)
+
+	config := StoreConfig{
+		Version:      "2.1",
+		RequiredTags: []string{"key1.1", "key2.1"},
+	}
+	err := store.SetConfig(context.Background(), config)
+
+	assert.NoError(t, err)
+
+	config, err = store.Config(context.Background())
+
+	assert.NoError(t, err)
+	assert.Equal(t, "2.1", config.Version)
+	assert.Equal(t, []string{"key1.1", "key2.1"}, config.RequiredTags)
+}

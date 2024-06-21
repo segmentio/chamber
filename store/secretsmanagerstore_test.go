@@ -477,3 +477,13 @@ func uniqueID() string {
 	_, _ = rand.Read(uuid)
 	return fmt.Sprintf("%x", uuid)
 }
+
+func TestSecretsManagerStoreConfig(t *testing.T) {
+	store := &SecretsManagerStore{}
+
+	config, err := store.Config(context.Background())
+
+	assert.NoError(t, err)
+	assert.Equal(t, LatestStoreConfigVersion, config.Version)
+	assert.Empty(t, config.RequiredTags)
+}

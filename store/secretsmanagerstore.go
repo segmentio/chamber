@@ -114,6 +114,16 @@ func NewSecretsManagerStore(ctx context.Context, numRetries int) (*SecretsManage
 	}, nil
 }
 
+func (s *SecretsManagerStore) Config(ctx context.Context) (StoreConfig, error) {
+	return StoreConfig{
+		Version: LatestStoreConfigVersion,
+	}, nil
+}
+
+func (s *SecretsManagerStore) SetConfig(ctx context.Context, config StoreConfig) error {
+	return errors.New("Not implemented for Secrets Manager Store")
+}
+
 // Write writes a given value to a secret identified by id. If the secret
 // already exists, then write a new version.
 func (s *SecretsManagerStore) Write(ctx context.Context, id SecretId, value string) error {

@@ -15,6 +15,15 @@ func ReservedService(service string) bool {
 	return service == ChamberService
 }
 
+const (
+	LatestStoreConfigVersion = "1"
+)
+
+type StoreConfig struct {
+	Version      string   `json:"version"`
+	RequiredTags []string `json:"requiredTags,omitempty"`
+}
+
 type ChangeEventType int
 
 const (
@@ -73,6 +82,8 @@ type ChangeEvent struct {
 
 // Store is an interface for a secret store.
 type Store interface {
+	Config(ctx context.Context) (StoreConfig, error)
+	SetConfig(ctx context.Context, config StoreConfig) error
 	Write(ctx context.Context, id SecretId, value string) error
 	WriteWithTags(ctx context.Context, id SecretId, value string, tags map[string]string) error
 	Read(ctx context.Context, id SecretId, version int) (Secret, error)

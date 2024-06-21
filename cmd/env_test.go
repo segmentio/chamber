@@ -51,3 +51,26 @@ func Test_sanitizeKey(t *testing.T) {
 		})
 	}
 }
+
+func Test_doubleQuoteEscape(t *testing.T) {
+	tests := []struct {
+		given    string
+		expected string
+	}{
+		{given: "ordinary string", expected: "ordinary string"},
+		{given: `string\with\backslashes`, expected: `string\\with\\backslashes`},
+		{given: "string\nwith\nnewlines", expected: `string\nwith\nnewlines`},
+		{given: "string\rwith\rcarriage returns", expected: `string\rwith\rcarriage returns`},
+		{given: `string"with"quotation marks`, expected: `string\"with\"quotation marks`},
+		{given: `string!with!excl`, expected: `string!with!excl`}, // do not escape !
+		{given: `string$with$dollar signs`, expected: `string\$with\$dollar signs`},
+	}
+
+	for _, tt := range tests {
+		t.Run("test sanitizing key names", func(t *testing.T) {
+			if got := doubleQuoteEscape(tt.given); got != tt.expected {
+				t.Errorf("shellName error: want %q, got %q", tt.expected, got)
+			}
+		})
+	}
+}

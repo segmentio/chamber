@@ -99,3 +99,11 @@ type Store interface {
 	Delete(ctx context.Context, id SecretId) error
 	DeleteTags(ctx context.Context, id SecretId, tagKeys []string) error
 }
+
+func requiredTags(ctx context.Context, s Store) ([]string, error) {
+	config, err := s.Config(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return config.RequiredTags, nil
+}

@@ -117,6 +117,9 @@ func validateService(service string) error {
 	if !validServicePathFormat.MatchString(service) {
 		return fmt.Errorf("Failed to validate service name '%s'. Only alphanumeric, dashes, forward slashes, full stops and underscores are allowed for service names. Service names must not start or end with a forward slash", service)
 	}
+	if store.ReservedService(service) {
+		fmt.Fprintf(os.Stderr, "Service name %s is reserved for chamber's own use and will be prohibited in a future version. Please switch to a different service name.\n", service)
+	}
 
 	return nil
 }
@@ -124,6 +127,9 @@ func validateService(service string) error {
 func validateServiceWithLabel(service string) error {
 	if !validServicePathFormatWithLabel.MatchString(service) {
 		return fmt.Errorf("Failed to validate service name '%s'. Only alphanumeric, dashes, forward slashes, full stops and underscores are allowed for service names, and colon followed by a label name. Service names must not start or end with a forward slash or colon", service)
+	}
+	if store.ReservedService(service) {
+		fmt.Fprintf(os.Stderr, "Service name %s is reserved for chamber's own use and will be prohibited in a future version. Please switch to a different service name.\n", service)
 	}
 
 	return nil

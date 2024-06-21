@@ -51,6 +51,7 @@ func TestValidateService_Path(t *testing.T) {
 		"foo-bar/foo-bar",
 		"foo/bar/foo",
 		"foo/bar/foo-bar",
+		"_chamber", // currently valid, but will be prohibited in a future version
 	}
 
 	for _, k := range validServicePathFormat {
@@ -86,6 +87,7 @@ func TestValidateService_PathLabel(t *testing.T) {
 		"foo/bar/foo:current",
 		"foo/bar/foo-bar:current",
 		"foo/bar/foo-bar",
+		"_chamber", // currently valid, but will be prohibited in a future version
 	}
 
 	for _, k := range validServicePathFormatWithLabel {

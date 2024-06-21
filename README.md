@@ -143,6 +143,11 @@ Secret keys are normalized automatically. The `-` will be `_` and the letters wi
 be converted to upper case (for example a secret with key `secret_key` and
 `secret-key` will become `SECRET_KEY`).
 
+#### Reserved Service Names
+
+Starting with version 3.0, the service name "_chamber" is reserved for chamber's
+internal use. You will be warned when using the service for any chamber operation.
+
 #### Tagging on Write
 
 ```bash

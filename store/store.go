@@ -6,6 +6,15 @@ import (
 	"time"
 )
 
+const (
+	// ChamberService is the name of the service reserved for chamber's own use.
+	ChamberService = "_chamber"
+)
+
+func ReservedService(service string) bool {
+	return service == ChamberService
+}
+
 type ChangeEventType int
 
 const (
@@ -29,22 +38,25 @@ var (
 	ErrSecretNotFound = errors.New("secret not found")
 )
 
+// SecretId is the compound key for a secret.
 type SecretId struct {
 	Service string
 	Key     string
 }
 
+// Secret is a secret with metadata.
 type Secret struct {
 	Value *string
 	Meta  SecretMetadata
 }
 
-// A secret without any metadata
+// RawSecret is a secret without any metadata.
 type RawSecret struct {
 	Value string
 	Key   string
 }
 
+// SecretMetadata is metadata about a secret.
 type SecretMetadata struct {
 	Created   time.Time
 	CreatedBy string
@@ -59,6 +71,7 @@ type ChangeEvent struct {
 	Version int
 }
 
+// Store is an interface for a secret store.
 type Store interface {
 	Write(ctx context.Context, id SecretId, value string) error
 	WriteWithTags(ctx context.Context, id SecretId, value string, tags map[string]string) error

@@ -13,6 +13,16 @@ func NewNullStore() *NullStore {
 	return &NullStore{}
 }
 
+func (s *NullStore) Config(ctx context.Context) (StoreConfig, error) {
+	return StoreConfig{
+		Version: LatestStoreConfigVersion,
+	}, nil
+}
+
+func (s *NullStore) SetConfig(ctx context.Context, config StoreConfig) error {
+	return errors.New("SetConfig is not implemented for Null Store")
+}
+
 func (s *NullStore) Write(ctx context.Context, id SecretId, value string) error {
 	return errors.New("Write is not implemented for Null Store")
 }

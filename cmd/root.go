@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"regexp"
 	"strconv"
@@ -24,7 +25,9 @@ var (
 	validTagKeyFormat               = regexp.MustCompile(`^[A-Za-z0-9 +\-=\._:/@]{1,128}$`)
 	validTagValueFormat             = regexp.MustCompile(`^[A-Za-z0-9 +\-=\._:/@]{1,256}$`)
 
+	// Deprecated: Use logLevel instead.
 	verbose    bool
+	logLevel   string
 	numRetries int
 	// Deprecated: Use retryMode instead.
 	minThrottleDelay time.Duration
@@ -72,19 +75,22 @@ var RootCmd = &cobra.Command{
 	Use:               "chamber",
 	Short:             "CLI for storing secrets",
 	SilenceUsage:      true,
-	PersistentPreRun:  prerun,
+	PersistentPreRunE: prerun,
 	PersistentPostRun: postrun,
 }
 
 func init() {
 	RootCmd.PersistentFlags().IntVarP(&numRetries, "retries", "r", DefaultNumRetries, "For SSM or Secrets Manager, the number of retries we'll make before giving up; AKA $CHAMBER_RETRIES")
 	RootCmd.PersistentFlags().DurationVarP(&minThrottleDelay, "min-throttle-delay", "", 0, "DEPRECATED and no longer has any effect. Use retry-mode instead")
+	RootCmd.PersistentFlags().MarkDeprecated("min-throttle-delay", "use --retry-mode instead")
 	RootCmd.PersistentFlags().StringVarP(&retryMode, "retry-mode", "", store.DefaultRetryMode.String(),
 		`For SSM, the model used to retry requests
   `+aws.RetryModeStandard.String()+`
   `+aws.RetryModeAdaptive.String(),
 	)
 	RootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "", false, "Print more information to STDOUT")
+	RootCmd.PersistentFlags().MarkDeprecated("verbose", "use --log-level debug instead")
+	RootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "", "Log level")
 	RootCmd.PersistentFlags().StringVarP(&backendFlag, "backend", "b", "ssm",
 		`Backend to use; AKA $CHAMBER_SECRET_BACKEND
 	null: no-op
@@ -236,7 +242,7 @@ func getSecretStore(ctx context.Context) (store.Store, error) {
 	return s, err
 }
 
-func prerun(cmd *cobra.Command, args []string) {
+func prerun(cmd *cobra.Command, args []string) error {
 	if analyticsEnabled {
 		// set up analytics client
 		analyticsClient, _ = analytics.NewWithConfig(analyticsWriteKey, analytics.Config{
@@ -250,6 +256,26 @@ func prerun(cmd *cobra.Command, args []string) {
 				Set("chamber-version", chamberVersion),
 		})
 	}
+
+	var slogLeveler slog.Leveler
+	if verbose {
+		levelVar := &slog.LevelVar{}
+		levelVar.Set(slog.LevelDebug)
+		slogLeveler = levelVar
+	}
+	if logLevel != "" {
+		levelVar := &slog.LevelVar{}
+		err := levelVar.UnmarshalText([]byte(logLevel))
+		if err != nil {
+			return fmt.Errorf("Failed to parse log level: %w", err)
+		}
+		slogLeveler = levelVar
+	}
+	if slogLeveler != nil {
+		handler := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slogLeveler})
+		slog.SetDefault(slog.New(handler))
+	}
+	return nil
 }
 
 func postrun(cmd *cobra.Command, args []string) {

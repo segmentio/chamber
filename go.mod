@@ -6,7 +6,7 @@ require (
 	github.com/alessio/shellescape v1.4.2
 	github.com/aws/aws-sdk-go-v2 v1.30.1
 	github.com/aws/aws-sdk-go-v2/config v1.27.11
-	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.1
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.9
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.57.1
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.32.1
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.52.1

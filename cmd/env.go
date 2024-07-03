@@ -8,7 +8,7 @@ import (
 
 	"github.com/alessio/shellescape"
 	analytics "github.com/segmentio/analytics-go/v3"
-	"github.com/segmentio/chamber/v2/utils"
+	"github.com/segmentio/chamber/v3/utils"
 
 	"github.com/spf13/cobra"
 )

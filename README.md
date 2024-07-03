@@ -8,16 +8,19 @@ For detailed info about using chamber, please read
 
 ## v3.0 Breaking Changes
 
-_Version 3.0 has not yet been released. Changes described here are forward-looking._
-
 * **Use of the SSM Parameter Store's path-based API is now required.** Support
   added in v2.0 to avoid it has been removed. The `CHAMBER_NO_PATHS` environment
   variable no longer has any effect. You must migrate to the new storage format
-  using the instructions below.
+  using the instructions below, using a 2.x version of chamber.
 * **The `--min-throttle-delay` option no longer has any effect.** Support for
   specifying a minimum throttle delay has been removed from the underlying AWS
   SDK with no direct replacement. Instead, set the new `--retry-mode` option to
   "adaptive" to use an experimental model that accounts for throttling errors.
+* **Context arguments are required for `Store` methods.** This is a consequence
+  of migrating to a new AWS SDK. This change has no effect for CLI users, but
+  those using chamber as a library must update their code to pass contexts.
+* **The deprecated `NewS3Store` constructor has been removed.** Use
+  `NewS3StoreWithBucket` instead.
 
 ## v2.0 Breaking Changes
 
@@ -52,7 +55,7 @@ at the time of release.
 If you have a functional go environment, you can install with:
 
 ```bash
-go install github.com/segmentio/chamber/v2@latest
+go install github.com/segmentio/chamber/v3@latest
 ```
 
 ### Caveat About `chamber version` and `go install`
@@ -443,7 +446,7 @@ you can use `CHAMBER_AWS_REGION` to override just for chamber.
 ### Custom SSM Endpoint
 
 If you'd like to use a custom SSM endpoint for chamber, you can use `CHAMBER_AWS_SSM_ENDPOINT`
-to override AWS default URL.
+to override the default URL.
 
 ## AWS Secrets Manager
 Chamber supports AWS Secrets Manager as an optional backend. For example:
@@ -452,6 +455,16 @@ Chamber supports AWS Secrets Manager as an optional backend. For example:
 chamber -b secretsmanager write myservice foo fah
 chamber -b secretsmanager write myservice foo2 fah2
 ```
+
+### Custom Secrets Manager Endpoint
+
+If you'd like to use a custom Secrets Manager endpoint for chamber, you can use
+`CHAMBER_AWS_SECRETS_MANAGER_ENDPOINT` to override the default URL.
+
+> [!WARNING]
+> Prior to v3.0.0, the endpoint could also be overridden with `CHAMBER_AWS_SSM_ENDPOINT`. This
+> has been deprecated and will stop working in a future chamber release. Please use
+> `CHAMBER_AWS_SECRETS_MANAGER_ENDPOINT` instead.
 
 ## S3 Backend (Experimental)
 

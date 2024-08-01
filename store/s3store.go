@@ -72,6 +72,16 @@ func NewS3StoreWithBucket(ctx context.Context, numRetries int, bucket string) (*
 	}, nil
 }
 
+func (s *S3Store) Config(ctx context.Context) (StoreConfig, error) {
+	return StoreConfig{
+		Version: LatestStoreConfigVersion,
+	}, nil
+}
+
+func (s *S3Store) SetConfig(ctx context.Context, config StoreConfig) error {
+	return errors.New("Not implemented for S3 Store")
+}
+
 func (s *S3Store) Write(ctx context.Context, id SecretId, value string) error {
 	index, err := s.readLatest(ctx, id.Service)
 	if err != nil {

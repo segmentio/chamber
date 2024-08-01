@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -91,6 +92,49 @@ func (s *SSMStore) KMSKey() string {
 	}
 
 	return fromEnv
+}
+
+const (
+	storeConfigKey = "store-config"
+)
+
+var (
+	storeConfigID = SecretId{
+		Service: ChamberService,
+		Key:     storeConfigKey,
+	}
+)
+
+func (s *SSMStore) Config(ctx context.Context) (StoreConfig, error) {
+	configSecret, err := s.readLatest(ctx, storeConfigID)
+	if err != nil {
+		if err == ErrSecretNotFound {
+			return StoreConfig{
+				Version: LatestStoreConfigVersion,
+			}, nil
+		} else {
+			return StoreConfig{}, err
+		}
+	}
+
+	var config StoreConfig
+	if err := json.Unmarshal([]byte(*configSecret.Value), &config); err != nil {
+		return StoreConfig{}, fmt.Errorf("failed to unmarshal store config: %w", err)
+	}
+	return config, nil
+}
+
+func (s *SSMStore) SetConfig(ctx context.Context, config StoreConfig) error {
+	configBytes, err := json.Marshal(config)
+	if err != nil {
+		return fmt.Errorf("failed to marshal store config: %w", err)
+	}
+
+	err = s.write(ctx, storeConfigID, string(configBytes), nil)
+	if err != nil {
+		return fmt.Errorf("failed to write store config: %w", err)
+	}
+	return nil
 }
 
 // Write writes a given value to a secret identified by id.  If the secret

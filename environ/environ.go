@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/segmentio/chamber/v2/store"
-	"github.com/segmentio/chamber/v2/utils"
+	"github.com/segmentio/chamber/v3/store"
+	"github.com/segmentio/chamber/v3/utils"
 )
 
 // environ is a slice of strings representing the environment, in the form "key=value".

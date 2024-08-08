@@ -12,7 +12,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	analytics "github.com/segmentio/analytics-go/v3"
-	"github.com/segmentio/chamber/v2/store"
+	"github.com/segmentio/chamber/v3/store"
 	"github.com/spf13/cobra"
 )
 

@@ -1,4 +1,4 @@
-module github.com/segmentio/chamber/v2
+module github.com/segmentio/chamber/v3
 
 go 1.20
 

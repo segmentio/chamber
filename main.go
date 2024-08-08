@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/segmentio/chamber/v2/cmd"
+	"github.com/segmentio/chamber/v3/cmd"
 )
 
 var (

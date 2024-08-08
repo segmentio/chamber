@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	analytics "github.com/segmentio/analytics-go/v3"
-	"github.com/segmentio/chamber/v2/environ"
+	"github.com/segmentio/chamber/v3/environ"
 	"github.com/spf13/cobra"
 )
 

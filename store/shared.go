@@ -31,10 +31,11 @@ func getConfig(ctx context.Context, numRetries int, retryMode aws.RetryMode) (aw
 	// If region is still not set, attempt to determine it via ec2 metadata API
 	if cfg.Region == "" {
 		imdsConfig, err := config.LoadDefaultConfig(ctx)
-		if err != nil {
+		if err == nil {
 			ec2metadataSvc := imds.NewFromConfig(imdsConfig)
 			if regionOverride, err := ec2metadataSvc.GetRegion(ctx, &imds.GetRegionInput{}); err == nil {
 				region = regionOverride.Region
+				cfg.Region = region
 			}
 		}
 	}

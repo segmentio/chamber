@@ -277,6 +277,12 @@ func (s *SSMStore) WriteTags(ctx context.Context, id SecretId, tags map[string]s
 	return nil
 }
 
+// checkForPresentRequiredTags returns an error if the given map of tags is
+// missing any required tags that are already present (in currentTags). This is
+// a problem only for a tag write command where any tags not being written are
+// to be deleted ("delete other tags"), because that would cause some required
+// tags to be deleted. Instead, the caller has to explicitly provide values for
+// all required tags, even if they aren't changing.
 func (s *SSMStore) checkForPresentRequiredTags(ctx context.Context, currentTags map[string]string, tags map[string]string) error {
 	requiredTags, err := requiredTags(ctx, s)
 	if err != nil {
@@ -287,6 +293,8 @@ func (s *SSMStore) checkForPresentRequiredTags(ctx context.Context, currentTags 
 		_, alreadyPresent := currentTags[requiredTag]
 		_, beingUpdated := tags[requiredTag]
 		if alreadyPresent && !beingUpdated {
+			// this required tag is present already but isn't being rewritten, which
+			// is a problem when "delete other tags" is set
 			missingTags = append(missingTags, requiredTag)
 		}
 	}

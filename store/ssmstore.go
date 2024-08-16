@@ -162,6 +162,11 @@ func (s *SSMStore) write(ctx context.Context, id SecretId, value string, tags ma
 		return errors.New("tags on write only supported for new secrets")
 	}
 
+	err = s.checkForRequiredTags(ctx, tags, version)
+	if err != nil {
+		return err
+	}
+
 	putParameterInput := &ssm.PutParameterInput{
 		KeyId:       aws.String(s.KMSKey()),
 		Name:        aws.String(s.idToName(id)),
@@ -186,6 +191,28 @@ func (s *SSMStore) write(ctx context.Context, id SecretId, value string, tags ma
 	return nil
 }
 
+func (s *SSMStore) checkForRequiredTags(ctx context.Context, tags map[string]string, version int) error {
+	if version != 1 {
+		return nil
+	}
+	requiredTags, err := requiredTags(ctx, s)
+	if err != nil {
+		return err
+	}
+
+	var missingTags []string
+	for _, requiredTag := range requiredTags {
+		if _, ok := tags[requiredTag]; !ok {
+			missingTags = append(missingTags, requiredTag)
+		}
+	}
+	if len(missingTags) > 0 {
+		return fmt.Errorf("required tags %v are missing", missingTags)
+	}
+
+	return nil
+}
+
 // Read reads a secret from the parameter store at a specific version.
 // To grab the latest version, use -1 as the version number.
 func (s *SSMStore) Read(ctx context.Context, id SecretId, version int) (Secret, error) {
@@ -204,6 +231,14 @@ func (s *SSMStore) WriteTags(ctx context.Context, id SecretId, tags map[string]s
 			return err
 		}
 
+		// fail if any required tags are already present but not being written, because they'd be deleted
+		// (a required tag that hasn't been set yet may be left out)
+		err = s.checkForPresentRequiredTags(ctx, currentTags, tags)
+		if err != nil {
+			return err
+		}
+
+		// remove any tags that are not being written
 		var tagKeysToRemove []string
 		for k := range currentTags {
 			if _, ok := tags[k]; !ok {
@@ -218,6 +253,7 @@ func (s *SSMStore) WriteTags(ctx context.Context, id SecretId, tags map[string]s
 		}
 	}
 
+	// add or update tags
 	addTags := make([]types.Tag, len(tags))
 	i := 0
 	for k, v := range tags {
@@ -236,6 +272,34 @@ func (s *SSMStore) WriteTags(ctx context.Context, id SecretId, tags map[string]s
 	_, err := s.svc.AddTagsToResource(ctx, addTagsInput)
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+// checkForPresentRequiredTags returns an error if the given map of tags is
+// missing any required tags that are already present (in currentTags). This is
+// a problem only for a tag write command where any tags not being written are
+// to be deleted ("delete other tags"), because that would cause some required
+// tags to be deleted. Instead, the caller has to explicitly provide values for
+// all required tags, even if they aren't changing.
+func (s *SSMStore) checkForPresentRequiredTags(ctx context.Context, currentTags map[string]string, tags map[string]string) error {
+	requiredTags, err := requiredTags(ctx, s)
+	if err != nil {
+		return err
+	}
+	var missingTags []string
+	for _, requiredTag := range requiredTags {
+		_, alreadyPresent := currentTags[requiredTag]
+		_, beingUpdated := tags[requiredTag]
+		if alreadyPresent && !beingUpdated {
+			// this required tag is present already but isn't being rewritten, which
+			// is a problem when "delete other tags" is set
+			missingTags = append(missingTags, requiredTag)
+		}
+	}
+	if len(missingTags) > 0 {
+		return fmt.Errorf("required tags %v are already present, so they must be rewritten", missingTags)
 	}
 
 	return nil
@@ -284,14 +348,42 @@ func (s *SSMStore) Delete(ctx context.Context, id SecretId) error {
 }
 
 func (s *SSMStore) DeleteTags(ctx context.Context, id SecretId, tagKeys []string) error {
+	err := s.checkIfDeletingRequiredTags(ctx, tagKeys)
+	if err != nil {
+		return err
+	}
+
 	removeTagsInput := &ssm.RemoveTagsFromResourceInput{
 		ResourceType: types.ResourceTypeForTaggingParameter,
 		ResourceId:   aws.String(s.idToName(id)),
 		TagKeys:      tagKeys,
 	}
-	_, err := s.svc.RemoveTagsFromResource(ctx, removeTagsInput)
+	_, err = s.svc.RemoveTagsFromResource(ctx, removeTagsInput)
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (s *SSMStore) checkIfDeletingRequiredTags(ctx context.Context, tagKeys []string) error {
+	requiredTags, err := requiredTags(ctx, s)
+	if err != nil {
+		return err
+	}
+	tags := make(map[string]any)
+	for _, key := range tagKeys {
+		tags[key] = struct{}{}
+	}
+
+	var foundTags []string
+	for _, requiredTag := range requiredTags {
+		if _, ok := tags[requiredTag]; ok {
+			foundTags = append(foundTags, requiredTag)
+		}
+	}
+	if len(foundTags) > 0 {
+		return fmt.Errorf("required tags %v may not be deleted", foundTags)
 	}
 
 	return nil

@@ -507,6 +507,41 @@ func TestWriteWithTags(t *testing.T) {
 	})
 }
 
+func TestWriteWithRequiredTags(t *testing.T) {
+	ctx := context.Background()
+	storeConfigMockParameter := storeConfigMockParameter(`{"version":"1","requiredTags":["key1", "key2"]}`)
+	parameters := map[string]mockParameter{
+		*storeConfigMockParameter.meta.Name: storeConfigMockParameter,
+	}
+	store := NewTestSSMStore(parameters)
+
+	t.Run("Setting a new key with required tags should work", func(t *testing.T) {
+		secretId := SecretId{Service: "test", Key: "mykey1"}
+		tags := map[string]string{
+			"key1": "value1",
+			"key2": "value2",
+			"key3": "value3",
+		}
+		err := store.WriteWithTags(ctx, secretId, "value", tags)
+		assert.NoError(t, err)
+		assert.Contains(t, parameters, store.idToName(secretId))
+
+		paramTags := parameters[store.idToName(secretId)].tags
+		assert.Equal(t, "value1", paramTags["key1"])
+		assert.Equal(t, "value2", paramTags["key2"])
+		assert.Equal(t, "value3", paramTags["key3"])
+	})
+	t.Run("Setting a new key without required tags should fail", func(t *testing.T) {
+		secretId := SecretId{Service: "test", Key: "mykey2"}
+		tags := map[string]string{
+			"key2": "value2",
+			"key3": "value3",
+		}
+		err := store.WriteWithTags(ctx, secretId, "value", tags)
+		assert.Error(t, err)
+	})
+}
+
 func TestReadPaths(t *testing.T) {
 	ctx := context.Background()
 	parameters := map[string]mockParameter{}
@@ -714,6 +749,82 @@ func TestWriteTags(t *testing.T) {
 	})
 }
 
+func TestWriteTagsWithRequiredTags(t *testing.T) {
+	ctx := context.Background()
+	storeConfigMockParameter := storeConfigMockParameter(`{"version":"1","requiredTags":["key1", "key2"]}`)
+	parameters := map[string]mockParameter{
+		*storeConfigMockParameter.meta.Name: storeConfigMockParameter,
+	}
+	store := NewTestSSMStore(parameters)
+	secretId := SecretId{Service: "test", Key: "key"}
+	require.NoError(t, store.WriteWithTags(ctx, secretId, "value", map[string]string{
+		"key1": "value1",
+		"key2": "value2",
+		"key3": "value3",
+	}))
+
+	t.Run("Writing tags can omit required tags when not deleting others", func(t *testing.T) {
+		tags := map[string]string{
+			"key3": "value3a",
+		}
+		err := store.WriteTags(ctx, secretId, tags, false)
+		assert.NoError(t, err)
+		assert.Contains(t, parameters, store.idToName(secretId))
+		paramTags := parameters[store.idToName(secretId)].tags
+		assert.Equal(t, "value1", paramTags["key1"])
+		assert.Equal(t, "value2", paramTags["key2"])
+		assert.Equal(t, "value3a", paramTags["key3"])
+	})
+
+	t.Run("Writing tags can include required tags when not deleting others", func(t *testing.T) {
+		tags := map[string]string{
+			"key1": "value1a",
+		}
+		err := store.WriteTags(ctx, secretId, tags, false)
+		assert.NoError(t, err)
+		assert.Contains(t, parameters, store.idToName(secretId))
+		paramTags := parameters[store.idToName(secretId)].tags
+		assert.Equal(t, "value1a", paramTags["key1"])
+		assert.Equal(t, "value2", paramTags["key2"])
+		assert.Equal(t, "value3a", paramTags["key3"])
+	})
+
+	t.Run("Writing tags must not omit present required tags when deleting others", func(t *testing.T) {
+		tags := map[string]string{
+			"key1": "value1b",
+			// skipping required key2
+			"key4": "value4",
+		}
+		err := store.WriteTags(ctx, secretId, tags, true)
+		assert.Error(t, err)
+		assert.Contains(t, parameters, store.idToName(secretId))
+		paramTags := parameters[store.idToName(secretId)].tags
+		assert.Equal(t, "value1a", paramTags["key1"])
+		assert.Equal(t, "value2", paramTags["key2"])
+		assert.Equal(t, "value3a", paramTags["key3"])
+		_, ok := paramTags["key4"]
+		assert.False(t, ok)
+	})
+
+	t.Run("Writing tags must include all present required tags when deleting others", func(t *testing.T) {
+		tags := map[string]string{
+			"key1": "value1b",
+			"key2": "value2b",
+			// key3 to be deleted
+			"key4": "value4",
+		}
+		err := store.WriteTags(ctx, secretId, tags, true)
+		assert.NoError(t, err)
+		assert.Contains(t, parameters, store.idToName(secretId))
+		paramTags := parameters[store.idToName(secretId)].tags
+		assert.Equal(t, "value1b", paramTags["key1"])
+		assert.Equal(t, "value2b", paramTags["key2"])
+		assert.Equal(t, "value4", paramTags["key4"])
+		_, ok := paramTags["key3"]
+		assert.False(t, ok)
+	})
+}
+
 func TestReadTags(t *testing.T) {
 	ctx := context.Background()
 	parameters := map[string]mockParameter{}
@@ -775,6 +886,37 @@ func TestDeleteTags(t *testing.T) {
 	t.Run("Deleting tags for a non-existent key should give not found err", func(t *testing.T) {
 		err := store.DeleteTags(ctx, SecretId{Service: "test", Key: "nope"}, []string{"tag1"})
 		assert.Equal(t, ErrSecretNotFound, err)
+	})
+}
+
+func TestDeleteTagsWithRequiredTags(t *testing.T) {
+	ctx := context.Background()
+	storeConfigMockParameter := storeConfigMockParameter(`{"version":"1","requiredTags":["key1", "key2"]}`)
+	parameters := map[string]mockParameter{
+		*storeConfigMockParameter.meta.Name: storeConfigMockParameter,
+	}
+	store := NewTestSSMStore(parameters)
+	secretId := SecretId{Service: "test", Key: "key"}
+	require.NoError(t, store.WriteWithTags(ctx, secretId, "value", map[string]string{
+		"key1": "value1",
+		"key2": "value2",
+		"key3": "value3",
+	}))
+
+	t.Run("Deleting non-required tags should work", func(t *testing.T) {
+		err := store.DeleteTags(ctx, secretId, []string{"key3"})
+		assert.NoError(t, err)
+		readTags, err := store.ReadTags(ctx, secretId)
+		assert.NoError(t, err)
+		assert.Equal(t, map[string]string{"key1": "value1", "key2": "value2"}, readTags)
+	})
+
+	t.Run("Deleting required tags should fail", func(t *testing.T) {
+		err := store.DeleteTags(ctx, secretId, []string{"key2"})
+		assert.Error(t, err)
+		readTags, err := store.ReadTags(ctx, secretId)
+		assert.NoError(t, err)
+		assert.Equal(t, map[string]string{"key1": "value1", "key2": "value2"}, readTags)
 	})
 }
 
@@ -856,21 +998,9 @@ func (a ByKeyRaw) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a ByKeyRaw) Less(i, j int) bool { return a[i].Key < a[j].Key }
 
 func TestSSMStoreConfig(t *testing.T) {
-	storeConfigName := fmt.Sprintf("/%s/%s", ChamberService, storeConfigKey)
+	storeConfigMockParameter := storeConfigMockParameter(`{"version":"2","requiredTags":["key1", "key2"]}`)
 	parameters := map[string]mockParameter{
-		storeConfigName: {
-			currentParam: &types.Parameter{
-				Name:  aws.String(storeConfigName),
-				Type:  types.ParameterTypeSecureString,
-				Value: aws.String(`{"version":"2","requiredTags":["key1", "key2"]}`),
-			},
-			meta: &types.ParameterMetadata{
-				Name:             aws.String(storeConfigName),
-				Description:      aws.String("1"),
-				LastModifiedDate: aws.Time(time.Now()),
-				LastModifiedUser: aws.String("test"),
-			},
-		},
+		*storeConfigMockParameter.meta.Name: storeConfigMockParameter,
 	}
 	store := NewTestSSMStore(parameters)
 
@@ -909,4 +1039,21 @@ func TestSSMStoreSetConfig(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "2.1", config.Version)
 	assert.Equal(t, []string{"key1.1", "key2.1"}, config.RequiredTags)
+}
+
+func storeConfigMockParameter(content string) mockParameter {
+	storeConfigName := fmt.Sprintf("/%s/%s", ChamberService, storeConfigKey)
+	return mockParameter{
+		currentParam: &types.Parameter{
+			Name:  aws.String(storeConfigName),
+			Type:  types.ParameterTypeSecureString,
+			Value: aws.String(content),
+		},
+		meta: &types.ParameterMetadata{
+			Name:             aws.String(storeConfigName),
+			Description:      aws.String("1"),
+			LastModifiedDate: aws.Time(time.Now()),
+			LastModifiedUser: aws.String("test"),
+		},
+	}
 }

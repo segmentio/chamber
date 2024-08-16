@@ -6,7 +6,7 @@ import (
 	"sort"
 	"text/tabwriter"
 
-	"github.com/segmentio/chamber/v2/utils"
+	"github.com/segmentio/chamber/v3/utils"
 	"github.com/spf13/cobra"
 )
 

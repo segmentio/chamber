@@ -11,7 +11,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.32.1
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.52.1
 	github.com/aws/aws-sdk-go-v2/service/sts v1.30.3
-	github.com/aws/smithy-go v1.20.3
+	github.com/aws/smithy-go v1.20.4
 	github.com/magiconair/properties v1.8.7
 	github.com/segmentio/analytics-go/v3 v3.3.0
 	github.com/spf13/cobra v1.8.1

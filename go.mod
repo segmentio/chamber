@@ -16,7 +16,7 @@ require (
 	github.com/segmentio/analytics-go/v3 v3.3.0
 	github.com/spf13/cobra v1.8.1
 	github.com/stretchr/testify v1.10.0
-	golang.org/x/sys v0.28.0
+	golang.org/x/sys v0.29.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 

@@ -9,12 +9,11 @@ import (
 	"os"
 	"strings"
 
+	yaml "github.com/goccy/go-yaml"
 	"github.com/magiconair/properties"
-
 	analytics "github.com/segmentio/analytics-go/v3"
 	"github.com/segmentio/chamber/v3/utils"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
 )
 
 // exportCmd represents the export command

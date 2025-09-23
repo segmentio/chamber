@@ -14,9 +14,10 @@ import (
 )
 
 var (
-	singleline    bool
-	skipUnchanged bool
-	tags          map[string]string
+	singleline        bool
+	skipUnchanged     bool
+	tags              map[string]string
+	preserveWriteCase bool
 
 	// writeCmd represents the write command
 	writeCmd = &cobra.Command{
@@ -31,6 +32,7 @@ func init() {
 	writeCmd.Flags().BoolVarP(&singleline, "singleline", "s", false, "Insert single line parameter (end with \\n)")
 	writeCmd.Flags().BoolVarP(&skipUnchanged, "skip-unchanged", "", false, "Skip writing secret if value is unchanged")
 	writeCmd.Flags().StringToStringVarP(&tags, "tags", "t", map[string]string{}, "Add tags to the secret; new secrets only")
+	writeCmd.Flags().BoolVarP(&preserveWriteCase, "preserve-case", "p", false, "preserve variable name case")
 	RootCmd.AddCommand(writeCmd)
 }
 
@@ -40,7 +42,12 @@ func write(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("Failed to validate service: %w", err)
 	}
 
-	key := utils.NormalizeKey(args[1])
+	key := args[1]
+
+	if !preserveWriteCase {
+		key = utils.NormalizeKey(key)
+	}
+
 	if err := validateKey(key); err != nil {
 		return fmt.Errorf("Failed to validate key: %w", err)
 	}

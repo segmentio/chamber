@@ -395,6 +395,17 @@ func TestNewSSMStore(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, DefaultRetryMode, s.config.RetryMode)
 	})
+
+	t.Run("Should return error when AWS_PROFILE points to invalid profile", func(t *testing.T) {
+		os.Setenv("AWS_PROFILE", "invalid-profile")
+		defer os.Unsetenv("AWS_PROFILE")
+
+		s, err := NewSSMStore(context.Background(), 1)
+		assert.NotNil(t, err)
+		assert.Nil(t, s)
+		// Verify it's a profile not exist error
+		assert.Contains(t, err.Error(), "profile")
+	})
 }
 
 func TestNewSSMStoreWithRetryMode(t *testing.T) {

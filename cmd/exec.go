@@ -24,6 +24,9 @@ var strictValue string
 // Default value to expect in strict mode
 const strictValueDefault = "chamberme"
 
+// When true, suppress warnings about conflicting environment variables
+var noWarnConflicts bool
+
 // execCmd represents the exec command
 var execCmd = &cobra.Command{
 	Use:   "exec <service...> -- <command> [<arg...>]",
@@ -58,6 +61,11 @@ Given a secret store like this:
 	$ HOME=/tmp DB_USERNAME=chamberme DB_PASSWORD=chamberme chamber exec --strict --pristine service exec -- env
 	DB_USERNAME=root
 	DB_PASSWORD=hunter22
+
+--no-warn-conflicts suppresses warnings when services overwrite environment variables
+
+	$ chamber exec --no-warn-conflicts service1 service2 -- env
+	# No warnings about conflicting keys between service1 and service2
 `,
 }
 
@@ -68,6 +76,7 @@ only inject secrets for which there is a corresponding env var with value
 <strict-value>, and fail if there are any env vars with that value missing
 from secrets`)
 	execCmd.Flags().StringVar(&strictValue, "strict-value", strictValueDefault, "value to expect in --strict mode")
+	execCmd.Flags().BoolVar(&noWarnConflicts, "no-warn-conflicts", false, "suppress warnings when services overwrite environment variables (useful when conflicts are expected)")
 	RootCmd.AddCommand(execCmd)
 }
 
@@ -123,8 +132,10 @@ func execRun(cmd *cobra.Command, args []string) error {
 				return fmt.Errorf("Failed to list store contents: %w", err)
 			}
 
-			for _, c := range collisions {
-				fmt.Fprintf(os.Stderr, "warning: service %s overwriting environment variable %s\n", service, c)
+			if !noWarnConflicts {
+				for _, c := range collisions {
+					fmt.Fprintf(os.Stderr, "warning: service %s overwriting environment variable %s\n", service, c)
+				}
 			}
 		}
 	}

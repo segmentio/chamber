@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/alessio/shellescape"
+	"al.essio.dev/pkg/shellescape"
 	analytics "github.com/segmentio/analytics-go/v3"
 	"github.com/segmentio/chamber/v3/utils"
 

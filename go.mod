@@ -1,9 +1,9 @@
 module github.com/segmentio/chamber/v3
 
-go 1.23.0
+go 1.24.11
 
 require (
-	github.com/alessio/shellescape v1.4.2
+	al.essio.dev/pkg/shellescape v1.6.0
 	github.com/aws/aws-sdk-go-v2 v1.40.0
 	github.com/aws/aws-sdk-go-v2/config v1.32.0
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.14
@@ -12,12 +12,12 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.67.3
 	github.com/aws/aws-sdk-go-v2/service/sts v1.41.1
 	github.com/aws/smithy-go v1.23.2
-	github.com/goccy/go-yaml v1.17.1
-	github.com/magiconair/properties v1.8.9
+	github.com/goccy/go-yaml v1.19.0
+	github.com/magiconair/properties v1.8.10
 	github.com/segmentio/analytics-go/v3 v3.3.0
-	github.com/spf13/cobra v1.8.1
+	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.10.0
-	golang.org/x/sys v0.29.0
+	golang.org/x/sys v0.39.0
 )
 
 require (
@@ -41,6 +41,6 @@ require (
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/segmentio/backo-go v1.0.1 // indirect
-	github.com/spf13/pflag v1.0.5 // indirect
+	github.com/spf13/pflag v1.0.9 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

@@ -11,11 +11,11 @@ import (
 
 func TestGetConfig(t *testing.T) {
 	originalRegion := os.Getenv(RegionEnvVar)
-	os.Setenv(RegionEnvVar, "us-west-2")
+	os.Setenv(RegionEnvVar, "us-west-2") //nolint:errcheck // pre-existing
 	if originalRegion != "" {
-		defer os.Setenv(RegionEnvVar, originalRegion)
+		defer os.Setenv(RegionEnvVar, originalRegion) //nolint:errcheck // pre-existing
 	} else {
-		defer os.Unsetenv(RegionEnvVar)
+		defer os.Unsetenv(RegionEnvVar) //nolint:errcheck // pre-existing
 	}
 
 	config, region, err := getConfig(context.Background(), 3, aws.RetryModeStandard)

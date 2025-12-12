@@ -351,12 +351,12 @@ func NewTestSSMStore(parameters map[string]mockParameter) *SSMStore {
 
 func TestNewSSMStore(t *testing.T) {
 	t.Run("Using region override should take precedence over other settings", func(t *testing.T) {
-		os.Setenv("CHAMBER_AWS_REGION", "us-east-1")
-		defer os.Unsetenv("CHAMBER_AWS_REGION")
-		os.Setenv("AWS_REGION", "us-west-1")
-		defer os.Unsetenv("AWS_REGION")
-		os.Setenv("AWS_DEFAULT_REGION", "us-west-2")
-		defer os.Unsetenv("AWS_DEFAULT_REGION")
+		os.Setenv("CHAMBER_AWS_REGION", "us-east-1")       //nolint:errcheck // pre-existing
+		defer os.Unsetenv("CHAMBER_AWS_REGION")            //nolint:errcheck // pre-existing
+		os.Setenv("AWS_REGION", "us-west-1")               //nolint:errcheck // pre-existing
+		defer os.Unsetenv("AWS_REGION")                    //nolint:errcheck // pre-existing
+		os.Setenv("AWS_DEFAULT_REGION", "us-west-2")       //nolint:errcheck // pre-existing
+		defer os.Unsetenv("AWS_DEFAULT_REGION")            //nolint:errcheck // pre-existing
 
 		s, err := NewSSMStore(context.Background(), 1)
 		assert.Nil(t, err)
@@ -364,8 +364,8 @@ func TestNewSSMStore(t *testing.T) {
 	})
 
 	t.Run("Should use AWS_REGION if it is set", func(t *testing.T) {
-		os.Setenv("AWS_REGION", "us-west-1")
-		defer os.Unsetenv("AWS_REGION")
+		os.Setenv("AWS_REGION", "us-west-1")    //nolint:errcheck // pre-existing
+		defer os.Unsetenv("AWS_REGION")         //nolint:errcheck // pre-existing
 
 		s, err := NewSSMStore(context.Background(), 1)
 		assert.Nil(t, err)
@@ -373,8 +373,8 @@ func TestNewSSMStore(t *testing.T) {
 	})
 
 	t.Run("Should use CHAMBER_AWS_SSM_ENDPOINT if set", func(t *testing.T) {
-		os.Setenv("CHAMBER_AWS_SSM_ENDPOINT", "mycustomendpoint")
-		defer os.Unsetenv("CHAMBER_AWS_SSM_ENDPOINT")
+		os.Setenv("CHAMBER_AWS_SSM_ENDPOINT", "mycustomendpoint")    //nolint:errcheck // pre-existing
+		defer os.Unsetenv("CHAMBER_AWS_SSM_ENDPOINT")                //nolint:errcheck // pre-existing
 
 		s, err := NewSSMStore(context.Background(), 1)
 		assert.Nil(t, err)

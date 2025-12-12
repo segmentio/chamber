@@ -60,12 +60,12 @@ func runExport(cmd *cobra.Command, args []string) error {
 	for _, service := range args {
 		service = utils.NormalizeService(service)
 		if err := validateService(service); err != nil {
-			return fmt.Errorf("Failed to validate service %s: %w", service, err)
+			return fmt.Errorf("Failed to validate service %s: %w", service, err) //nolint:staticcheck // ST1005 pre-existing
 		}
 
 		rawSecrets, err := secretStore.ListRaw(cmd.Context(), service)
 		if err != nil {
-			return fmt.Errorf("Failed to list store contents for service %s: %w", service, err)
+			return fmt.Errorf("Failed to list store contents for service %s: %w", service, err) //nolint:staticcheck // ST1005 pre-existing
 		}
 		for _, rawSecret := range rawSecrets {
 			k := key(rawSecret.Key)
@@ -79,14 +79,14 @@ func runExport(cmd *cobra.Command, args []string) error {
 	file := os.Stdout
 	if exportOutput != "" {
 		if file, err = os.OpenFile(exportOutput, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644); err != nil {
-			return fmt.Errorf("Failed to open output file for writing: %w", err)
+			return fmt.Errorf("Failed to open output file for writing: %w", err) //nolint:staticcheck // ST1005 pre-existing
 		}
 		// TODO: check for errors flushing, syncing, or closing
-		defer file.Close()
-		defer file.Sync()
+		defer file.Close() //nolint:errcheck // pre-existing
+		defer file.Sync()  //nolint:errcheck // pre-existing
 	}
 	w := bufio.NewWriter(file)
-	defer w.Flush()
+	defer w.Flush() //nolint:errcheck // pre-existing
 
 	switch strings.ToLower(exportFormat) {
 	case "json":
@@ -104,11 +104,11 @@ func runExport(cmd *cobra.Command, args []string) error {
 	case "tfvars":
 		err = exportAsTFvars(params, w)
 	default:
-		err = fmt.Errorf("Unsupported export format: %s", exportFormat)
+		err = fmt.Errorf("Unsupported export format: %s", exportFormat) //nolint:staticcheck // ST1005 pre-existing
 	}
 
 	if err != nil {
-		return fmt.Errorf("Unable to export parameters: %w", err)
+		return fmt.Errorf("Unable to export parameters: %w", err) //nolint:staticcheck // ST1005 pre-existing
 	}
 
 	return nil
@@ -130,7 +130,7 @@ func exportAsEnvFile(params map[string]string, w io.Writer) error {
 	}
 
 	for i := range out {
-		_, err := w.Write([]byte(fmt.Sprintln(out[i])))
+		_, err := w.Write([]byte(fmt.Sprintln(out[i]))) //nolint:staticcheck // QF1012 pre-existing
 		if err != nil {
 			return err
 		}
@@ -144,7 +144,7 @@ func exportAsTFvars(params map[string]string, w io.Writer) error {
 	for _, k := range sortedKeys(params) {
 		key := sanitizeKey(strings.TrimPrefix(k, "tf_var_"))
 
-		_, err := w.Write([]byte(fmt.Sprintf(`%s = "%s"`+"\n", key, doubleQuoteEscape(params[k]))))
+		_, err := w.Write([]byte(fmt.Sprintf(`%s = "%s"`+"\n", key, doubleQuoteEscape(params[k])))) //nolint:staticcheck // QF1012 pre-existing
 		if err != nil {
 			return fmt.Errorf("failed to write variable with key %s: %v", k, err)
 		}
@@ -192,7 +192,7 @@ func exportAsCsv(params map[string]string, w io.Writer) error {
 	defer csvWriter.Flush()
 	for _, k := range sortedKeys(params) {
 		if err := csvWriter.Write([]string{k, params[k]}); err != nil {
-			return fmt.Errorf("Failed to write param %q to CSV file: %w", k, err)
+			return fmt.Errorf("Failed to write param %q to CSV file: %w", k, err) //nolint:staticcheck // ST1005 pre-existing
 		}
 	}
 	return nil
@@ -205,7 +205,7 @@ func exportAsTsv(params map[string]string, w io.Writer) error {
 	defer tsvWriter.Flush()
 	for _, k := range sortedKeys(params) {
 		if err := tsvWriter.Write([]string{k, params[k]}); err != nil {
-			return fmt.Errorf("Failed to write param %q to TSV file: %w", k, err)
+			return fmt.Errorf("Failed to write param %q to TSV file: %w", k, err) //nolint:staticcheck // ST1005 pre-existing
 		}
 	}
 	return nil

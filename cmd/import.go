@@ -30,7 +30,7 @@ func init() {
 func importRun(cmd *cobra.Command, args []string) error {
 	service := utils.NormalizeService(args[0])
 	if err := validateService(service); err != nil {
-		return fmt.Errorf("Failed to validate service: %w", err)
+		return fmt.Errorf("Failed to validate service: %w", err) //nolint:staticcheck // ST1005 pre-existing
 	}
 
 	var in io.Reader
@@ -42,7 +42,7 @@ func importRun(cmd *cobra.Command, args []string) error {
 	} else {
 		in, err = os.Open(file)
 		if err != nil {
-			return fmt.Errorf("Failed to open file: %w", err)
+			return fmt.Errorf("Failed to open file: %w", err) //nolint:staticcheck // ST1005 pre-existing
 		}
 	}
 
@@ -50,7 +50,7 @@ func importRun(cmd *cobra.Command, args []string) error {
 
 	decoder := yaml.NewDecoder(in)
 	if err := decoder.Decode(&toBeImported); err != nil {
-		return fmt.Errorf("Failed to decode input as json: %w", err)
+		return fmt.Errorf("Failed to decode input as json: %w", err) //nolint:staticcheck // ST1005 pre-existing
 	}
 
 	if analyticsEnabled && analyticsClient != nil {
@@ -67,7 +67,7 @@ func importRun(cmd *cobra.Command, args []string) error {
 
 	secretStore, err := getSecretStore(cmd.Context())
 	if err != nil {
-		return fmt.Errorf("Failed to get secret store: %w", err)
+		return fmt.Errorf("Failed to get secret store: %w", err) //nolint:staticcheck // ST1005 pre-existing
 	}
 
 	for key, value := range toBeImported {
@@ -79,10 +79,10 @@ func importRun(cmd *cobra.Command, args []string) error {
 			Key:     key,
 		}
 		if err := secretStore.Write(cmd.Context(), secretId, value); err != nil {
-			return fmt.Errorf("Failed to write secret: %w", err)
+			return fmt.Errorf("Failed to write secret: %w", err) //nolint:staticcheck // ST1005 pre-existing
 		}
 	}
 
-	fmt.Fprintf(os.Stdout, "Successfully imported %d secrets\n", len(toBeImported))
+	fmt.Fprintf(os.Stdout, "Successfully imported %d secrets\n", len(toBeImported)) //nolint:errcheck // pre-existing
 	return nil
 }

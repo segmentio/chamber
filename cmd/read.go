@@ -33,12 +33,12 @@ func init() {
 func read(cmd *cobra.Command, args []string) error {
 	service := utils.NormalizeService(args[0])
 	if err := validateService(service); err != nil {
-		return fmt.Errorf("Failed to validate service: %w", err)
+		return fmt.Errorf("Failed to validate service: %w", err) //nolint:staticcheck // ST1005 pre-existing
 	}
 
 	key := utils.NormalizeKey(args[1])
 	if err := validateKey(key); err != nil {
-		return fmt.Errorf("Failed to validate key: %w", err)
+		return fmt.Errorf("Failed to validate key: %w", err) //nolint:staticcheck // ST1005 pre-existing
 	}
 
 	if analyticsEnabled && analyticsClient != nil {
@@ -56,7 +56,7 @@ func read(cmd *cobra.Command, args []string) error {
 
 	secretStore, err := getSecretStore(cmd.Context())
 	if err != nil {
-		return fmt.Errorf("Failed to get secret store: %w", err)
+		return fmt.Errorf("Failed to get secret store: %w", err) //nolint:staticcheck // ST1005 pre-existing
 	}
 
 	secretId := store.SecretId{
@@ -66,22 +66,22 @@ func read(cmd *cobra.Command, args []string) error {
 
 	secret, err := secretStore.Read(cmd.Context(), secretId, version)
 	if err != nil {
-		return fmt.Errorf("Failed to read: %w", err)
+		return fmt.Errorf("Failed to read: %w", err) //nolint:staticcheck // ST1005 pre-existing
 	}
 
 	if quiet {
-		fmt.Fprintf(os.Stdout, "%s\n", *secret.Value)
+		fmt.Fprintf(os.Stdout, "%s\n", *secret.Value) //nolint:errcheck // pre-existing
 		return nil
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 8, 2, '\t', 0)
-	fmt.Fprintln(w, "Key\tValue\tVersion\tLastModified\tUser")
-	fmt.Fprintf(w, "%s\t%s\t%d\t%s\t%s\n",
+	fmt.Fprintln(w, "Key\tValue\tVersion\tLastModified\tUser") //nolint:errcheck // pre-existing
+	fmt.Fprintf(w, "%s\t%s\t%d\t%s\t%s\n", //nolint:errcheck // pre-existing
 		key,
 		*secret.Value,
 		secret.Meta.Version,
 		secret.Meta.Created.Local().Format(ShortTimeFormat),
 		secret.Meta.CreatedBy)
-	w.Flush()
+	w.Flush() //nolint:errcheck // pre-existing
 	return nil
 }

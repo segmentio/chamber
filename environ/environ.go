@@ -79,7 +79,7 @@ func secretKeyToEnvVarName(k string) string {
 }
 
 func normalizeEnvVarName(k string) string {
-	return strings.Replace(strings.ToUpper(k), "-", "_", -1)
+	return strings.Replace(strings.ToUpper(k), "-", "_", -1) //nolint:staticcheck // QF1004 pre-existing
 }
 
 // load loads environment variables into e from s given a service

@@ -26,18 +26,18 @@ func init() {
 func tagDelete(cmd *cobra.Command, args []string) error {
 	service := utils.NormalizeService(args[0])
 	if err := validateService(service); err != nil {
-		return fmt.Errorf("Failed to validate service: %w", err)
+		return fmt.Errorf("Failed to validate service: %w", err) //nolint:staticcheck // ST1005 pre-existing
 	}
 
 	key := utils.NormalizeKey(args[1])
 	if err := validateKey(key); err != nil {
-		return fmt.Errorf("Failed to validate key: %w", err)
+		return fmt.Errorf("Failed to validate key: %w", err) //nolint:staticcheck // ST1005 pre-existing
 	}
 
 	tagKeys := make([]string, len(args)-2)
 	for i, tagArg := range args[2:] {
 		if err := validateTag(tagArg, "dummy"); err != nil {
-			return fmt.Errorf("Failed to validate tag key %s: %w", tagArg, err)
+			return fmt.Errorf("Failed to validate tag key %s: %w", tagArg, err) //nolint:staticcheck // ST1005 pre-existing
 		}
 		tagKeys[i] = tagArg
 	}
@@ -57,7 +57,7 @@ func tagDelete(cmd *cobra.Command, args []string) error {
 
 	secretStore, err := getSecretStore(cmd.Context())
 	if err != nil {
-		return fmt.Errorf("Failed to get secret store: %w", err)
+		return fmt.Errorf("Failed to get secret store: %w", err) //nolint:staticcheck // ST1005 pre-existing
 	}
 
 	secretId := store.SecretId{
@@ -67,7 +67,7 @@ func tagDelete(cmd *cobra.Command, args []string) error {
 
 	err = secretStore.DeleteTags(cmd.Context(), secretId, tagKeys)
 	if err != nil {
-		return fmt.Errorf("Failed to delete tags: %w", err)
+		return fmt.Errorf("Failed to delete tags: %w", err) //nolint:staticcheck // ST1005 pre-existing
 	}
 
 	return nil

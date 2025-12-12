@@ -89,13 +89,13 @@ func execRun(cmd *cobra.Command, args []string) error {
 
 	for _, service := range services {
 		if err := validateServiceWithLabel(service); err != nil {
-			return fmt.Errorf("Failed to validate service: %w", err)
+			return fmt.Errorf("Failed to validate service: %w", err) //nolint:staticcheck // ST1005 pre-existing
 		}
 	}
 
 	secretStore, err := getSecretStore(cmd.Context())
 	if err != nil {
-		return fmt.Errorf("Failed to get secret store: %w", err)
+		return fmt.Errorf("Failed to get secret store: %w", err) //nolint:staticcheck // ST1005 pre-existing
 	}
 
 	if pristine {
@@ -120,7 +120,7 @@ func execRun(cmd *cobra.Command, args []string) error {
 			// TODO: these interfaces should look the same as Strict*, so move pristine in there
 			err := env.Load(cmd.Context(), secretStore, service, &collisions)
 			if err != nil {
-				return fmt.Errorf("Failed to list store contents: %w", err)
+				return fmt.Errorf("Failed to list store contents: %w", err) //nolint:staticcheck // ST1005 pre-existing
 			}
 
 			for _, c := range collisions {

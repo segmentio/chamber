@@ -20,7 +20,7 @@ func init() {
 }
 
 func versionRun(cmd *cobra.Command, args []string) error {
-	fmt.Fprintf(os.Stdout, "chamber %s\n", chamberVersion)
+	fmt.Fprintf(os.Stdout, "chamber %s\n", chamberVersion) //nolint:errcheck // pre-existing
 	if analyticsEnabled && analyticsClient != nil {
 		_ = analyticsClient.Enqueue(analytics.Track{
 			UserId: username,

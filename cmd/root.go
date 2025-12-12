@@ -117,7 +117,7 @@ func Execute(vers string, writeKey string) {
 
 func validateService(service string) error {
 	if !validServicePathFormat.MatchString(service) {
-		return fmt.Errorf("Failed to validate service name '%s'. Only alphanumeric, dashes, forward slashes, full stops and underscores are allowed for service names. Service names must not start or end with a forward slash", service)
+		return fmt.Errorf("Failed to validate service name '%s'. Only alphanumeric, dashes, forward slashes, full stops and underscores are allowed for service names. Service names must not start or end with a forward slash", service) //nolint:staticcheck // ST1005 pre-existing
 	}
 	if store.ReservedService(service) {
 		fmt.Fprintf(os.Stderr, "Service name %s is reserved for chamber's own use and will be prohibited in a future version. Please switch to a different service name.\n", service)
@@ -128,7 +128,7 @@ func validateService(service string) error {
 
 func validateServiceWithLabel(service string) error {
 	if !validServicePathFormatWithLabel.MatchString(service) {
-		return fmt.Errorf("Failed to validate service name '%s'. Only alphanumeric, dashes, forward slashes, full stops and underscores are allowed for service names, and colon followed by a label name. Service names must not start or end with a forward slash or colon", service)
+		return fmt.Errorf("Failed to validate service name '%s'. Only alphanumeric, dashes, forward slashes, full stops and underscores are allowed for service names, and colon followed by a label name. Service names must not start or end with a forward slash or colon", service) //nolint:staticcheck // ST1005 pre-existing
 	}
 	if store.ReservedService(service) {
 		fmt.Fprintf(os.Stderr, "Service name %s is reserved for chamber's own use and will be prohibited in a future version. Please switch to a different service name.\n", service)
@@ -139,17 +139,17 @@ func validateServiceWithLabel(service string) error {
 
 func validateKey(key string) error {
 	if !validKeyFormat.MatchString(key) {
-		return fmt.Errorf("Failed to validate key name '%s'. Only alphanumeric, dashes, full stops and underscores are allowed for key names", key)
+		return fmt.Errorf("Failed to validate key name '%s'. Only alphanumeric, dashes, full stops and underscores are allowed for key names", key) //nolint:staticcheck // ST1005 pre-existing
 	}
 	return nil
 }
 
 func validateTag(key string, value string) error {
 	if !validTagKeyFormat.MatchString(key) {
-		return fmt.Errorf("Failed to validate tag key '%s'. Only 128 alphanumeric, space, and characters +-=._:/@ are allowed for tag keys", key)
+		return fmt.Errorf("Failed to validate tag key '%s'. Only 128 alphanumeric, space, and characters +-=._:/@ are allowed for tag keys", key) //nolint:staticcheck // ST1005 pre-existing
 	}
 	if !validTagValueFormat.MatchString(value) {
-		return fmt.Errorf("Failed to validate tag value '%s'. Only 256 alphanumeric, space, and characters +-=._:/@ are allowed for tag values", value)
+		return fmt.Errorf("Failed to validate tag value '%s'. Only 256 alphanumeric, space, and characters +-=._:/@ are allowed for tag values", value) //nolint:staticcheck // ST1005 pre-existing
 	}
 	return nil
 }
@@ -167,7 +167,7 @@ func getSecretStore(ctx context.Context) (store.Store, error) {
 		var err error
 		numRetries, err = strconv.Atoi(numRetriesEnvVarValue)
 		if err != nil {
-			return nil, errors.New("Cannot parse $CHAMBER_RETRIES to an integer.")
+			return nil, errors.New("Cannot parse $CHAMBER_RETRIES to an integer.") //nolint:staticcheck // ST1005 pre-existing
 		}
 	}
 
@@ -179,7 +179,7 @@ func getSecretStore(ctx context.Context) (store.Store, error) {
 		s = store.NewNullStore()
 	case S3Backend:
 		if kmsKeyAliasFlag != DefaultKMSKey {
-			return nil, errors.New("Unable to use --kms-key-alias with this backend.")
+			return nil, errors.New("Unable to use --kms-key-alias with this backend.") //nolint:staticcheck // ST1005 pre-existing
 		}
 
 		var bucket string
@@ -189,7 +189,7 @@ func getSecretStore(ctx context.Context) (store.Store, error) {
 			bucket = backendS3BucketFlag
 		}
 		if bucket == "" {
-			return nil, errors.New("Must set bucket for s3 backend")
+			return nil, errors.New("Must set bucket for s3 backend") //nolint:staticcheck // ST1005 pre-existing
 		}
 		s, err = store.NewS3StoreWithBucket(ctx, numRetries, bucket)
 	case S3KMSBackend:
@@ -200,7 +200,7 @@ func getSecretStore(ctx context.Context) (store.Store, error) {
 			bucket = backendS3BucketFlag
 		}
 		if bucket == "" {
-			return nil, errors.New("Must set bucket for s3 backend")
+			return nil, errors.New("Must set bucket for s3 backend") //nolint:staticcheck // ST1005 pre-existing
 		}
 
 		var kmsKeyAlias string
@@ -215,7 +215,7 @@ func getSecretStore(ctx context.Context) (store.Store, error) {
 		}
 
 		if kmsKeyAlias == "" {
-			return nil, errors.New("Must set kmsKeyAlias for S3 KMS backend")
+			return nil, errors.New("Must set kmsKeyAlias for S3 KMS backend") //nolint:staticcheck // ST1005 pre-existing
 		}
 
 		s, err = store.NewS3KMSStore(ctx, numRetries, bucket, kmsKeyAlias)
@@ -223,13 +223,13 @@ func getSecretStore(ctx context.Context) (store.Store, error) {
 		s, err = store.NewSecretsManagerStore(ctx, numRetries)
 	case SSMBackend:
 		if kmsKeyAliasFlag != DefaultKMSKey {
-			return nil, errors.New("Unable to use --kms-key-alias with this backend. Use CHAMBER_KMS_KEY_ALIAS instead.")
+			return nil, errors.New("Unable to use --kms-key-alias with this backend. Use CHAMBER_KMS_KEY_ALIAS instead.") //nolint:staticcheck // ST1005 pre-existing
 		}
 
 		var parsedRetryMode aws.RetryMode
 		parsedRetryMode, err = aws.ParseRetryMode(retryMode)
 		if err != nil {
-			return nil, fmt.Errorf("Invalid retry mode %s", retryMode)
+			return nil, fmt.Errorf("Invalid retry mode %s", retryMode) //nolint:staticcheck // ST1005 pre-existing
 		}
 		s, err = store.NewSSMStoreWithRetryMode(ctx, numRetries, parsedRetryMode)
 	default:
@@ -263,6 +263,6 @@ func prerun(cmd *cobra.Command, args []string) {
 
 func postrun(cmd *cobra.Command, args []string) {
 	if analyticsEnabled && analyticsClient != nil {
-		analyticsClient.Close()
+		analyticsClient.Close() //nolint:errcheck // pre-existing
 	}
 }

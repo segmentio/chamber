@@ -39,7 +39,7 @@ func init() {
 func list(cmd *cobra.Command, args []string) error {
 	service := utils.NormalizeService(args[0])
 	if err := validateServiceWithLabel(service); err != nil {
-		return fmt.Errorf("Failed to validate service: %w", err)
+		return fmt.Errorf("Failed to validate service: %w", err) //nolint:staticcheck // ST1005 pre-existing
 	}
 
 	if analyticsEnabled && analyticsClient != nil {
@@ -56,20 +56,20 @@ func list(cmd *cobra.Command, args []string) error {
 
 	secretStore, err := getSecretStore(cmd.Context())
 	if err != nil {
-		return fmt.Errorf("Failed to get secret store: %w", err)
+		return fmt.Errorf("Failed to get secret store: %w", err) //nolint:staticcheck // ST1005 pre-existing
 	}
 	secrets, err := secretStore.List(cmd.Context(), service, withValues)
 	if err != nil {
-		return fmt.Errorf("Failed to list store contents: %w", err)
+		return fmt.Errorf("Failed to list store contents: %w", err) //nolint:staticcheck // ST1005 pre-existing
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 8, 2, '\t', 0)
 
-	fmt.Fprint(w, "Key\tVersion\tLastModified\tUser")
+	fmt.Fprint(w, "Key\tVersion\tLastModified\tUser") //nolint:errcheck // pre-existing
 	if withValues {
-		fmt.Fprint(w, "\tValue")
+		fmt.Fprint(w, "\tValue") //nolint:errcheck // pre-existing
 	}
-	fmt.Fprintln(w, "")
+	fmt.Fprintln(w, "") //nolint:errcheck // pre-existing
 
 	sort.Sort(ByName(secrets))
 	if sortByTime {
@@ -83,18 +83,18 @@ func list(cmd *cobra.Command, args []string) error {
 	}
 
 	for _, secret := range secrets {
-		fmt.Fprintf(w, "%s\t%d\t%s\t%s",
+		fmt.Fprintf(w, "%s\t%d\t%s\t%s", //nolint:errcheck // pre-existing
 			key(secret.Meta.Key),
 			secret.Meta.Version,
 			secret.Meta.Created.Local().Format(ShortTimeFormat),
 			secret.Meta.CreatedBy)
 		if withValues {
-			fmt.Fprintf(w, "\t%s", *secret.Value)
+			fmt.Fprintf(w, "\t%s", *secret.Value) //nolint:errcheck // pre-existing
 		}
-		fmt.Fprintln(w, "")
+		fmt.Fprintln(w, "") //nolint:errcheck // pre-existing
 	}
 
-	w.Flush()
+	w.Flush() //nolint:errcheck // pre-existing
 	return nil
 }
 

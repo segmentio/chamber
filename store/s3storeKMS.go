@@ -77,7 +77,7 @@ func (s *S3KMSStore) Write(ctx context.Context, id SecretId, value string) error
 	}
 
 	if val, ok := index.Latest[id.Key]; val.KMSAlias != s.kmsKeyAlias && ok {
-		return fmt.Errorf("Unable to overwrite secret %s using new KMS key %s; mismatch with existing key %s", id.Key, s.kmsKeyAlias, val.KMSAlias)
+		return fmt.Errorf("Unable to overwrite secret %s using new KMS key %s; mismatch with existing key %s", id.Key, s.kmsKeyAlias, val.KMSAlias) //nolint:staticcheck // ST1005 pre-existing
 	}
 
 	objPath := getObjectPath(id)
@@ -139,7 +139,7 @@ func (s *S3KMSStore) Write(ctx context.Context, id SecretId, value string) error
 }
 
 func (s *S3KMSStore) WriteWithTags(ctx context.Context, id SecretId, value string, tags map[string]string) error {
-	return errors.New("Not implemented for S3 KMS Store")
+	return errors.New("Not implemented for S3 KMS Store") //nolint:staticcheck // ST1005 pre-existing
 }
 
 func (s *S3KMSStore) ListServices(ctx context.Context, service string, includeSecretName bool) ([]string, error) {
@@ -216,7 +216,7 @@ func (s *S3KMSStore) Delete(ctx context.Context, id SecretId) error {
 	}
 
 	if val, ok := index.Latest[id.Key]; val.KMSAlias != s.kmsKeyAlias && ok {
-		return fmt.Errorf("Unable to overwrite secret %s using new KMS key %s; mismatch with existing key %s", id.Key, s.kmsKeyAlias, val.KMSAlias)
+		return fmt.Errorf("Unable to overwrite secret %s using new KMS key %s; mismatch with existing key %s", id.Key, s.kmsKeyAlias, val.KMSAlias) //nolint:staticcheck // ST1005 pre-existing
 	}
 
 	delete(index.Latest, id.Key)
@@ -302,7 +302,7 @@ func (s *S3KMSStore) readLatest(ctx context.Context, service string) (LatestInde
 			result, err := s.readLatestFile(ctx, key_name)
 
 			if err != nil {
-				paginationError = fmt.Errorf("Error reading latest index for KMS Key (%s): %s", key_name, err)
+				paginationError = fmt.Errorf("Error reading latest index for KMS Key (%s): %s", key_name, err) //nolint:staticcheck // ST1005 pre-existing
 				break
 			}
 
@@ -330,7 +330,7 @@ func (s *S3KMSStore) readLatest(ctx context.Context, service string) (LatestInde
 }
 
 func (s *S3KMSStore) latestFileKeyNameByKMSKey() string {
-	return fmt.Sprintf("__kms_%s__latest.json", strings.Replace(s.kmsKeyAlias, "/", "_", -1))
+	return fmt.Sprintf("__kms_%s__latest.json", strings.Replace(s.kmsKeyAlias, "/", "_", -1)) //nolint:staticcheck // QF1004 pre-existing
 }
 
 func (s *S3KMSStore) writeLatest(ctx context.Context, service string, index LatestIndexFile) error {

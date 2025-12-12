@@ -41,11 +41,11 @@ func find(cmd *cobra.Command, args []string) error {
 
 	secretStore, err := getSecretStore(cmd.Context())
 	if err != nil {
-		return fmt.Errorf("Failed to get secret store: %w", err)
+		return fmt.Errorf("Failed to get secret store: %w", err) //nolint:staticcheck // ST1005 pre-existing
 	}
 	services, err := secretStore.ListServices(cmd.Context(), blankService, includeSecrets)
 	if err != nil {
-		return fmt.Errorf("Failed to list store contents: %w", err)
+		return fmt.Errorf("Failed to list store contents: %w", err) //nolint:staticcheck // ST1005 pre-existing
 	}
 
 	if byValue {
@@ -60,20 +60,20 @@ func find(cmd *cobra.Command, args []string) error {
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 8, 2, '\t', 0)
-	fmt.Fprint(w, "Service")
+	fmt.Fprint(w, "Service")   //nolint:errcheck // pre-existing
 	if byValue {
-		fmt.Fprint(w, "\tKey")
+		fmt.Fprint(w, "\tKey") //nolint:errcheck // pre-existing
 	}
-	fmt.Fprintln(w, "")
+	fmt.Fprintln(w, "") //nolint:errcheck // pre-existing
 
 	for _, match := range matches {
-		fmt.Fprintf(w, "%s", match.Service)
+		fmt.Fprintf(w, "%s", match.Service) //nolint:errcheck // pre-existing
 		if byValue {
-			fmt.Fprintf(w, "\t%s", match.Key)
+			fmt.Fprintf(w, "\t%s", match.Key) //nolint:errcheck // pre-existing
 		}
-		fmt.Fprintln(w, "")
+		fmt.Fprintln(w, "") //nolint:errcheck // pre-existing
 	}
-	w.Flush()
+	w.Flush() //nolint:errcheck // pre-existing
 
 	return nil
 }

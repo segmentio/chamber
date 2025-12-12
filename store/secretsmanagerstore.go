@@ -121,7 +121,7 @@ func (s *SecretsManagerStore) Config(ctx context.Context) (StoreConfig, error) {
 }
 
 func (s *SecretsManagerStore) SetConfig(ctx context.Context, config StoreConfig) error {
-	return errors.New("Not implemented for Secrets Manager Store")
+	return errors.New("Not implemented for Secrets Manager Store") //nolint:staticcheck // ST1005 pre-existing
 }
 
 // Write writes a given value to a secret identified by id. If the secret
@@ -225,7 +225,7 @@ func (s *SecretsManagerStore) Write(ctx context.Context, id SecretId, value stri
 			return err
 		}
 		if details.RotationEnabled != nil && *details.RotationEnabled {
-			return fmt.Errorf("Cannot write to a secret with rotation enabled")
+			return fmt.Errorf("Cannot write to a secret with rotation enabled") //nolint:staticcheck // ST1005 pre-existing
 		}
 
 		putSecretValueInput := &secretsmanager.PutSecretValueInput{
@@ -286,7 +286,7 @@ func (s *SecretsManagerStore) Delete(ctx context.Context, id SecretId) error {
 }
 
 func (s *SecretsManagerStore) DeleteTags(ctx context.Context, id SecretId, tagKeys []string) error {
-	return errors.New("Not implemented for Secrets Manager Store")
+	return errors.New("Not implemented for Secrets Manager Store") //nolint:staticcheck // ST1005 pre-existing
 }
 
 func (s *SecretsManagerStore) readVersion(ctx context.Context, id SecretId, version int) (Secret, error) {
@@ -381,16 +381,16 @@ func (s *SecretsManagerStore) readLatest(ctx context.Context, service string) (s
 }
 
 func (s *SecretsManagerStore) WriteTags(ctx context.Context, id SecretId, tags map[string]string, deleteOtherTags bool) error {
-	return errors.New("Not implemented for Secrets Manager Store")
+	return errors.New("Not implemented for Secrets Manager Store") //nolint:staticcheck // ST1005 pre-existing
 }
 
 func (s *SecretsManagerStore) ReadTags(ctx context.Context, id SecretId) (map[string]string, error) {
-	return nil, errors.New("Not implemented for Secrets Manager Store")
+	return nil, errors.New("Not implemented for Secrets Manager Store") //nolint:staticcheck // ST1005 pre-existing
 }
 
 // ListServices (not implemented)
 func (s *SecretsManagerStore) ListServices(ctx context.Context, service string, includeSecretName bool) ([]string, error) {
-	return nil, fmt.Errorf("Secrets Manager Backend is experimental and does not implement this command")
+	return nil, fmt.Errorf("Secrets Manager Backend is experimental and does not implement this command") //nolint:staticcheck // ST1005 pre-existing
 }
 
 // List lists all secrets for a given service.  If includeValues is true,

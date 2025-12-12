@@ -36,24 +36,24 @@ func listServices(cmd *cobra.Command, args []string) error {
 	}
 	secretStore, err := getSecretStore(cmd.Context())
 	if err != nil {
-		return fmt.Errorf("Failed to get secret store: %w", err)
+		return fmt.Errorf("Failed to get secret store: %w", err) //nolint:staticcheck // ST1005 pre-existing
 	}
 	secrets, err := secretStore.ListServices(cmd.Context(), service, includeSecretName)
 	if err != nil {
-		return fmt.Errorf("Failed to list store contents: %w", err)
+		return fmt.Errorf("Failed to list store contents: %w", err) //nolint:staticcheck // ST1005 pre-existing
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 8, 2, '\t', 0)
-	fmt.Fprint(w, "Service")
-	fmt.Fprintln(w, "")
+	fmt.Fprint(w, "Service")   //nolint:errcheck // pre-existing
+	fmt.Fprintln(w, "") //nolint:errcheck // pre-existing
 
 	sort.Strings(secrets)
 
 	for _, secret := range secrets {
-		fmt.Fprintf(w, "%s",
+		fmt.Fprintf(w, "%s", //nolint:errcheck // pre-existing
 			secret)
-		fmt.Fprintln(w, "")
+		fmt.Fprintln(w, "") //nolint:errcheck // pre-existing
 	}
-	w.Flush()
+	w.Flush() //nolint:errcheck // pre-existing
 	return nil
 }

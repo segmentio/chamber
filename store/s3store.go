@@ -79,7 +79,7 @@ func (s *S3Store) Config(ctx context.Context) (StoreConfig, error) {
 }
 
 func (s *S3Store) SetConfig(ctx context.Context, config StoreConfig) error {
-	return errors.New("Not implemented for S3 Store")
+	return errors.New("Not implemented for S3 Store") //nolint:staticcheck // ST1005 pre-existing
 }
 
 func (s *S3Store) Write(ctx context.Context, id SecretId, value string) error {
@@ -142,7 +142,7 @@ func (s *S3Store) Write(ctx context.Context, id SecretId, value string) error {
 }
 
 func (s *S3Store) WriteWithTags(ctx context.Context, id SecretId, value string, tags map[string]string) error {
-	return errors.New("Not implemented for S3 Store")
+	return errors.New("Not implemented for S3 Store") //nolint:staticcheck // ST1005 pre-existing
 }
 
 func (s *S3Store) Read(ctx context.Context, id SecretId, version int) (Secret, error) {
@@ -175,11 +175,11 @@ func (s *S3Store) Read(ctx context.Context, id SecretId, version int) (Secret, e
 }
 
 func (s *S3Store) WriteTags(ctx context.Context, id SecretId, tags map[string]string, deleteOtherTags bool) error {
-	return errors.New("Not implemented for S3 Store")
+	return errors.New("Not implemented for S3 Store") //nolint:staticcheck // ST1005 pre-existing
 }
 
 func (s *S3Store) ReadTags(ctx context.Context, id SecretId) (map[string]string, error) {
-	return nil, errors.New("Not implemented for S3 Store")
+	return nil, errors.New("Not implemented for S3 Store") //nolint:staticcheck // ST1005 pre-existing
 }
 
 func (s *S3Store) ListServices(ctx context.Context, service string, includeSecretName bool) ([]string, error) {
@@ -290,7 +290,7 @@ func (s *S3Store) Delete(ctx context.Context, id SecretId) error {
 }
 
 func (s *S3Store) DeleteTags(ctx context.Context, id SecretId, tagKeys []string) error {
-	return errors.New("Not implemented for S3 Store")
+	return errors.New("Not implemented for S3 Store") //nolint:staticcheck // ST1005 pre-existing
 }
 
 // getCurrentUser uses the STS API to get the current caller identity,

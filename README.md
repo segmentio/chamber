@@ -133,7 +133,7 @@ will use your account's default SSM alias:
 ### Writing Secrets
 
 ```bash
-$ chamber write <service> <key> <value|->
+$ chamber write [--preserve-case] <service> <key> <value|->
 ```
 
 This operation will write a secret into the secret store. If a secret with that
@@ -142,9 +142,10 @@ key already exists, it will increment the version and store a new value.
 If `-` is provided as the value argument, the value will be read from standard
 input.
 
-Secret keys are normalized automatically. The `-` will be `_` and the letters will
-be converted to upper case (for example a secret with key `secret_key` and
-`secret-key` will become `SECRET_KEY`).
+Secret keys are normalized automatically unless `--preserve-case` is specified.
+The letters will be converted to lower case (for example a secret with key
+`SECRET_KEY` will become `secret_key`, and `Secret-Key` will become
+`secret-key`).
 
 #### Reserved Service Names
 

@@ -239,6 +239,14 @@ example, if you do `chamber exec app apptwo -- ...` and both apps have a secret
 named `api_key`, the `api_key` from `apptwo` will be the one set in your
 environment.
 
+When loading secrets from multiple services, chamber will warn about environment
+variables that get overwritten. Use the `--no-warn-conflicts` flag to suppress
+these warnings when conflicts are expected:
+
+```bash
+$ chamber exec --no-warn-conflicts app apptwo -- <your executable>
+```
+
 ### Reading
 
 ```bash

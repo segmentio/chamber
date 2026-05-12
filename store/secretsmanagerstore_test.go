@@ -222,6 +222,17 @@ func TestNewSecretsManagerStore(t *testing.T) {
 		secretsmanagerClient := s.svc.(*secretsmanager.Client)
 		assert.Nil(t, secretsmanagerClient.Options().BaseEndpoint)
 	})
+
+	t.Run("Should return error when AWS_PROFILE points to invalid profile", func(t *testing.T) {
+		os.Setenv("AWS_PROFILE", "invalid-profile")
+		defer os.Unsetenv("AWS_PROFILE")
+
+		s, err := NewSecretsManagerStore(context.Background(), 1)
+		assert.NotNil(t, err)
+		assert.Nil(t, s)
+		// Verify it's a profile not exist error
+		assert.Contains(t, err.Error(), "profile")
+	})
 }
 
 func TestSecretsManagerWrite(t *testing.T) {

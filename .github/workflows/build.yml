@@ -12,13 +12,13 @@ jobs:
       matrix:
         go: ["1.25.x", "1.24.x", "1.23.x"]
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-large
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
 
       - name: Setup Go ${{ matrix.go }}
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4  # v4
         with:
           go-version: ${{ matrix.go }}
 
@@ -29,13 +29,13 @@ jobs:
     strategy:
       matrix:
         go: ["1.25.x", "1.24.x", "1.23.x"]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-large
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
 
       - name: Setup Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4  # v4
         with:
           go-version: ${{ matrix.go }}
 
@@ -54,13 +54,13 @@ jobs:
           fi
 
   coverage:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-large
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
 
       - name: Setup Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4  # v4
         with:
           go-version: "1.25.x"
 
@@ -68,7 +68,7 @@ jobs:
         run: make coverage
 
       - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v4.6.0
+        uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238  # v4.6.0
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: segmentio/chamber
@@ -77,14 +77,14 @@ jobs:
     strategy:
       matrix:
         go: ["1.25.x", "1.24.x", "1.23.x"]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-large
     needs: test
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
 
       - name: Setup Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4  # v4
         with:
           go-version: ${{ matrix.go }}
 
@@ -93,7 +93,7 @@ jobs:
 
       - name: Make distributables
         run: make -f Makefile.release dist
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
         with:
           name: dist-${{ matrix.go }}
           path: "dist/*"
